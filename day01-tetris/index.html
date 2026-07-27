@@ -18,9 +18,9 @@
         <span class="title" style="font-size:16px;">TETRIS</span>
         <span class="sub">DAY 01</span>
       </div>
-      <div class="card">
-        <h2>Next</h2>
-        <canvas id="next" width="120" height="120"></canvas>
+      <div class="card previews">
+        <div><h2>Hold</h2><canvas id="hold" width="96" height="72"></canvas></div>
+        <div><h2>Next</h2><canvas id="next" width="96" height="72"></canvas></div>
       </div>
       <div class="card"><h2>Score</h2><div class="stat" id="score">0</div></div>
       <div class="card"><h2>Lines</h2><div class="stat" id="lines">0</div></div>
@@ -31,10 +31,12 @@
         <b>&darr;</b> 소프트드롭<br>
         <b>&uarr; / X</b> 회전<br>
         <b>Z</b> 반시계 회전<br>
+        <b>C</b> 홀드<br>
         <b>Space</b> 하드드롭<br>
         <b>P</b> 일시정지
       </div>
       <div class="touch" id="touch">
+        <button data-a="hold">&#8646;</button>
         <button data-a="left">&#9664;</button>
         <button data-a="rotate">&#10227;</button>
         <button data-a="right">&#9654;</button>

@@ -7,7 +7,7 @@ import {
   LINES_PER_LEVEL, BASE_DROP_MS, MIN_DROP_MS, SPEED_STEP_MS, WALL_KICKS,
 } from './config.js';
 import { Board } from './board.js';
-import { Bag } from './tetromino.js';
+import { Bag, Tetromino } from './tetromino.js';
 
 export class Game {
   constructor(renderer, { onStats, onStateChange } = {}) {
@@ -31,6 +31,8 @@ export class Game {
     this.over = false;
     this.current = null;
     this.next = null;
+    this.heldPiece = null;
+    this.canHold = true; // one hold per drop; re-enabled when a piece locks
   }
 
   start() {
@@ -43,6 +45,7 @@ export class Game {
     this.running = true;
     this._emitStats();
     this.renderer.drawNext(this.next);
+    this.renderer.drawHold(this.heldPiece, this.canHold);
     this.onStateChange('playing');
     this._raf = requestAnimationFrame((t) => this._loop(t));
   }
@@ -104,6 +107,26 @@ export class Game {
     this._lock();
   }
 
+  // Stash the current piece, or swap it with the stashed one. Allowed once
+  // per drop so it can't be used to stall indefinitely.
+  hold() {
+    if (!this._active() || !this.canHold) return;
+    const currentType = this.current.type;
+    if (this.heldPiece) {
+      this.current = new Tetromino(this.heldPiece.type);
+      this.heldPiece = new Tetromino(currentType);
+    } else {
+      this.heldPiece = new Tetromino(currentType);
+      this.current = this.next;
+      this.next = this.bag.next();
+      this.renderer.drawNext(this.next);
+    }
+    this.canHold = false;
+    this.renderer.drawHold(this.heldPiece, this.canHold);
+    if (this.board.collides(this.current, 0, 0)) this._gameOver();
+    this._draw();
+  }
+
   // ----- internals -----
 
   _active() {
@@ -129,6 +152,9 @@ export class Game {
     this.current = this.next;
     this.next = this.bag.next();
     this.renderer.drawNext(this.next);
+
+    this.canHold = true;
+    this.renderer.drawHold(this.heldPiece, this.canHold);
 
     if (this.board.collides(this.current, 0, 0)) this._gameOver();
   }

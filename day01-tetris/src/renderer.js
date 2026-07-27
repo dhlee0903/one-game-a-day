@@ -4,11 +4,13 @@
 import { COLS, ROWS, CELL, COLORS, SHAPES } from './config.js';
 
 export class Renderer {
-  constructor(boardCanvas, nextCanvas) {
+  constructor(boardCanvas, nextCanvas, holdCanvas) {
     this.ctx = boardCanvas.getContext('2d');
     this.nctx = nextCanvas.getContext('2d');
+    this.hctx = holdCanvas.getContext('2d');
     this.boardCanvas = boardCanvas;
     this.nextCanvas = nextCanvas;
+    this.holdCanvas = holdCanvas;
   }
 
   // A single block with a light top edge and dark bottom edge for depth.
@@ -68,25 +70,37 @@ export class Renderer {
     });
   }
 
-  // Preview of the upcoming piece, centered in the side panel.
-  drawNext(piece) {
-    const { nctx, nextCanvas } = this;
-    nctx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  // Shared mini-preview used by the Hold and Next panels. `alpha` dims the
+  // Hold slot while it is temporarily locked.
+  _drawPreview(ctx, canvas, piece, alpha = 1) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!piece) return;
     const shape = SHAPES[piece.type];
-    const size = 24;
+    const size = 18;
     const w = shape[0].length;
     const h = shape.length;
-    const ox = (nextCanvas.width - w * size) / 2;
-    const oy = (nextCanvas.height - h * size) / 2;
+    const ox = (canvas.width - w * size) / 2;
+    const oy = (canvas.height - h * size) / 2;
+    ctx.globalAlpha = alpha;
     shape.forEach((row, r) => {
       row.forEach((v, c) => {
         if (!v) return;
-        nctx.save();
-        nctx.translate(ox, oy);
-        this.drawCell(nctx, c, r, COLORS[piece.type], size);
-        nctx.restore();
+        ctx.save();
+        ctx.translate(ox, oy);
+        this.drawCell(ctx, c, r, COLORS[piece.type], size);
+        ctx.restore();
       });
     });
+    ctx.globalAlpha = 1;
+  }
+
+  // Preview of the upcoming piece.
+  drawNext(piece) {
+    this._drawPreview(this.nctx, this.nextCanvas, piece);
+  }
+
+  // The stashed piece; dimmed when hold is on cooldown for this drop.
+  drawHold(piece, enabled = true) {
+    this._drawPreview(this.hctx, this.holdCanvas, piece, enabled ? 1 : 0.35);
   }
 }

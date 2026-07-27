@@ -63,6 +63,23 @@ canvas {
   padding: 12px 14px;
 }
 
+.previews {
+  display: flex;
+  gap: 10px;
+}
+
+.previews > div {
+  flex: 1;
+  text-align: center;
+}
+
+.previews canvas {
+  box-shadow: none;
+  background: #0d1117;
+  width: 100%;
+  height: auto;
+}
+
 .card h2 {
   font-size: 11px;
   letter-spacing: .15em;

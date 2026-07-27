@@ -29,6 +29,8 @@ export class InputController {
         case 'X': game.rotate(1); break;
         case 'z':
         case 'Z': game.rotate(-1); break;
+        case 'c':
+        case 'C': game.hold(); break;
         case ' ': game.hardDrop(); break;
         default: break;
       }
@@ -44,6 +46,7 @@ export class InputController {
       down: () => game.softDrop(),
       rotate: () => game.rotate(1),
       drop: () => game.hardDrop(),
+      hold: () => game.hold(),
     };
     this.touchEl.addEventListener('click', (e) => {
       const action = actions[e.target.dataset.a];

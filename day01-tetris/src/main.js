@@ -7,7 +7,7 @@ import { InputController } from './input.js';
 
 const $ = (id) => document.getElementById(id);
 
-const renderer = new Renderer($('board'), $('next'));
+const renderer = new Renderer($('board'), $('next'), $('hold'));
 const overlay = $('overlay');
 
 const stat = {
