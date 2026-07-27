@@ -3,7 +3,7 @@
 // rotate, hardDrop, ...) that the input layer drives.
 
 import {
-  SCORE_TABLE, SOFT_DROP_POINT, HARD_DROP_POINT,
+  SCORE_TABLE, SOFT_DROP_POINT, HARD_DROP_POINT, COMBO_POINT, CLEAR_ANIM_MS,
   LINES_PER_LEVEL, BASE_DROP_MS, MIN_DROP_MS, SPEED_STEP_MS,
   JLSTZ_KICKS, I_KICKS,
 } from './config.js';
@@ -11,10 +11,11 @@ import { Board } from './board.js';
 import { Bag, Tetromino } from './tetromino.js';
 
 export class Game {
-  constructor(renderer, { onStats, onStateChange } = {}) {
+  constructor(renderer, { onStats, onStateChange, onClear } = {}) {
     this.renderer = renderer;
     this.onStats = onStats || (() => {});
     this.onStateChange = onStateChange || (() => {});
+    this.onClear = onClear || (() => {});
     this.board = new Board();
     this._raf = 0;
     this._resetState();
@@ -34,6 +35,8 @@ export class Game {
     this.next = null;
     this.heldPiece = null;
     this.canHold = true; // one hold per drop; re-enabled when a piece locks
+    this.combo = -1;     // -1 = no streak; incremented per line-clearing lock
+    this.clearAnim = null; // { rows, elapsed, cleared } while a clear plays out
   }
 
   start() {
@@ -143,7 +146,7 @@ export class Game {
   // ----- internals -----
 
   _active() {
-    return this.running && !this.paused && !this.over;
+    return this.running && !this.paused && !this.over && !this.clearAnim;
   }
 
   ghostY() {
@@ -159,9 +162,26 @@ export class Game {
 
   _lock() {
     this.board.merge(this.current);
-    const cleared = this.board.clearLines();
-    if (cleared > 0) this._score(cleared);
+    const rows = this.board.fullRows();
+    if (rows.length > 0) {
+      // Defer removal: flash the rows, then collapse and spawn in _finishClear.
+      this.clearAnim = { rows, elapsed: 0, cleared: rows.length };
+      return;
+    }
+    this.combo = -1; // a lock that clears nothing breaks the streak
+    this._spawnNext();
+  }
 
+  // Rows have finished flashing: collapse them, score the clear, then spawn.
+  _finishClear() {
+    const { rows, cleared } = this.clearAnim;
+    this.board.removeRows(rows);
+    this.clearAnim = null;
+    this._score(cleared);
+    this._spawnNext();
+  }
+
+  _spawnNext() {
     this.current = this.next;
     this.next = this.bag.next();
     this.renderer.drawNext(this.next);
@@ -174,10 +194,16 @@ export class Game {
 
   _score(cleared) {
     this.score += SCORE_TABLE[cleared] * this.level;
+
+    // Consecutive clears build a combo; the bonus scales with the streak.
+    this.combo += 1;
+    if (this.combo > 0) this.score += COMBO_POINT * this.combo * this.level;
+
     this.lines += cleared;
     this.level = Math.floor(this.lines / LINES_PER_LEVEL) + 1;
     this.dropInterval = Math.max(MIN_DROP_MS, BASE_DROP_MS - (this.level - 1) * SPEED_STEP_MS);
     this._emitStats();
+    this.onClear({ cleared, combo: this.combo });
   }
 
   _gameOver() {
@@ -187,21 +213,35 @@ export class Game {
   }
 
   _loop(t) {
-    if (!this._active()) return;
+    // Keep looping through the clear animation; only a hard stop or pause ends it.
+    if (!this.running || this.over || this.paused) return;
     if (!this.lastTime) this.lastTime = t;
     const dt = t - this.lastTime;
     this.lastTime = t;
-    this.dropTimer += dt;
-    if (this.dropTimer > this.dropInterval) {
-      this._gravity();
-      this.dropTimer = 0;
+
+    if (this.clearAnim) {
+      this.clearAnim.elapsed += dt;
+      if (this.clearAnim.elapsed >= CLEAR_ANIM_MS) this._finishClear();
+    } else {
+      this.dropTimer += dt;
+      if (this.dropTimer > this.dropInterval) {
+        this._gravity();
+        this.dropTimer = 0;
+      }
     }
+
     this._draw();
     this._raf = requestAnimationFrame((n) => this._loop(n));
   }
 
   _draw() {
-    if (this.current) this.renderer.render(this.board, this.current, this.ghostY());
+    let anim = null;
+    if (this.clearAnim) {
+      anim = { rows: this.clearAnim.rows, progress: Math.min(1, this.clearAnim.elapsed / CLEAR_ANIM_MS) };
+    }
+    if (this.current || anim) {
+      this.renderer.render(this.board, this.current, this.current ? this.ghostY() : 0, anim);
+    }
   }
 
   _emitStats() {

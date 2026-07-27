@@ -42,17 +42,22 @@ export class Board {
     });
   }
 
-  // Remove full rows, shifting everything above down. Returns rows cleared.
-  clearLines() {
-    let cleared = 0;
-    for (let r = ROWS - 1; r >= 0; r--) {
-      if (this.grid[r].every((cell) => cell)) {
-        this.grid.splice(r, 1);
-        this.grid.unshift(Array(COLS).fill(null));
-        cleared++;
-        r++; // re-check the same index after the shift
-      }
+  // Row indices that are completely filled. Detection is split from removal so
+  // the game can flash the rows before collapsing them.
+  fullRows() {
+    const rows = [];
+    for (let r = 0; r < ROWS; r++) {
+      if (this.grid[r].every((cell) => cell)) rows.push(r);
     }
-    return cleared;
+    return rows;
+  }
+
+  // Drop the given rows out and refill from the top, shifting everything above
+  // down into the gaps.
+  removeRows(rows) {
+    const doomed = new Set(rows);
+    const kept = this.grid.filter((_, r) => !doomed.has(r));
+    while (kept.length < ROWS) kept.unshift(Array(COLS).fill(null));
+    this.grid = kept;
   }
 }

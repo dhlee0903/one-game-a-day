@@ -32,6 +32,13 @@ export const SCORE_TABLE = [0, 100, 300, 500, 800];
 export const SOFT_DROP_POINT = 1;
 export const HARD_DROP_POINT = 2;
 
+// Combo bonus: awarded per consecutive line-clearing lock, times combo count
+// and level. Rewards keeping a clearing streak alive.
+export const COMBO_POINT = 50;
+
+// How long the line-clear flash plays before rows collapse (ms).
+export const CLEAR_ANIM_MS = 260;
+
 // Level progression and gravity.
 export const LINES_PER_LEVEL = 10;
 export const BASE_DROP_MS = 1000;

@@ -39,8 +39,9 @@ export class Renderer {
     }
   }
 
-  // Draw settled blocks, the falling piece, and its landing ghost.
-  render(board, piece, ghostY) {
+  // Draw settled blocks, the falling piece, and its landing ghost. When a line
+  // clear is animating, flash those rows instead of drawing the piece.
+  render(board, piece, ghostY, clearAnim = null) {
     const { ctx } = this;
     this.drawGridLines();
 
@@ -49,6 +50,11 @@ export class Renderer {
         const t = board.grid[r][c];
         if (t) this.drawCell(ctx, c, r, COLORS[t]);
       }
+    }
+
+    if (clearAnim) {
+      this._drawClearFlash(clearAnim.rows, clearAnim.progress);
+      return;
     }
 
     if (!piece) return;
@@ -67,6 +73,22 @@ export class Renderer {
           this.drawCell(ctx, piece.x + c, piece.y + r, COLORS[piece.type]);
         }
       });
+    });
+  }
+
+  // Bright flash over the rows being cleared, brightest at the start and fading
+  // as the rows are about to collapse. `progress` runs 0 -> 1.
+  _drawClearFlash(rows, progress) {
+    const { ctx } = this;
+    // Quick white flash that fades, plus a horizontal wipe from the center.
+    const fade = 1 - progress;
+    ctx.fillStyle = `rgba(255,255,255,${0.85 * fade})`;
+    const wipe = (COLS * CELL) * progress; // gap grows from the middle outward
+    rows.forEach((r) => {
+      const y = r * CELL;
+      ctx.fillRect(0, y, COLS * CELL, CELL);
+      // Carve out the collapsing gap so it reads as a wipe, not just a blink.
+      ctx.clearRect((COLS * CELL - wipe) / 2, y, wipe, CELL);
     });
   }
 
