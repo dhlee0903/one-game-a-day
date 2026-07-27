@@ -127,6 +127,44 @@ canvas {
   font-weight: 600;
 }
 
+.popup {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-align: center;
+  line-height: 1.2;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, #58a6ff, #a371f7, #f778ba);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, .6));
+}
+
+.popup.pop {
+  animation: popIn .9s ease-out;
+}
+
+.popup .combo {
+  display: block;
+  font-size: 14px;
+  letter-spacing: .12em;
+  color: #f778ba;
+  -webkit-text-fill-color: #f778ba;
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: translate(-50%, -40%) scale(.6); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  70% { opacity: 1; transform: translate(-50%, -54%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -72%) scale(1); }
+}
+
 .overlay {
   position: absolute;
   inset: 0;

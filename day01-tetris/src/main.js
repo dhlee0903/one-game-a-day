@@ -22,6 +22,20 @@ function updateStats({ score, lines, level }) {
   stat.level.textContent = level;
 }
 
+const popup = $('popup');
+const CLEAR_NAMES = ['', 'SINGLE', 'DOUBLE', 'TRIPLE', 'TETRIS'];
+
+// Flash a "TETRIS!" / combo popup when lines clear. Restart the CSS animation
+// each time by removing the class and forcing a reflow before re-adding it.
+function showClear({ cleared, combo }) {
+  const name = CLEAR_NAMES[cleared] || `${cleared} LINES`;
+  const comboLine = combo > 0 ? `<span class="combo">COMBO ×${combo}</span>` : '';
+  popup.innerHTML = name + comboLine;
+  popup.classList.remove('pop');
+  void popup.offsetWidth;
+  popup.classList.add('pop');
+}
+
 function showOverlay(title, text, buttonLabel, onClick) {
   overlay.innerHTML =
     `<h3>${title}</h3>` +
@@ -53,6 +67,7 @@ function handleStateChange(state, payload) {
 const game = new Game(renderer, {
   onStats: updateStats,
   onStateChange: handleStateChange,
+  onClear: showClear,
 });
 
 new InputController(game, $('board'), $('touch'));
