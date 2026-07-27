@@ -11,5 +11,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code
-.claude/
+# Claude Code — ignore local settings/state, but version project skills
+.claude/*
+!.claude/skills/
