@@ -24,13 +24,22 @@ function updateStats({ score, lines, level }) {
 
 const popup = $('popup');
 const CLEAR_NAMES = ['', 'SINGLE', 'DOUBLE', 'TRIPLE', 'TETRIS'];
+const TSPIN_NAMES = ['T-SPIN', 'T-SPIN SINGLE', 'T-SPIN DOUBLE', 'T-SPIN TRIPLE'];
+const TSPIN_MINI_NAMES = ['T-SPIN MINI', 'T-SPIN MINI SINGLE', 'T-SPIN MINI DOUBLE'];
 
-// Flash a "TETRIS!" / combo popup when lines clear. Restart the CSS animation
-// each time by removing the class and forcing a reflow before re-adding it.
-function showClear({ cleared, combo }) {
-  const name = CLEAR_NAMES[cleared] || `${cleared} LINES`;
-  const comboLine = combo > 0 ? `<span class="combo">COMBO ×${combo}</span>` : '';
-  popup.innerHTML = name + comboLine;
+// Flash a popup naming the clear (TETRIS, T-SPIN DOUBLE, …) plus back-to-back
+// and combo badges. Restart the CSS animation each time by removing the class
+// and forcing a reflow before re-adding it.
+function showClear({ cleared, tspin, combo, b2b }) {
+  let name;
+  if (tspin === 'full') name = TSPIN_NAMES[cleared];
+  else if (tspin === 'mini') name = TSPIN_MINI_NAMES[cleared] || 'T-SPIN MINI';
+  else name = CLEAR_NAMES[cleared];
+  if (!name) return;
+
+  const badges = (b2b ? '<span class="combo">BACK-TO-BACK</span>' : '')
+    + (combo > 0 ? `<span class="combo">COMBO ×${combo}</span>` : '');
+  popup.innerHTML = name + badges;
   popup.classList.remove('pop');
   void popup.offsetWidth;
   popup.classList.add('pop');

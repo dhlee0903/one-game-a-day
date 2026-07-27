@@ -4,8 +4,9 @@
 
 import {
   SCORE_TABLE, SOFT_DROP_POINT, HARD_DROP_POINT, COMBO_POINT, CLEAR_ANIM_MS,
+  TSPIN_SCORE, TSPIN_MINI_SCORE, B2B_MULTIPLIER,
   LINES_PER_LEVEL, BASE_DROP_MS, MIN_DROP_MS, SPEED_STEP_MS,
-  JLSTZ_KICKS, I_KICKS,
+  JLSTZ_KICKS, I_KICKS, COLS, ROWS,
 } from './config.js';
 import { Board } from './board.js';
 import { Bag, Tetromino } from './tetromino.js';
@@ -36,7 +37,12 @@ export class Game {
     this.heldPiece = null;
     this.canHold = true; // one hold per drop; re-enabled when a piece locks
     this.combo = -1;     // -1 = no streak; incremented per line-clearing lock
-    this.clearAnim = null; // { rows, elapsed, cleared } while a clear plays out
+    this.b2b = false;    // last difficult clear active? drives back-to-back bonus
+    this.clearAnim = null; // { rows, elapsed, info } while a clear plays out
+    // T-spin detection needs to know the last action was a rotation (not a
+    // slide/drop) and whether a tall wall-kick was used.
+    this.lastMoveRotation = false;
+    this.lastKickBig = false;
   }
 
   start() {
@@ -73,7 +79,10 @@ export class Game {
 
   _shift(dx) {
     if (!this._active()) return;
-    if (!this.board.collides(this.current, dx, 0)) this.current.x += dx;
+    if (!this.board.collides(this.current, dx, 0)) {
+      this.current.x += dx;
+      this.lastMoveRotation = false; // a slide clears any pending T-spin
+    }
     this._draw();
   }
 
@@ -82,6 +91,7 @@ export class Game {
     if (!this.board.collides(this.current, 0, 1)) {
       this.current.y += 1;
       this.score += SOFT_DROP_POINT;
+      this.lastMoveRotation = false;
       this._emitStats();
     }
     this.dropTimer = 0;
@@ -101,12 +111,15 @@ export class Game {
 
     // Try each kick offset in order; the first that clears wins. SRS y is
     // up-positive, so negate it for our downward grid.
-    for (const [kx, ky] of tests) {
+    for (let k = 0; k < tests.length; k++) {
+      const [kx, ky] = tests[k];
       if (!this.board.collides(piece, kx, -ky, rotated)) {
         piece.shape = rotated;
         piece.x += kx;
         piece.y += -ky;
         piece.rotation = to;
+        this.lastMoveRotation = true;
+        this.lastKickBig = Math.abs(ky) === 2; // tall kick → T-spin (not mini)
         break;
       }
     }
@@ -117,9 +130,12 @@ export class Game {
     if (!this._active()) return;
     let dist = 0;
     while (!this.board.collides(this.current, 0, dist + 1)) dist++;
-    this.current.y += dist;
-    this.score += dist * HARD_DROP_POINT;
-    this._emitStats();
+    if (dist > 0) {
+      this.current.y += dist;
+      this.score += dist * HARD_DROP_POINT;
+      this.lastMoveRotation = false; // dropping through space isn't a spin
+      this._emitStats();
+    }
     this._lock();
   }
 
@@ -138,6 +154,7 @@ export class Game {
       this.renderer.drawNext(this.next);
     }
     this.canHold = false;
+    this.lastMoveRotation = false; // swapped piece hasn't been rotated yet
     this.renderer.drawHold(this.heldPiece, this.canHold);
     if (this.board.collides(this.current, 0, 0)) this._gameOver();
     this._draw();
@@ -156,28 +173,71 @@ export class Game {
   }
 
   _gravity() {
-    if (!this.board.collides(this.current, 0, 1)) this.current.y += 1;
-    else this._lock();
+    if (!this.board.collides(this.current, 0, 1)) {
+      this.current.y += 1;
+      this.lastMoveRotation = false;
+    } else {
+      // Locking after a rotation that couldn't fall further is the T-spin case,
+      // so leave lastMoveRotation intact here.
+      this._lock();
+    }
+  }
+
+  // Classic "3-corner T" test: it's a T-spin only if the last action was a
+  // rotation and 3+ of the four cells diagonally around the T's center are
+  // blocked (by a wall, the floor, or a settled block). Which two corners are
+  // "front" (on the side the T points) decides full vs. mini.
+  _detectTSpin() {
+    const p = this.current;
+    if (p.type !== 'T' || !this.lastMoveRotation) return 'none';
+
+    const cx = p.x + 1;
+    const cy = p.y + 1; // center of the T's 3x3 box
+    const blocked = (dx, dy) => {
+      const x = cx + dx;
+      const y = cy + dy;
+      if (x < 0 || x >= COLS || y >= ROWS) return true; // wall / floor
+      if (y < 0) return false; // above the field is open
+      return !!this.board.grid[y][x];
+    };
+    const tl = blocked(-1, -1);
+    const tr = blocked(1, -1);
+    const bl = blocked(-1, 1);
+    const br = blocked(1, 1);
+    if (tl + tr + bl + br < 3) return 'none';
+
+    // Front corners by facing: 0 up, 1 right, 2 down, 3 left.
+    const front = { 0: [tl, tr], 1: [tr, br], 2: [bl, br], 3: [tl, bl] }[p.rotation];
+    if (front[0] && front[1]) return 'full';
+    // Only one front corner blocked → mini, unless a tall kick pulled it in.
+    return this.lastKickBig ? 'full' : 'mini';
   }
 
   _lock() {
+    const tspin = this._detectTSpin();
     this.board.merge(this.current);
     const rows = this.board.fullRows();
+
     if (rows.length > 0) {
-      // Defer removal: flash the rows, then collapse and spawn in _finishClear.
-      this.clearAnim = { rows, elapsed: 0, cleared: rows.length };
+      // Defer removal: flash the rows, then collapse and score in _finishClear.
+      this.clearAnim = { rows, elapsed: 0, info: { cleared: rows.length, tspin } };
       return;
     }
-    this.combo = -1; // a lock that clears nothing breaks the streak
+
+    if (tspin !== 'none') {
+      this._score({ cleared: 0, tspin }); // a spin with no lines still scores
+    } else {
+      this.combo = -1; // a plain lock that clears nothing breaks the streak
+    }
     this._spawnNext();
   }
 
   // Rows have finished flashing: collapse them, score the clear, then spawn.
   _finishClear() {
-    const { rows, cleared } = this.clearAnim;
+    const { rows, info } = this.clearAnim;
     this.board.removeRows(rows);
     this.clearAnim = null;
-    this._score(cleared);
+    this._score(info);
     this._spawnNext();
   }
 
@@ -185,6 +245,8 @@ export class Game {
     this.current = this.next;
     this.next = this.bag.next();
     this.renderer.drawNext(this.next);
+    this.lastMoveRotation = false;
+    this.lastKickBig = false;
 
     this.canHold = true;
     this.renderer.drawHold(this.heldPiece, this.canHold);
@@ -192,18 +254,42 @@ export class Game {
     if (this.board.collides(this.current, 0, 0)) this._gameOver();
   }
 
-  _score(cleared) {
-    this.score += SCORE_TABLE[cleared] * this.level;
+  _score({ cleared, tspin }) {
+    const level = this.level;
 
-    // Consecutive clears build a combo; the bonus scales with the streak.
-    this.combo += 1;
-    if (this.combo > 0) this.score += COMBO_POINT * this.combo * this.level;
+    // Base line points depend on whether it was a normal clear or a T-spin.
+    let base;
+    if (tspin === 'full') base = TSPIN_SCORE[cleared];
+    else if (tspin === 'mini') base = TSPIN_MINI_SCORE[cleared];
+    else base = SCORE_TABLE[cleared];
 
-    this.lines += cleared;
-    this.level = Math.floor(this.lines / LINES_PER_LEVEL) + 1;
-    this.dropInterval = Math.max(MIN_DROP_MS, BASE_DROP_MS - (this.level - 1) * SPEED_STEP_MS);
+    // "Difficult" clears (Tetris or a line-clearing T-spin) chain for B2B.
+    const difficult = cleared === 4 || (tspin !== 'none' && cleared > 0);
+    const b2bBonus = difficult && this.b2b;
+    let points = base * level;
+    if (b2bBonus) points = Math.floor(points * B2B_MULTIPLIER);
+    this.score += points;
+
+    // Combo counts only line clears; a spin with no lines breaks it.
+    if (cleared > 0) {
+      this.combo += 1;
+      if (this.combo > 0) this.score += COMBO_POINT * this.combo * level;
+    } else {
+      this.combo = -1;
+    }
+
+    // Update the back-to-back flag only on line clears: a difficult clear keeps
+    // it alive, a normal clear resets it, a no-line spin leaves it untouched.
+    if (cleared > 0) this.b2b = difficult;
+
+    if (cleared > 0) {
+      this.lines += cleared;
+      this.level = Math.floor(this.lines / LINES_PER_LEVEL) + 1;
+      this.dropInterval = Math.max(MIN_DROP_MS, BASE_DROP_MS - (this.level - 1) * SPEED_STEP_MS);
+    }
+
     this._emitStats();
-    this.onClear({ cleared, combo: this.combo });
+    this.onClear({ cleared, tspin, combo: this.combo, b2b: b2bBonus });
   }
 
   _gameOver() {

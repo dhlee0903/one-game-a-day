@@ -36,6 +36,15 @@ export const HARD_DROP_POINT = 2;
 // and level. Rewards keeping a clearing streak alive.
 export const COMBO_POINT = 50;
 
+// T-spin base points by lines cleared (index = line count), times level.
+// A T-spin is a T locked into a notch by rotation with 3+ corners boxed in.
+export const TSPIN_SCORE = [400, 800, 1200, 1600];      // full T-spin
+export const TSPIN_MINI_SCORE = [100, 200, 400, 400];   // mini T-spin
+
+// Back-to-back: consecutive "difficult" clears (Tetris or any T-spin that
+// clears lines) multiply their line points. Guideline value is 1.5.
+export const B2B_MULTIPLIER = 1.5;
+
 // How long the line-clear flash plays before rows collapse (ms).
 export const CLEAR_ANIM_MS = 260;
 
