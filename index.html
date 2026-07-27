@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>하루에 게임 1개씩</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --line: #2a3341;
+      --text: #e6edf3;
+      --dim: #8b949e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% -10%, #182233, #0d1117 55%);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 64px 24px;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 48px; }
+    h1 {
+      font-size: 40px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #58a6ff, #a371f7, #f778ba);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    header p { color: var(--dim); margin-top: 12px; font-size: 15px; }
+    .repo {
+      display: inline-block;
+      margin-top: 16px;
+      color: var(--dim);
+      font-size: 13px;
+      text-decoration: none;
+      border: 1px solid var(--line);
+      padding: 6px 14px;
+      border-radius: 999px;
+      transition: color .15s, border-color .15s;
+    }
+    .repo:hover { color: var(--text); border-color: var(--dim); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      display: block;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 24px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .15s, border-color .15s, box-shadow .15s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: #3d5a80;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .4);
+    }
+    .day { font-size: 12px; letter-spacing: .2em; color: var(--dim); font-weight: 600; }
+    .card h2 { font-size: 24px; margin: 8px 0 14px; }
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tag {
+      font-size: 11px;
+      color: var(--dim);
+      background: #0d1117;
+      border: 1px solid var(--line);
+      padding: 3px 9px;
+      border-radius: 6px;
+    }
+    .soon {
+      opacity: .5;
+      border-style: dashed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 148px;
+      color: var(--dim);
+      font-size: 14px;
+    }
+    footer { text-align: center; margin-top: 56px; color: var(--dim); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🎮 하루에 게임 1개씩</h1>
+      <p>매일 웹 게임을 하나씩. 프레임워크 없이 바닐라 JS로.</p>
+      <a class="repo" href="https://github.com/dhlee0903/one-game-a-day" target="_blank" rel="noopener">GitHub →</a>
+    </header>
+
+    <div class="grid">
+      <a class="card" href="./day01-tetris/">
+        <div class="day">DAY 01</div>
+        <h2>테트리스</h2>
+        <div class="tags">
+          <span class="tag">Canvas</span>
+          <span class="tag">ES Modules</span>
+          <span class="tag">7-bag</span>
+        </div>
+      </a>
+      <div class="card soon">Day 02 · coming soon</div>
+    </div>
+
+    <footer>Built with vanilla web tech · no dependencies</footer>
+  </div>
+</body>
+</html>
