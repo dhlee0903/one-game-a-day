@@ -29,8 +29,7 @@ export class InputController {
         case 'X': game.rotate(1); break;
         case 'z':
         case 'Z': game.rotate(-1); break;
-        case 'c':
-        case 'C': game.hold(); break;
+        case 'Shift': game.hold(); break;
         case ' ': game.hardDrop(); break;
         default: break;
       }
