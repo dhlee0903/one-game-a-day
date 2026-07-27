@@ -13,6 +13,8 @@ export class Tetromino {
     // Center horizontally; I-piece starts one row high so it enters cleanly.
     this.x = Math.floor((COLS - this.shape[0].length) / 2);
     this.y = type === 'I' ? -1 : 0;
+    // SRS rotation state: 0 spawn, 1 CW, 2 180, 3 CCW. Drives wall-kick lookup.
+    this.rotation = 0;
   }
 
   // Rotate a square matrix 90deg. dir = 1 clockwise, -1 counter-clockwise.

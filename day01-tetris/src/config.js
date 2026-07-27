@@ -38,5 +38,31 @@ export const BASE_DROP_MS = 1000;
 export const MIN_DROP_MS = 80;
 export const SPEED_STEP_MS = 80;
 
-// Wall-kick offsets tried, in order, when a rotation collides.
-export const WALL_KICKS = [0, -1, 1, -2, 2];
+// Super Rotation System (SRS) wall kicks. When a rotation collides, these
+// offsets are tried in order and the first that fits is applied — this is what
+// lets pieces "kick" off walls and floors, and what makes T-spins possible.
+//
+// Keys are "<from>><to>" rotation states: 0 = spawn, 1 = CW, 2 = 180, 3 = CCW.
+// Offsets use SRS convention where +y is UP; the game negates y for our
+// downward-positive grid. J/L/S/T/Z share one table; I has its own.
+export const JLSTZ_KICKS = {
+  '0>1': [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]],
+  '1>0': [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]],
+  '1>2': [[0, 0], [1, 0], [1, -1], [0, 2], [1, 2]],
+  '2>1': [[0, 0], [-1, 0], [-1, 1], [0, -2], [-1, -2]],
+  '2>3': [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]],
+  '3>2': [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]],
+  '3>0': [[0, 0], [-1, 0], [-1, -1], [0, 2], [-1, 2]],
+  '0>3': [[0, 0], [1, 0], [1, 1], [0, -2], [1, -2]],
+};
+
+export const I_KICKS = {
+  '0>1': [[0, 0], [-2, 0], [1, 0], [-2, -1], [1, 2]],
+  '1>0': [[0, 0], [2, 0], [-1, 0], [2, 1], [-1, -2]],
+  '1>2': [[0, 0], [-1, 0], [2, 0], [-1, 2], [2, -1]],
+  '2>1': [[0, 0], [1, 0], [-2, 0], [1, -2], [-2, 1]],
+  '2>3': [[0, 0], [2, 0], [-1, 0], [2, 1], [-1, -2]],
+  '3>2': [[0, 0], [-2, 0], [1, 0], [-2, -1], [1, 2]],
+  '3>0': [[0, 0], [1, 0], [-2, 0], [1, -2], [-2, 1]],
+  '0>3': [[0, 0], [-1, 0], [2, 0], [-1, 2], [2, -1]],
+};

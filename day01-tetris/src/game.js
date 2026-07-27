@@ -4,7 +4,8 @@
 
 import {
   SCORE_TABLE, SOFT_DROP_POINT, HARD_DROP_POINT,
-  LINES_PER_LEVEL, BASE_DROP_MS, MIN_DROP_MS, SPEED_STEP_MS, WALL_KICKS,
+  LINES_PER_LEVEL, BASE_DROP_MS, MIN_DROP_MS, SPEED_STEP_MS,
+  JLSTZ_KICKS, I_KICKS,
 } from './config.js';
 import { Board } from './board.js';
 import { Bag, Tetromino } from './tetromino.js';
@@ -86,11 +87,23 @@ export class Game {
 
   rotate(dir) {
     if (!this._active()) return;
-    const rotated = this.current.rotatedShape(dir);
-    for (const kick of WALL_KICKS) {
-      if (!this.board.collides(this.current, kick, 0, rotated)) {
-        this.current.shape = rotated;
-        this.current.x += kick;
+    const piece = this.current;
+    if (piece.type === 'O') return; // O never needs to rotate or kick
+
+    const from = piece.rotation;
+    const to = (from + (dir > 0 ? 1 : 3)) % 4;
+    const rotated = piece.rotatedShape(dir);
+    const table = piece.type === 'I' ? I_KICKS : JLSTZ_KICKS;
+    const tests = table[`${from}>${to}`];
+
+    // Try each kick offset in order; the first that clears wins. SRS y is
+    // up-positive, so negate it for our downward grid.
+    for (const [kx, ky] of tests) {
+      if (!this.board.collides(piece, kx, -ky, rotated)) {
+        piece.shape = rotated;
+        piece.x += kx;
+        piece.y += -ky;
+        piece.rotation = to;
         break;
       }
     }
