@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>TETRIS · Day 01</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="board-wrap">
+      <canvas id="board" width="300" height="600"></canvas>
+      <div class="overlay show" id="overlay"></div>
+    </div>
+
+    <div class="side">
+      <div class="card" style="text-align:center;">
+        <span class="title" style="font-size:16px;">TETRIS</span>
+        <span class="sub">DAY 01</span>
+      </div>
+      <div class="card">
+        <h2>Next</h2>
+        <canvas id="next" width="120" height="120"></canvas>
+      </div>
+      <div class="card"><h2>Score</h2><div class="stat" id="score">0</div></div>
+      <div class="card"><h2>Lines</h2><div class="stat" id="lines">0</div></div>
+      <div class="card"><h2>Level</h2><div class="stat" id="level">1</div></div>
+      <div class="card keys">
+        <h2>Keys</h2>
+        <b>&larr; &rarr;</b> 이동<br>
+        <b>&darr;</b> 소프트드롭<br>
+        <b>&uarr; / X</b> 회전<br>
+        <b>Z</b> 반시계 회전<br>
+        <b>Space</b> 하드드롭<br>
+        <b>P</b> 일시정지
+      </div>
+      <div class="touch" id="touch">
+        <button data-a="left">&#9664;</button>
+        <button data-a="rotate">&#10227;</button>
+        <button data-a="right">&#9654;</button>
+        <button data-a="down">&#9660;</button>
+        <button data-a="drop">&#10515;</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

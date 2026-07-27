@@ -1,0 +1,211 @@
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --line: #2a3341;
+  --text: #e6edf3;
+  --dim: #8b949e;
+  --accent: #58a6ff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 50% -20%, #182233, #0d1117 60%);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  user-select: none;
+}
+
+.board-wrap {
+  position: relative;
+}
+
+canvas {
+  background: var(--panel);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .5), inset 0 0 0 1px var(--line);
+  display: block;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 150px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.card h2 {
+  font-size: 11px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.stat {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .25em;
+  background: linear-gradient(90deg, #58a6ff, #a371f7, #f778ba);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: block;
+  text-align: center;
+}
+
+.sub {
+  font-size: 10px;
+  color: var(--dim);
+  text-align: center;
+  letter-spacing: .2em;
+  margin-top: 2px;
+  display: block;
+}
+
+.keys {
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.9;
+}
+
+.keys b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: rgba(13, 17, 23, .82);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+
+.overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.overlay h3 {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.overlay p {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.btn {
+  background: var(--accent);
+  color: #06131f;
+  border: none;
+  padding: 11px 26px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .05em;
+  transition: transform .1s, filter .1s;
+}
+
+.btn:hover {
+  filter: brightness(1.1);
+}
+
+.btn:active {
+  transform: scale(.96);
+}
+
+.touch {
+  display: none;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.touch button {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 20px;
+  padding: 16px 0;
+  border-radius: 10px;
+}
+
+.touch button:active {
+  background: var(--line);
+}
+
+@media (max-width: 640px) {
+  .app {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .side {
+    flex-direction: row;
+    width: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .card {
+    padding: 8px 12px;
+  }
+
+  .keys {
+    display: none;
+  }
+
+  .touch {
+    display: flex;
+  }
+}
