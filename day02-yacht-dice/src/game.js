@@ -28,6 +28,7 @@ export class Game {
     this.rolling = Array(DICE_COUNT).fill(false); // which dice just tumbled
     this.pendingCategory = null; // human-selected category awaiting confirmation
     this.lastWrite = null;       // { player, catId } just committed, for the write animation
+    this.cursor = 0;             // keyboard cursor over open categories
     this.winner = null; // index, or 'tie'
   }
 
@@ -93,6 +94,28 @@ export class Game {
     if (this.pendingCategory) this.choose(this.pendingCategory);
   }
 
+  // ----- keyboard cursor over the open categories -----
+
+  openCategories() {
+    return CATEGORY_IDS.filter((id) => this.currentPlayer().scores[id] == null);
+  }
+
+  moveCursor(dir) {
+    if (this.phase !== 'playing' || !this.rolled || this.currentPlayer().isBot) return;
+    const open = this.openCategories();
+    if (!open.length) return;
+    this.cursor = (this.cursor + dir + open.length) % open.length;
+    this.onChange();
+  }
+
+  // Enter: confirm a pending selection, otherwise select the cursor category.
+  enter() {
+    if (this.pendingCategory) { this.confirm(); return; }
+    if (this.phase !== 'playing' || !this.rolled || this.currentPlayer().isBot) return;
+    const open = this.openCategories();
+    if (open.length) this.select(open[Math.min(this.cursor, open.length - 1)]);
+  }
+
   toggleHold(i) {
     if (this.phase !== 'playing' || !this.rolled || this.rollsLeft <= 0) return;
     this.held[i] = !this.held[i];
@@ -143,6 +166,7 @@ export class Game {
     this.held = Array(DICE_COUNT).fill(false);
     this.rolled = false;
     this.pendingCategory = null;
+    this.cursor = 0;
     // lastWrite is intentionally NOT cleared here: the freshly written number
     // should animate on this render, then clear when the next player rolls.
     this._stopTumble();

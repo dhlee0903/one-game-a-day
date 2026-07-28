@@ -20,5 +20,21 @@ export class InputController {
       const cell = e.target.closest('.clickable');
       if (cell && cell.dataset.cat) game.select(cell.dataset.cat);
     });
+
+    this._bindKeyboard(game);
+  }
+
+  // Space/R roll · 1-5 hold · ↑↓ move category cursor · Enter select/confirm · Esc cancel.
+  _bindKeyboard(game) {
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return; // don't hijack the name fields
+      const k = e.key;
+      if (k === ' ' || k === 'r' || k === 'R') { e.preventDefault(); game.roll(); }
+      else if (k >= '1' && k <= '5') { game.toggleHold(Number(k) - 1); }
+      else if (k === 'ArrowUp') { e.preventDefault(); game.moveCursor(-1); }
+      else if (k === 'ArrowDown') { e.preventDefault(); game.moveCursor(1); }
+      else if (k === 'Enter') { e.preventDefault(); game.enter(); }
+      else if (k === 'Escape') { game.cancelSelect(); }
+    });
   }
 }

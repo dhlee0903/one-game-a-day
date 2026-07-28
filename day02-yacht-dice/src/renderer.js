@@ -2,7 +2,7 @@
 // interaction goes back through the game via input.js. Re-renders fully on each
 // change — the board is small, so this stays simple and bug-resistant.
 
-import { CATEGORIES, UPPER_BONUS_THRESHOLD, MAX_ROLLS } from './config.js';
+import { CATEGORIES, CATEGORY_IDS, UPPER_BONUS_THRESHOLD, MAX_ROLLS } from './config.js';
 import { scoreFor, upperSum, upperBonus, grandTotal } from './scoring.js';
 
 // Pip positions in a 3x3 grid for each die face.
@@ -79,6 +79,12 @@ export class Renderer {
     const [p1, p2] = game.players;
     const rows = [];
 
+    // Which open category the keyboard cursor is on (current human turn only).
+    const humanTurn = !game.currentPlayer().isBot && game.phase === 'playing' && game.rolled;
+    const openIds = CATEGORY_IDS.filter((id) => game.currentPlayer().scores[id] == null);
+    const cursorId = humanTurn && openIds.length
+      ? openIds[Math.min(game.cursor, openIds.length - 1)] : null;
+
     const cell = (player, pIndex, cat) => {
       const val = player.scores[cat.id];
       if (val != null) {
@@ -91,7 +97,8 @@ export class Renderer {
       if (isTurn) {
         const preview = scoreFor(cat.id, game.dice);
         const pending = game.pendingCategory === cat.id;
-        return `<td class="score clickable${pending ? ' pending' : ''}" data-cat="${cat.id}"><span class="preview">${preview}</span></td>`;
+        const cursor = cat.id === cursorId && !pending;
+        return `<td class="score clickable${pending ? ' pending' : ''}${cursor ? ' cursor' : ''}" data-cat="${cat.id}"><span class="preview">${preview}</span></td>`;
       }
       return '<td class="score empty">·</td>';
     };
