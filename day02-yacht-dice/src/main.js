@@ -68,37 +68,51 @@ function renderOverlay() {
   $('againBtn').onclick = () => game.reset();
 }
 
-// ----- bot driver: one visible action per tick -----
+// ----- bot driver -----
+// Plays one visible action per tick, but narrates what it's about to do and
+// pauses so a human can follow: roll → show which dice it keeps → wait → reroll
+// → … → pick a category. The "생각 중" status shows during each pause.
 
 let botTimer = null;
 let botHoldsShown = false;
 
-function scheduleBot() {
-  if (game.phase !== 'playing' || botTimer) return;
-  if (!game.currentPlayer().isBot) return;
-  botTimer = setTimeout(() => { botTimer = null; botTick(); }, 750);
+// Decide the next bot action, with a message + how long to "think" first.
+function decideBot() {
+  const p = game.currentPlayer();
+  if (!game.rolled) return { kind: 'roll', msg: '🎲 주사위를 굴려요', delay: 650 };
+
+  if (game.rollsLeft > 0 && wantsReroll(game.dice, p.scores, game.rollsLeft)) {
+    if (!botHoldsShown) return { kind: 'hold', msg: '🤔 남길 주사위 고르는 중…', delay: 850 };
+    return { kind: 'reroll', msg: '🎲 나머지를 다시 굴려요', delay: 1100 };
+  }
+  return { kind: 'choose', msg: '🤔 점수칸 고르는 중…', delay: 1200 };
 }
 
-function botTick() {
-  if (game.phase !== 'playing') return;
+function scheduleBot() {
+  if (game.phase !== 'playing' || botTimer) return;
   const p = game.currentPlayer();
   if (!p.isBot) return;
 
-  if (!game.rolled) { game.roll(); return; }
+  const next = decideBot();
+  renderer.setStatus(game, next.msg); // show the pause message without touching the dice
 
-  if (game.rollsLeft > 0 && wantsReroll(game.dice, p.scores, game.rollsLeft)) {
-    if (!botHoldsShown) {
-      game.setHeld(chooseHolds(game.dice, p.scores));
+  botTimer = setTimeout(() => {
+    botTimer = null;
+    if (game.phase !== 'playing' || !game.currentPlayer().isBot) return;
+    const scores = game.currentPlayer().scores;
+    if (next.kind === 'roll') {
+      game.roll();
+    } else if (next.kind === 'hold') {
       botHoldsShown = true;
-    } else {
+      game.setHeld(chooseHolds(game.dice, scores)); // highlight kept dice, then pause
+    } else if (next.kind === 'reroll') {
       botHoldsShown = false;
       game.roll();
+    } else {
+      botHoldsShown = false;
+      game.choose(chooseCategory(game.dice, scores));
     }
-    return;
-  }
-
-  botHoldsShown = false;
-  game.choose(chooseCategory(game.dice, p.scores));
+  }, next.delay);
 }
 
 // Show the initial setup screen.
