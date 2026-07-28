@@ -35,6 +35,26 @@ function showToast(evt) {
 function handleGameOver(result) {
   lastResult = recordGame(result);
   renderStats();
+  if (result.winner !== 'tie') launchConfetti();
+}
+
+const CONFETTI_COLORS = ['#2f6fdb', '#e8940c', '#2e9e5b', '#e5484d', '#a371f7', '#f0c419'];
+
+// A quick burst of falling confetti over the win screen. Pure DOM, no deps.
+function launchConfetti() {
+  const box = $('confetti');
+  box.innerHTML = '';
+  for (let i = 0; i < 110; i += 1) {
+    const p = document.createElement('i');
+    p.className = 'conf';
+    p.style.left = `${Math.random() * 100}%`;
+    p.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    p.style.animationDelay = `${Math.random() * 0.5}s`;
+    p.style.animationDuration = `${1.6 + Math.random() * 1.4}s`;
+    if (Math.random() < 0.5) p.style.borderRadius = '50%';
+    box.appendChild(p);
+  }
+  setTimeout(() => { box.innerHTML = ''; }, 3400);
 }
 
 // Best score + vs-bot record shown on the setup screen.
