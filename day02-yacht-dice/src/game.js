@@ -4,7 +4,7 @@
 // Rendering happens via the onChange callback; the game never touches the DOM.
 
 import {
-  DICE_COUNT, DIE_FACES, MAX_ROLLS, CATEGORY_IDS,
+  DICE_COUNT, DIE_FACES, MAX_ROLLS, CATEGORY_IDS, YACHT_BONUS,
 } from './config.js';
 import { scoreFor, upperBonus, grandTotal, isCardFull } from './scoring.js';
 
@@ -141,10 +141,17 @@ export class Game {
     if (player.scores[categoryId] != null) return; // already used
 
     const bonusBefore = upperBonus(player.scores);
+    const hadYacht = player.scores.yacht === 50; // Yacht slot already scored 50?
     const score = scoreFor(categoryId, this.dice);
     player.scores[categoryId] = score;
     this.lastWrite = { player: this.current, catId: categoryId };
     this.pendingCategory = null;
+
+    // Extra-Yacht bonus: rolling another Yacht once the Yacht slot holds 50.
+    if (hadYacht && scoreFor('yacht', this.dice) === 50) {
+      player.scores.yachtBonus = (player.scores.yachtBonus || 0) + YACHT_BONUS;
+      this.onEvent({ type: 'yachtBonus', text: `YACHT BONUS +${YACHT_BONUS}! 🎉` });
+    }
 
     this._announce(categoryId, score, bonusBefore, upperBonus(player.scores));
     this._endTurn();

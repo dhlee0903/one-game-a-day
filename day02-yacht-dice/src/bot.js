@@ -29,7 +29,7 @@ const upperGap = (scores) => Math.max(0, UPPER_BONUS_THRESHOLD - upperSum(scores
 // makes it save Yacht/Straight slots for big hands instead of dumping them.
 const PAR = {
   aces: 2, twos: 4, threes: 6, fours: 8, fives: 10, sixes: 12,
-  choice: 23, threeKind: 15, fourKind: 8, fullHouse: 13, smallStraight: 11, largeStraight: 9, yacht: 5,
+  choice: 23, fourKind: 8, fullHouse: 13, smallStraight: 11, largeStraight: 9, yacht: 5,
 };
 
 // Strategic value of these dice: the best "excess over par" across open

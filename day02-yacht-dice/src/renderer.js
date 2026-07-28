@@ -124,6 +124,15 @@ export class Renderer {
 
     CATEGORIES.filter((c) => c.section === 'lower').forEach((c) => rows.push(catRow(c)));
 
+    // Yacht bonus row — only once someone has earned an extra Yacht.
+    if (p1.scores.yachtBonus || p2.scores.yachtBonus) {
+      const yb = (pl) => `<td class="bonus got">${pl.scores.yachtBonus ? `+${pl.scores.yachtBonus}` : '·'}</td>`;
+      rows.push(`<tr class="sep">
+        <th class="cat" title="야추 슬롯에 50이 있는 상태에서 추가 야추마다 +100"><span class="label">야추 보너스</span></th>
+        ${yb(p1)}${yb(p2)}
+      </tr>`);
+    }
+
     // Totals.
     const totalCell = (pl, i) =>
       `<td class="total ${i === game.current ? 'active' : ''}">${grandTotal(pl.scores)}</td>`;
