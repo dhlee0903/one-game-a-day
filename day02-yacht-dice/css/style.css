@@ -34,20 +34,35 @@ body {
   color: var(--text);
   font-family: var(--font-ui);
   font-size: 17px;
-  min-height: 100vh;
-  padding: 24px 16px 48px;
+  height: 100vh;
+  height: 100dvh;
+  padding: 16px;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
 }
 
 .wrap {
   width: 100%;
   max-width: 560px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  flex: none;
+}
+
+/* the game panel fills the leftover height; its scorecard flexes within */
+#game {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 h1 {
@@ -172,6 +187,12 @@ h1 {
 }
 
 /* ---------- turn + dice ---------- */
+
+.turn,
+.dice,
+.controls {
+  flex: none; /* only the scorecard flexes; these keep the dice/roll pinned */
+}
 
 .turn {
   text-align: center;
@@ -338,15 +359,18 @@ h1 {
 
 /* ---------- scorecard ---------- */
 
-/* The scorecard is a white paper score sheet sitting on the dark table. */
+/* The scorecard is a white paper score sheet sitting on the dark table.
+   It scrolls on its own so the dice and roll/confirm controls above it stay
+   put — no scrolling up and down to score and then roll again. */
 .scorecard {
   background: var(--paper);
   border-radius: 14px;
-  padding: 8px 16px 14px;
+  padding: 0 16px 14px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(0, 0, 0, .06);
-  /* faint ruled-paper lines */
-  background-image: linear-gradient(rgba(120, 110, 80, .05) 1px, transparent 1px);
-  background-size: 100% 44px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .scorecard table {
@@ -371,7 +395,12 @@ h1 {
   border-left: 1px solid var(--rule);
 }
 
+/* keep the player-name header visible while the categories scroll under it */
 .scorecard thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
   color: var(--ink-dim);
   font-size: 15px;
   letter-spacing: .02em;
@@ -454,8 +483,12 @@ tr.sep .bonus.got { color: var(--ink-green); font-weight: 700; }
 
 tr.sep th, tr.sep td { background: rgba(120, 100, 50, .06); }
 
+/* pin the totals to the bottom so the running score is always visible */
 .total-row th, .total-row td {
-  background: rgba(120, 100, 50, .1);
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: #efe7d2;
   border-top: 2px solid var(--rule-strong);
   font-size: 24px;
   font-weight: 700;
