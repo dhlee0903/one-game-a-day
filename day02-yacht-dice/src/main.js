@@ -6,6 +6,7 @@ import { Renderer } from './renderer.js';
 import { InputController } from './input.js';
 import { chooseHolds, wantsReroll, chooseCategory } from './bot.js';
 import { grandTotal } from './scoring.js';
+import { getStats, recordGame } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,8 +18,34 @@ const els = {
 };
 
 const renderer = new Renderer(els);
-const game = new Game({ onChange });
+const game = new Game({ onChange, onEvent: showToast, onGameOver: handleGameOver });
 new InputController(game, els);
+
+let lastResult = null; // { isNewBest, stats } from the most recent finished game
+
+// Brief celebratory toast for standout moments (Yacht, bonus, straights…).
+function showToast(evt) {
+  const popup = $('popup');
+  popup.textContent = evt.text;
+  popup.classList.remove('pop');
+  void popup.offsetWidth; // restart the CSS animation
+  popup.classList.add('pop');
+}
+
+function handleGameOver(result) {
+  lastResult = recordGame(result);
+  renderStats();
+}
+
+// Best score + vs-bot record shown on the setup screen.
+function renderStats() {
+  const el = $('stats');
+  if (!el) return;
+  const s = getStats();
+  el.innerHTML =
+    `🏆 최고 <b>${s.best}</b>`
+    + ` &nbsp;·&nbsp; 🤖 vs 봇 <b>${s.bot.w}</b>승 <b>${s.bot.l}</b>패 <b>${s.bot.t}</b>무`;
+}
 
 // ----- setup screen -----
 
@@ -58,9 +85,11 @@ function renderOverlay() {
   const title = game.winner === 'tie'
     ? '무승부!'
     : `${game.players[game.winner].name} 승리!`;
+  const newBest = lastResult && lastResult.isNewBest ? '<p class="newbest">🎉 신기록!</p>' : '';
   overlay.innerHTML = `
     <div class="result">
       <h2>${title}</h2>
+      ${newBest}
       <p class="finals">${p1.name} ${t1} : ${t2} ${p2.name}</p>
       <button id="againBtn" class="primary">다시하기</button>
     </div>`;
@@ -116,4 +145,5 @@ function scheduleBot() {
 }
 
 // Show the initial setup screen.
+renderStats();
 onChange();
