@@ -6,7 +6,7 @@
 import {
   DICE_COUNT, DIE_FACES, MAX_ROLLS, CATEGORY_IDS,
 } from './config.js';
-import { scoreFor, grandTotal, isCardFull } from './scoring.js';
+import { scoreFor, upperBonus, grandTotal, isCardFull } from './scoring.js';
 
 const emptyScores = () =>
   CATEGORY_IDS.reduce((acc, id) => { acc[id] = null; return acc; }, {});
@@ -14,8 +14,10 @@ const emptyScores = () =>
 const rollDie = () => 1 + Math.floor(Math.random() * DIE_FACES);
 
 export class Game {
-  constructor({ onChange } = {}) {
+  constructor({ onChange, onEvent, onGameOver } = {}) {
     this.onChange = onChange || (() => {});
+    this.onEvent = onEvent || (() => {});       // celebratory moments (Yacht, bonus…)
+    this.onGameOver = onGameOver || (() => {});  // final result, for stats
     this.phase = 'setup'; // setup | playing | gameover
     this.players = [];
     this.current = 0;
@@ -24,6 +26,8 @@ export class Game {
     this.rollsLeft = MAX_ROLLS;
     this.rolled = false;
     this.rolling = Array(DICE_COUNT).fill(false); // which dice just tumbled
+    this.pendingCategory = null; // human-selected category awaiting confirmation
+    this.lastWrite = null;       // { player, catId } just committed, for the write animation
     this.winner = null; // index, or 'tie'
   }
 
@@ -62,9 +66,31 @@ export class Game {
       if (!this.held[i]) this.dice[i] = rollDie();
     }
     this.rolling = this.held.map((h) => !h); // the unheld dice are the ones that tumbled
+    this.pendingCategory = null; // dice changed — any pending selection is stale
+    this.lastWrite = null;       // clear the write animation once the next turn acts
     this.rollsLeft -= 1;
     this.rolled = true;
     this.onChange();
+  }
+
+  // A human clicks a category to select it (shows a confirm bar); clicking the
+  // same one again confirms. Guards against fat-fingering a category away.
+  select(categoryId) {
+    if (this.phase !== 'playing' || !this.rolled) return;
+    const player = this.currentPlayer();
+    if (player.isBot || player.scores[categoryId] != null) return;
+    if (this.pendingCategory === categoryId) { this.choose(categoryId); return; }
+    this.pendingCategory = categoryId;
+    this.onChange();
+  }
+
+  cancelSelect() {
+    this.pendingCategory = null;
+    this.onChange();
+  }
+
+  confirm() {
+    if (this.pendingCategory) this.choose(this.pendingCategory);
   }
 
   toggleHold(i) {
@@ -88,10 +114,26 @@ export class Game {
   // Commit the current dice into a category for the current player, then advance.
   choose(categoryId) {
     if (this.phase !== 'playing' || !this.rolled) return;
-    const scores = this.currentPlayer().scores;
-    if (scores[categoryId] != null) return; // already used
-    scores[categoryId] = scoreFor(categoryId, this.dice);
+    const player = this.currentPlayer();
+    if (player.scores[categoryId] != null) return; // already used
+
+    const bonusBefore = upperBonus(player.scores);
+    const score = scoreFor(categoryId, this.dice);
+    player.scores[categoryId] = score;
+    this.lastWrite = { player: this.current, catId: categoryId };
+    this.pendingCategory = null;
+
+    this._announce(categoryId, score, bonusBefore, upperBonus(player.scores));
     this._endTurn();
+  }
+
+  // Fire celebratory events for standout results.
+  _announce(categoryId, score, bonusBefore, bonusAfter) {
+    if (categoryId === 'yacht' && score === 50) this.onEvent({ type: 'yacht', text: 'YACHT! 🎉' });
+    else if (categoryId === 'largeStraight' && score === 30) this.onEvent({ type: 'largeStraight', text: 'L. STRAIGHT! ✨' });
+    else if (categoryId === 'smallStraight' && score === 15) this.onEvent({ type: 'smallStraight', text: 'S. STRAIGHT!' });
+    else if (categoryId === 'fullHouse' && score > 0) this.onEvent({ type: 'fullHouse', text: 'FULL HOUSE!' });
+    if (bonusBefore === 0 && bonusAfter > 0) this.onEvent({ type: 'bonus', text: '상단 보너스 +35! 🎉' });
   }
 
   // ----- turn lifecycle -----
@@ -100,6 +142,9 @@ export class Game {
     this.rollsLeft = MAX_ROLLS;
     this.held = Array(DICE_COUNT).fill(false);
     this.rolled = false;
+    this.pendingCategory = null;
+    // lastWrite is intentionally NOT cleared here: the freshly written number
+    // should animate on this render, then clear when the next player rolls.
     this._stopTumble();
     this.onChange();
   }
@@ -115,8 +160,12 @@ export class Game {
 
   _finish() {
     this.phase = 'gameover';
-    const [a, b] = this.players.map((p) => grandTotal(p.scores));
-    this.winner = a === b ? 'tie' : (a > b ? 0 : 1);
+    const totals = this.players.map((p) => grandTotal(p.scores));
+    this.winner = totals[0] === totals[1] ? 'tie' : (totals[0] > totals[1] ? 0 : 1);
+    this.onGameOver({
+      winner: this.winner,
+      players: this.players.map((p, i) => ({ name: p.name, isBot: p.isBot, total: totals[i] })),
+    });
     this.onChange();
   }
 }

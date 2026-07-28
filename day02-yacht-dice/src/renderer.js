@@ -54,11 +54,25 @@ export class Renderer {
 
   _renderControls(game) {
     const p = game.currentPlayer();
+
+    // A category is selected and waiting for confirmation.
+    if (game.pendingCategory && !p.isBot) {
+      const cat = CATEGORIES.find((c) => c.id === game.pendingCategory);
+      const pts = scoreFor(game.pendingCategory, game.dice);
+      this.els.controls.innerHTML =
+        `<div class="confirm-bar">
+          <span class="ask"><b>${cat.label}</b>에 <b>${pts}</b>점</span>
+          <button class="confirm-yes">확정</button>
+          <button class="confirm-no">취소</button>
+        </div>`;
+      return;
+    }
+
     const canRoll = game.phase === 'playing' && game.rollsLeft > 0 && !p.isBot;
     const label = game.rolled ? `다시 굴리기 (${game.rollsLeft})` : '주사위 굴리기';
     this.els.controls.innerHTML =
       `<button class="roll-btn" ${canRoll ? '' : 'disabled'}>${label}</button>` +
-      (game.rolled && !p.isBot ? '<span class="tip">주사위 클릭 = 고정 · 점수칸 클릭 = 확정</span>' : '');
+      (game.rolled && !p.isBot ? '<span class="tip">주사위 클릭 = 고정 · 점수칸 클릭 = 선택 → 확정</span>' : '');
   }
 
   _renderCard(game) {
@@ -67,12 +81,17 @@ export class Renderer {
 
     const cell = (player, pIndex, cat) => {
       const val = player.scores[cat.id];
-      if (val != null) return `<td class="score filled">${val}</td>`;
+      if (val != null) {
+        const written = game.lastWrite
+          && game.lastWrite.player === pIndex && game.lastWrite.catId === cat.id;
+        return `<td class="score filled${written ? ' written' : ''}">${val}</td>`;
+      }
       const isTurn = pIndex === game.current && !player.isBot
         && game.phase === 'playing' && game.rolled;
       if (isTurn) {
         const preview = scoreFor(cat.id, game.dice);
-        return `<td class="score clickable" data-cat="${cat.id}"><span class="preview">${preview}</span></td>`;
+        const pending = game.pendingCategory === cat.id;
+        return `<td class="score clickable${pending ? ' pending' : ''}" data-cat="${cat.id}"><span class="preview">${preview}</span></td>`;
       }
       return '<td class="score empty">·</td>';
     };
