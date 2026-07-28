@@ -613,13 +613,13 @@ h1 {
 
 .score.pending .preview { color: var(--ink); }
 
-/* the number just committed animates in like it was written by hand */
-.score.written { animation: writeIn .45s ease-out; }
+/* the just-entered cell holds a highlight for ~1s, then fades away gradually */
+.score.written { animation: writeFlash 1.3s ease-out; }
 
-@keyframes writeIn {
-  0% { transform: scale(.3) rotate(-12deg); opacity: 0; }
-  60% { transform: scale(1.25) rotate(4deg); opacity: 1; }
-  100% { transform: none; opacity: 1; }
+@keyframes writeFlash {
+  0%   { background-color: rgba(232, 148, 12, .8); }
+  55%  { background-color: rgba(232, 148, 12, .8); }
+  100% { background-color: rgba(232, 148, 12, 0); }
 }
 
 tr.sep .bonus {

@@ -43,10 +43,9 @@ export class Renderer {
       const held = game.held[i];
       const faceUp = game.rolled;
       const rolling = faceUp && game.rolling[i];
-      const pips = faceUp
-        ? Array.from({ length: 9 }, (_, k) =>
-          `<span class="cell${PIPS[v].includes(k) ? ' pip' : ''}"></span>`).join('')
-        : '<span class="q">?</span>';
+      // Always show pip faces; before the first roll they're dimmed via .blank.
+      const pips = Array.from({ length: 9 }, (_, k) =>
+        `<span class="cell${PIPS[v].includes(k) ? ' pip' : ''}"></span>`).join('');
       const cls = `die${held ? ' held' : ''}${faceUp ? '' : ' blank'}${rolling ? ' rolling' : ''}`;
       return `<button class="${cls}" data-die="${i}" ${faceUp ? '' : 'disabled'}>${pips}</button>`;
     }).join('');

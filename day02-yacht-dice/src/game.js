@@ -172,6 +172,8 @@ export class Game {
     this.rollsLeft = MAX_ROLLS;
     this.held = Array(DICE_COUNT).fill(false);
     this.rolled = false;
+    // Show random (dimmed) faces before the first roll instead of blank "?".
+    for (let i = 0; i < DICE_COUNT; i += 1) this.dice[i] = rollDie();
     this.pendingCategory = null;
     this.cursor = 0;
     // lastWrite is intentionally NOT cleared here: the freshly written number
