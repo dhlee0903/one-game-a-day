@@ -2,6 +2,15 @@
 // win/loss/tie record against the bot. Fails soft if storage is unavailable.
 
 const KEY = 'yacht-dice-stats';
+const SKIN_KEY = 'yacht-dice-skin';
+
+// Dice skin (1 ivory / 2 red / 3 onyx), persisted.
+export function getSkin() {
+  try { return Number(localStorage.getItem(SKIN_KEY)) || 1; } catch { return 1; }
+}
+export function setSkin(n) {
+  try { localStorage.setItem(SKIN_KEY, String(n)); } catch { /* ignore */ }
+}
 
 const defaults = () => ({ best: 0, bot: { w: 0, l: 0, t: 0 } });
 

@@ -6,7 +6,7 @@ import { Renderer } from './renderer.js';
 import { InputController } from './input.js';
 import { chooseHolds, wantsReroll, chooseCategory } from './bot.js';
 import { grandTotal } from './scoring.js';
-import { getStats, recordGame } from './storage.js';
+import { getStats, recordGame, getSkin, setSkin } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -81,6 +81,26 @@ document.querySelectorAll('.mode').forEach((btn) => {
 $('startBtn').addEventListener('click', () => {
   game.start(mode, { p1: $('name1').value.trim(), p2: $('name2').value.trim() });
 });
+
+// ----- dice skin -----
+
+const SKIN_CLASS = { 1: 'dice-ivory', 2: 'dice-red', 3: 'dice-onyx' };
+
+function applySkin(n) {
+  Object.values(SKIN_CLASS).forEach((c) => document.body.classList.remove(c));
+  document.body.classList.add(SKIN_CLASS[n] || SKIN_CLASS[1]);
+  document.querySelectorAll('.skin').forEach((b) => b.classList.toggle('active', Number(b.dataset.skin) === n));
+}
+
+document.querySelectorAll('.skin').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const n = Number(btn.dataset.skin);
+    setSkin(n);
+    applySkin(n);
+  });
+});
+
+applySkin(getSkin());
 
 // ----- render + phase routing -----
 
