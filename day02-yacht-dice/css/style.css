@@ -1,27 +1,27 @@
 :root {
-  --bg: #eef1f7;
+  --bg: #eef1f6;
   --panel: #ffffff;
-  --line: #e4e8f0;
-  --text: #2b3142;
-  --dim: #8892a3;
-  --accent: #2f6fdb;
-  --gold: #e8940c;
-  --good: #2e9e5b;
+  --line: #e6e9f0;
+  --text: #363d4d;      /* softened dark — less harsh than near-black */
+  --dim: #838d9e;
+  --accent: #3b76dc;
+  --gold: #d98a12;
+  --good: #33a05f;
 
   /* Scorecard — a white card that floats above the light background */
   --paper: #ffffff;
-  --ink: #2b3142;
-  --ink-dim: #99a1b0;
-  --rule: #eceef4;
-  --rule-strong: #dbe0ea;
-  --ink-blue: #2f6fdb;
-  --ink-gold: #c07d0a;
-  --ink-green: #2e9e5b;
+  --ink: #363d4d;
+  --ink-dim: #98a0b0;
+  --rule: #edeff4;
+  --rule-strong: #dde1ea;
+  --ink-blue: #3b76dc;
+  --ink-gold: #b47a12;
+  --ink-green: #2f9a5a;
 
-  --shadow-card: 0 10px 30px rgba(40, 55, 90, .10);
-  --shadow-float: 0 18px 44px rgba(40, 55, 90, .18), 0 3px 10px rgba(40, 55, 90, .08);
+  --shadow-card: 0 8px 24px rgba(45, 60, 95, .08);
+  --shadow-float: 0 16px 40px rgba(45, 60, 95, .14), 0 2px 8px rgba(45, 60, 95, .06);
 
-  --font-ui: 'IBM Plex Sans KR', "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-ui: 'Noto Sans KR', "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 * {
@@ -32,10 +32,13 @@
 }
 
 body {
-  background: linear-gradient(165deg, #f7f9fc 0%, #e8edf5 55%, #dfe6f1 100%);
+  background: linear-gradient(168deg, #f2f4f8 0%, #e9edf3 60%, #e3e8f0 100%);
   color: var(--text);
   font-family: var(--font-ui);
-  font-size: 17px;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   height: 100vh;
   height: 100dvh;
   padding: 16px;
@@ -104,7 +107,7 @@ h1 {
   font-size: 16px;
   margin-bottom: 16px;
   color: var(--dim);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .modes {
@@ -121,7 +124,7 @@ h1 {
   background: #f3f6fb;
   color: var(--dim);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all .15s;
 }
@@ -323,7 +326,7 @@ h1 {
   border-radius: 10px;
   font-family: var(--font-ui);
   font-size: 19px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: transform .1s, filter .1s;
 }
@@ -360,7 +363,7 @@ h1 {
   padding: 9px 18px;
   font-family: var(--font-ui);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -395,7 +398,7 @@ h1 {
 .scorecard th,
 .scorecard td {
   border-bottom: 1px solid var(--rule);
-  padding: 2px 10px;
+  padding: 7px 10px;
 }
 
 /* vertical rules between the label and the two player columns */
@@ -422,7 +425,7 @@ h1 {
 .pname {
   text-align: center;
   width: 92px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .pname.active { color: var(--ink-blue); }
@@ -433,8 +436,8 @@ h1 {
 
 .cat .label {
   display: block;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   color: var(--ink);
 }
 
@@ -448,7 +451,7 @@ h1 {
 .score {
   text-align: center;
   width: 92px;
-  font-size: 18px;
+  font-size: 19px;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
@@ -506,9 +509,9 @@ tr.sep th, tr.sep td { background: rgba(47, 111, 219, .04); }
   position: sticky;
   bottom: 0;
   z-index: 1;
-  background: #f3f6fb;
+  background: #f4f7fb;
   border-top: 2px solid var(--rule-strong);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
 }
 
