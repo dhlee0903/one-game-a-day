@@ -153,7 +153,7 @@ function scheduleBot() {
       game.roll();
     } else if (next.kind === 'hold') {
       botHoldsShown = true;
-      game.setHeld(chooseHolds(game.dice, scores)); // highlight kept dice, then pause
+      game.setHeld(chooseHolds(game.dice, scores, game.rollsLeft)); // highlight kept dice, then pause
     } else if (next.kind === 'reroll') {
       botHoldsShown = false;
       game.roll();
