@@ -18,8 +18,8 @@
   --ink-gold: #c08a17;
   --ink-green: #2e8b4f;
 
-  --font-ui: 'Jua', "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-hand: 'Gaegu', 'Jua', "Comic Sans MS", cursive;
+  --font-ui: 'IBM Plex Sans KR', "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-hand: 'Gaegu', "Comic Sans MS", cursive;
 }
 
 * {
@@ -52,8 +52,9 @@ header {
 
 h1 {
   font-family: var(--font-ui);
-  font-size: 40px;
-  letter-spacing: .01em;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -.01em;
   background: linear-gradient(90deg, #58a6ff, #ffca28);
   -webkit-background-clip: text;
   background-clip: text;
@@ -172,7 +173,8 @@ h1 {
 }
 
 .turn .who {
-  font-size: 24px;
+  font-size: 23px;
+  font-weight: 700;
   color: var(--text);
   margin-right: 8px;
 }
@@ -281,7 +283,8 @@ h1 {
   padding: 14px 38px;
   border-radius: 10px;
   font-family: var(--font-ui);
-  font-size: 20px;
+  font-size: 19px;
+  font-weight: 600;
   cursor: pointer;
   transition: transform .1s, filter .1s;
 }
@@ -342,6 +345,7 @@ h1 {
 .pname {
   text-align: center;
   width: 92px;
+  font-weight: 600;
 }
 
 .pname.active { color: var(--ink-blue); }
@@ -352,7 +356,8 @@ h1 {
 
 .cat .label {
   display: block;
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 600;
   color: var(--ink);
 }
 
@@ -400,9 +405,10 @@ tr.sep th, tr.sep td { background: rgba(120, 100, 50, .06); }
   background: rgba(120, 100, 50, .1);
   border-top: 2px solid var(--rule-strong);
   font-size: 24px;
+  font-weight: 700;
 }
 
-.total-row .label { font-size: 20px; }
+.total-row .label { font-size: 19px; font-weight: 700; }
 
 .total {
   text-align: center;
