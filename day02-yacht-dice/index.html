@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>야추 다이스 · Day 02</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>야추 다이스</h1>
+      <p class="sub">DAY 02 · vs Bot / vs Human</p>
+    </header>
+
+    <section id="setup" class="panel">
+      <h2>게임 시작</h2>
+      <div class="modes">
+        <button class="mode active" data-mode="bot">🤖 vs 봇</button>
+        <button class="mode" data-mode="human">🧑‍🤝‍🧑 vs 사람</button>
+      </div>
+      <div class="names">
+        <input id="name1" placeholder="Player 1" maxlength="10">
+        <span class="vs">vs</span>
+        <input id="name2" placeholder="Bot" maxlength="10">
+      </div>
+      <button id="startBtn" class="primary">시작</button>
+      <p class="rules-hint">한 턴에 최대 3번 굴려 주사위를 만들고, 점수칸에 확정하세요.<br>12칸을 모두 채우면 총점이 높은 쪽이 승리.</p>
+    </section>
+
+    <section id="game" class="panel" hidden>
+      <div id="turn" class="turn"></div>
+      <div id="dice" class="dice"></div>
+      <div id="controls" class="controls"></div>
+      <div id="scorecard" class="scorecard"></div>
+    </section>
+
+    <div id="overlay" class="overlay"></div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
