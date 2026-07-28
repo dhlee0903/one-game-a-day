@@ -45,12 +45,12 @@ day02-yacht-dice/
 | Aces~Sixes | 해당 눈의 합 |
 | 상단 보너스 | 상단 합 63 이상 → **+35** |
 | Choice | 전체 주사위 합 |
-| 3 of a Kind | 같은 눈 3개 → 전체 합 |
 | 4 of a Kind | 같은 눈 4개 → 전체 합 |
 | Full House | 3+2 → 전체 합 |
 | S. Straight | 4연속 → 15 |
 | L. Straight | 5연속 → 30 |
 | Yacht | 같은 눈 5개 → 50 |
+| **야추 보너스** | Yacht 슬롯에 50이 있는 상태에서 추가 야추마다 **+100** |
 
 ## 조작
 
