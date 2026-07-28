@@ -236,6 +236,25 @@ h1 {
   background: var(--pip-grad);
 }
 
+/* compact in-game skin switcher */
+.skins.ingame {
+  flex: none;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 0 2px 0 0;
+}
+
+.skins.ingame .skin { padding: 2px; border-radius: 7px; }
+
+.skins.ingame .die-mini {
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 5px;
+}
+
+.skins.ingame .die-mini .pip { width: 3px; height: 3px; }
+
 .names {
   display: flex;
   align-items: center;
