@@ -1,25 +1,29 @@
 :root {
-  --bg: #eef1f6;
-  --panel: #ffffff;
-  --line: #e6e9f0;
-  --text: #363d4d;      /* softened dark — less harsh than near-black */
-  --dim: #838d9e;
-  --accent: #3b76dc;
-  --gold: #d98a12;
-  --good: #33a05f;
+  /* felt table + parchment scorecard, like a real board game */
+  --felt: #1c6b48;
+  --cream: #f3ecd8;       /* text on the felt */
+  --cream-dim: #b3c7b7;
+  --gold: #d8a838;
 
-  /* Scorecard — a white card that floats above the light background */
-  --paper: #ffffff;
-  --ink: #363d4d;
-  --ink-dim: #98a0b0;
-  --rule: #edeff4;
-  --rule-strong: #dde1ea;
-  --ink-blue: #3b76dc;
-  --ink-gold: #b47a12;
-  --ink-green: #2f9a5a;
+  --panel: #f3ead2;       /* parchment cards (setup / result) */
+  --line: #d9cbaa;
+  --text: #f3ecd8;        /* default = on-felt cream */
+  --dim: #a9bdad;
+  --accent: #2f6fd0;
+  --good: #37995c;
 
-  --shadow-card: 0 8px 24px rgba(45, 60, 95, .08);
-  --shadow-float: 0 16px 40px rgba(45, 60, 95, .14), 0 2px 8px rgba(45, 60, 95, .06);
+  /* Scorecard paper */
+  --paper: #f4edd6;
+  --ink: #3c3325;
+  --ink-dim: #8d7f61;
+  --rule: #ddceaa;
+  --rule-strong: #c9b688;
+  --ink-blue: #2b62c4;
+  --ink-gold: #a9791a;
+  --ink-green: #2c8a52;
+
+  --shadow-card: 0 8px 22px rgba(0, 30, 15, .28);
+  --shadow-float: 0 18px 42px rgba(0, 25, 12, .4), 0 3px 10px rgba(0, 20, 10, .25);
 
   --font-ui: 'Noto Sans KR', "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -32,7 +36,11 @@
 }
 
 body {
-  background: linear-gradient(168deg, #f2f4f8 0%, #e9edf3 60%, #e3e8f0 100%);
+  background-color: var(--felt);
+  background-image:
+    radial-gradient(ellipse at 50% 22%, rgba(255, 255, 255, .10), transparent 55%),
+    radial-gradient(ellipse at 50% 118%, rgba(0, 0, 0, .5), transparent 68%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
   color: var(--text);
   font-family: var(--font-ui);
   font-size: 15px;
@@ -62,24 +70,25 @@ header {
   flex: none;
 }
 
-/* the game panel fills the leftover height; its scorecard flexes within */
+/* the game area fills the leftover height; its scorecard flexes within */
 #game {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 12px;
+  padding: 4px 0 0;
 }
 
 h1 {
   font-family: var(--font-ui);
   font-size: 30px;
   font-weight: 700;
-  letter-spacing: -.01em;
-  background: linear-gradient(90deg, #2f6fdb, #e8940c);
+  letter-spacing: .01em;
+  background: linear-gradient(90deg, #f6e7ba, #d8a838);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45));
 }
 
 .sub {
@@ -91,10 +100,19 @@ h1 {
 
 .panel {
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 18px;
+  border: 1px solid #cbbb92;
+  border-radius: 14px;
   padding: 20px;
+  color: var(--ink);
   box-shadow: var(--shadow-card);
+}
+
+/* the game area sits directly on the felt — no card behind it */
+#game {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--cream);
 }
 
 /* ---------- setup ---------- */
@@ -106,7 +124,7 @@ h1 {
 #setup h2 {
   font-size: 16px;
   margin-bottom: 16px;
-  color: var(--dim);
+  color: var(--ink-dim);
   font-weight: 500;
 }
 
@@ -120,9 +138,9 @@ h1 {
   flex: 1;
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid var(--line);
-  background: #f3f6fb;
-  color: var(--dim);
+  border: 1px solid #cdbd94;
+  background: #eaddbd;
+  color: #7c6f54;
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -130,9 +148,10 @@ h1 {
 }
 
 .mode.active {
-  border-color: var(--accent);
-  color: var(--text);
-  box-shadow: 0 0 0 1px var(--accent) inset;
+  border-color: var(--gold);
+  color: var(--ink);
+  background: #f6eccb;
+  box-shadow: 0 0 0 1px var(--gold) inset;
 }
 
 .names {
@@ -146,9 +165,9 @@ h1 {
   flex: 1;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: #f7f9fc;
-  color: var(--text);
+  border: 1px solid #cdbd94;
+  background: #fbf5e6;
+  color: var(--ink);
   font-family: var(--font-ui);
   font-size: 14px;
   text-align: center;
@@ -156,42 +175,42 @@ h1 {
 
 .names input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--gold);
 }
 
 .vs {
-  color: var(--dim);
+  color: var(--ink-dim);
   font-size: 12px;
 }
 
 .primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, #43ad6d 0%, #2f8a52 100%);
   color: #fff;
-  border: none;
-  padding: 13px 40px;
-  border-radius: 10px;
+  border: 1px solid #256e41;
+  padding: 12px 40px;
+  border-radius: 11px;
   font-family: var(--font-ui);
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(47, 111, 219, .3);
-  transition: transform .1s, filter .1s;
+  box-shadow: 0 4px 0 #22643a, 0 9px 16px rgba(0, 20, 10, .3);
+  transition: transform .08s, box-shadow .08s, filter .1s;
 }
 
-.primary:hover { filter: brightness(1.1); }
-.primary:active { transform: scale(.97); }
+.primary:hover { filter: brightness(1.06); }
+.primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #22643a, 0 4px 8px rgba(0, 20, 10, .28); }
 
 .stats {
   margin-top: 16px;
-  color: var(--text);
+  color: var(--ink);
   font-size: 14px;
 }
 
-.stats b { color: var(--gold); }
+.stats b { color: var(--ink-gold); }
 
 .rules-hint {
   margin-top: 12px;
-  color: var(--dim);
+  color: #7c6f54;
   font-size: 12px;
   line-height: 1.7;
 }
@@ -251,13 +270,16 @@ h1 {
 }
 
 .die {
-  width: 50px;
-  height: 50px;
-  padding: 6px;
+  width: 52px;
+  height: 52px;
+  padding: 7px;
   border-radius: 13px;
-  background: #ffffff;
-  border: 2px solid #e2e7f0;
-  box-shadow: 0 3px 8px rgba(40, 55, 90, .14);
+  background: linear-gradient(155deg, #fffdf5 0%, #efe6d0 100%);
+  border: 1px solid #d7cbae;
+  box-shadow:
+    0 6px 10px rgba(0, 22, 11, .38),
+    inset 0 2px 3px rgba(255, 255, 255, .95),
+    inset 0 -5px 7px rgba(120, 100, 60, .13);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
@@ -273,13 +295,14 @@ h1 {
   height: 9px;
   margin: auto;
   border-radius: 50%;
-  background: #1a2433;
+  background: radial-gradient(circle at 35% 30%, #57524b, #14110d 75%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .3), 0 1px 1px rgba(0, 0, 0, .35);
 }
 
 .die.blank {
-  background: #eef1f7;
-  border-color: #e4e8f0;
-  box-shadow: none;
+  background: linear-gradient(155deg, #e9e1cb, #dcd2b9);
+  border-color: #cbbf9f;
+  box-shadow: inset 0 2px 5px rgba(90, 70, 40, .16);
   cursor: default;
 }
 
@@ -291,13 +314,16 @@ h1 {
   justify-content: center;
   font-size: 24px;
   font-weight: 800;
-  color: var(--dim);
+  color: #b3a686;
 }
 
 .die.held {
-  border-color: var(--good);
-  box-shadow: 0 0 0 3px rgba(46, 158, 91, .25), 0 8px 16px rgba(40, 55, 90, .2);
-  transform: translateY(-6px);
+  border-color: var(--gold);
+  box-shadow:
+    0 0 0 3px rgba(216, 168, 56, .55),
+    0 12px 18px rgba(0, 20, 10, .42),
+    inset 0 2px 3px rgba(255, 255, 255, .9);
+  transform: translateY(-7px);
 }
 
 /* Roll animation: the just-rolled dice tumble and pop before settling. */
@@ -319,21 +345,22 @@ h1 {
 }
 
 .roll-btn {
-  background: var(--gold);
-  color: #241a00;
-  border: none;
-  padding: 14px 38px;
-  border-radius: 10px;
+  background: linear-gradient(180deg, #e8bb4c 0%, #cf9526 100%);
+  color: #3a2500;
+  border: 1px solid #b17e19;
+  padding: 13px 38px;
+  border-radius: 11px;
   font-family: var(--font-ui);
   font-size: 19px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  transition: transform .1s, filter .1s;
+  box-shadow: 0 4px 0 #9a6d15, 0 9px 16px rgba(0, 20, 10, .35);
+  transition: transform .08s, box-shadow .08s, filter .1s;
 }
 
 .roll-btn:hover:not(:disabled) { filter: brightness(1.05); }
-.roll-btn:active:not(:disabled) { transform: scale(.97); }
-.roll-btn:disabled { opacity: .4; cursor: default; }
+.roll-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #9a6d15, 0 4px 8px rgba(0, 20, 10, .3); }
+.roll-btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
 
 .controls .tip {
   display: block;
@@ -347,14 +374,14 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: #fff;
+  background: var(--paper);
   border: 2px solid var(--gold);
   border-radius: 12px;
   padding: 7px 7px 7px 16px;
   box-shadow: var(--shadow-card);
 }
 
-.confirm-bar .ask { font-size: 16px; color: var(--text); }
+.confirm-bar .ask { font-size: 16px; color: var(--ink); }
 .confirm-bar .ask b { color: var(--ink-gold); }
 
 .confirm-bar button {
@@ -368,7 +395,7 @@ h1 {
 }
 
 .confirm-yes { background: var(--good); color: #fff; }
-.confirm-no { background: #eef1f7; color: var(--text); }
+.confirm-no { background: #e6dabb; color: var(--ink); }
 .confirm-bar button:active { transform: scale(.96); }
 
 /* ---------- scorecard ---------- */
@@ -377,9 +404,10 @@ h1 {
    It scrolls on its own so the dice and roll/confirm controls above it stay
    put — no scrolling up and down to score and then roll again. */
 .scorecard {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.04'/%3E%3C/svg%3E");
+  border: 1px solid #cdbd94;
+  border-radius: 12px;
   padding: 0 16px 12px;
   box-shadow: var(--shadow-float);
   flex: 1;
@@ -457,7 +485,7 @@ h1 {
 }
 
 .score.filled { color: var(--ink); font-weight: 700; }
-.score.empty { color: #c3cad6; }
+.score.empty { color: #c8bb98; }
 
 .score.clickable {
   cursor: pointer;
@@ -502,14 +530,14 @@ tr.sep .bonus {
 
 tr.sep .bonus.got { color: var(--ink-green); font-weight: 700; }
 
-tr.sep th, tr.sep td { background: rgba(47, 111, 219, .04); }
+tr.sep th, tr.sep td { background: rgba(120, 90, 30, .07); }
 
 /* pin the totals to the bottom so the running score is always visible */
 .total-row th, .total-row td {
   position: sticky;
   bottom: 0;
   z-index: 1;
-  background: #f4f7fb;
+  background: #ecdfbe;
   border-top: 2px solid var(--rule-strong);
   font-size: 20px;
   font-weight: 700;
@@ -531,7 +559,7 @@ tr.sep th, tr.sep td { background: rgba(47, 111, 219, .04); }
   position: fixed;
   inset: 0;
   z-index: 20;
-  background: rgba(30, 40, 60, .5);
+  background: rgba(8, 28, 16, .62);
   backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
@@ -546,26 +574,28 @@ tr.sep th, tr.sep td { background: rgba(47, 111, 219, .04); }
 .result {
   text-align: center;
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 18px;
+  border: 1px solid #cbbb92;
+  border-radius: 16px;
   padding: 32px 40px;
+  color: var(--ink);
   box-shadow: var(--shadow-float);
 }
 
 .result h2 {
   font-size: 26px;
   margin-bottom: 10px;
+  color: var(--ink);
 }
 
 .result .finals {
-  color: var(--dim);
+  color: var(--ink-dim);
   font-size: 15px;
   margin-bottom: 20px;
   font-variant-numeric: tabular-nums;
 }
 
 .result .newbest {
-  color: var(--gold);
+  color: var(--ink-gold);
   font-size: 20px;
   font-weight: 700;
   margin-bottom: 8px;
@@ -579,8 +609,8 @@ tr.sep th, tr.sep td { background: rgba(47, 111, 219, .04); }
   transform: translate(-50%, -50%);
   font-size: 34px;
   font-weight: 700;
-  color: var(--ink-gold);
-  text-shadow: 0 2px 3px #fff, 0 4px 18px rgba(232, 148, 12, .35);
+  color: #f4d472;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .55), 0 0 22px rgba(244, 212, 114, .45);
   pointer-events: none;
   opacity: 0;
   z-index: 25;
