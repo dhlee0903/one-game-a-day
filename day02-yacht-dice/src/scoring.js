@@ -44,6 +44,7 @@ export function scoreFor(categoryId, dice) {
     case 'fives': return c[5] * 5;
     case 'sixes': return c[6] * 6;
     case 'choice': return total;
+    case 'threeKind': return c.some((n) => n >= 3) ? total : 0;
     case 'fourKind': return c.some((n) => n >= 4) ? total : 0;
     case 'fullHouse': {
       const hasThree = c.some((n) => n === 3);

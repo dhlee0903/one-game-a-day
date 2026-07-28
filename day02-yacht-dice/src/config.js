@@ -22,6 +22,7 @@ export const CATEGORIES = [
   { id: 'fives', label: 'Fives', hint: '5 합', section: 'upper', face: 5 },
   { id: 'sixes', label: 'Sixes', hint: '6 합', section: 'upper', face: 6 },
   { id: 'choice', label: 'Choice', hint: '전체 합', section: 'lower' },
+  { id: 'threeKind', label: '3 of a Kind', hint: '같은 눈 3개 → 전체 합', section: 'lower' },
   { id: 'fourKind', label: '4 of a Kind', hint: '같은 눈 4개 → 전체 합', section: 'lower' },
   { id: 'fullHouse', label: 'Full House', hint: '3+2 → 전체 합', section: 'lower' },
   { id: 'smallStraight', label: 'S. Straight', hint: '4연속 → 15', section: 'lower' },

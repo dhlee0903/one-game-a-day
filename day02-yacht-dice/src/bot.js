@@ -95,13 +95,13 @@ export function wantsReroll(dice, scores, rollsLeft) {
 // Rough ceiling for each category, used to prefer efficient placements.
 const CEIL = {
   aces: 5, twos: 10, threes: 15, fours: 20, fives: 25, sixes: 30,
-  choice: 30, fourKind: 30, fullHouse: 28, smallStraight: 15, largeStraight: 30, yacht: 50,
+  choice: 30, threeKind: 30, fourKind: 30, fullHouse: 28, smallStraight: 15, largeStraight: 30, yacht: 50,
 };
 
 // When a turn busts (nothing scores), give up the cheapest slots first and keep
 // the high-payoff ones open.
 const SACRIFICE_ORDER = [
-  'aces', 'twos', 'threes', 'fourKind', 'yacht',
+  'aces', 'twos', 'threes', 'threeKind', 'fourKind', 'yacht',
   'fullHouse', 'largeStraight', 'smallStraight', 'fours', 'fives', 'sixes', 'choice',
 ];
 
