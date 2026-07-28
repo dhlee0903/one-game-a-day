@@ -23,23 +23,32 @@ export class Renderer {
     this._renderCard(game);
   }
 
-  _renderTurn(game) {
+  // Update only the turn line (used to show the bot's "thinking" status without
+  // re-rendering the dice, which would replay their roll animation).
+  setStatus(game, status) {
+    this._renderTurn(game, status);
+  }
+
+  _renderTurn(game, status = '') {
     const p = game.currentPlayer();
     const rolls = game.rolled ? game.rollsLeft : MAX_ROLLS;
     this.els.turn.innerHTML =
       `<span class="who ${p.isBot ? 'bot' : ''}">${p.name}</span> 차례` +
-      `<span class="rolls">남은 굴림 ${rolls}</span>`;
+      `<span class="rolls">남은 굴림 ${rolls}</span>` +
+      (status ? `<span class="status">${status}</span>` : '');
   }
 
   _renderDice(game) {
     this.els.dice.innerHTML = game.dice.map((v, i) => {
       const held = game.held[i];
       const faceUp = game.rolled;
+      const rolling = faceUp && game.rolling[i];
       const pips = faceUp
         ? Array.from({ length: 9 }, (_, k) =>
           `<span class="cell${PIPS[v].includes(k) ? ' pip' : ''}"></span>`).join('')
         : '<span class="q">?</span>';
-      return `<button class="die${held ? ' held' : ''}${faceUp ? '' : ' blank'}" data-die="${i}" ${faceUp ? '' : 'disabled'}>${pips}</button>`;
+      const cls = `die${held ? ' held' : ''}${faceUp ? '' : ' blank'}${rolling ? ' rolling' : ''}`;
+      return `<button class="${cls}" data-die="${i}" ${faceUp ? '' : 'disabled'}>${pips}</button>`;
     }).join('');
   }
 

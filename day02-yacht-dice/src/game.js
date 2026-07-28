@@ -23,6 +23,7 @@ export class Game {
     this.held = Array(DICE_COUNT).fill(false);
     this.rollsLeft = MAX_ROLLS;
     this.rolled = false;
+    this.rolling = Array(DICE_COUNT).fill(false); // which dice just tumbled
     this.winner = null; // index, or 'tie'
   }
 
@@ -60,6 +61,7 @@ export class Game {
     for (let i = 0; i < DICE_COUNT; i += 1) {
       if (!this.held[i]) this.dice[i] = rollDie();
     }
+    this.rolling = this.held.map((h) => !h); // the unheld dice are the ones that tumbled
     this.rollsLeft -= 1;
     this.rolled = true;
     this.onChange();
@@ -68,12 +70,19 @@ export class Game {
   toggleHold(i) {
     if (this.phase !== 'playing' || !this.rolled || this.rollsLeft <= 0) return;
     this.held[i] = !this.held[i];
+    this._stopTumble();
     this.onChange();
   }
 
   setHeld(mask) {
     this.held = mask.slice();
+    this._stopTumble();
     this.onChange();
+  }
+
+  // Clear the tumble flags so a re-render doesn't replay the roll animation.
+  _stopTumble() {
+    this.rolling = Array(DICE_COUNT).fill(false);
   }
 
   // Commit the current dice into a category for the current player, then advance.
@@ -91,6 +100,7 @@ export class Game {
     this.rollsLeft = MAX_ROLLS;
     this.held = Array(DICE_COUNT).fill(false);
     this.rolled = false;
+    this._stopTumble();
     this.onChange();
   }
 
