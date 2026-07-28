@@ -98,7 +98,7 @@ export class Renderer {
 
     const catRow = (cat) => `
       <tr>
-        <th class="cat"><span class="label">${cat.label}</span><span class="hint">${cat.hint}</span></th>
+        <th class="cat" title="${cat.hint}"><span class="label">${cat.label}</span></th>
         ${cell(p1, 0, cat)}${cell(p2, 1, cat)}
       </tr>`;
 
@@ -111,7 +111,7 @@ export class Renderer {
       return `<td class="bonus ${got ? 'got' : ''}">${s}/${UPPER_BONUS_THRESHOLD}${got ? ' +35' : ''}</td>`;
     };
     rows.push(`<tr class="sep">
-        <th class="cat"><span class="label">보너스</span><span class="hint">상단 63↑ → +35</span></th>
+        <th class="cat" title="상단 합 63 이상이면 +35"><span class="label">보너스</span></th>
         ${bonusCell(p1)}${bonusCell(p2)}
       </tr>`);
 
