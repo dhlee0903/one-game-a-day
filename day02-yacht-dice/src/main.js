@@ -63,8 +63,8 @@ function renderStats() {
   if (!el) return;
   const s = getStats();
   el.innerHTML =
-    `🏆 최고 <b>${s.best}</b>`
-    + ` &nbsp;·&nbsp; 🤖 vs 봇 <b>${s.bot.w}</b>승 <b>${s.bot.l}</b>패 <b>${s.bot.t}</b>무`;
+    `최고 <b>${s.best}</b>`
+    + ` &nbsp;·&nbsp; vs 봇 <b>${s.bot.w}</b>승 <b>${s.bot.l}</b>패 <b>${s.bot.t}</b>무`;
 }
 
 // ----- setup screen -----
@@ -125,7 +125,7 @@ function renderOverlay() {
   const title = game.winner === 'tie'
     ? '무승부!'
     : `${game.players[game.winner].name} 승리!`;
-  const newBest = lastResult && lastResult.isNewBest ? '<p class="newbest">🎉 신기록!</p>' : '';
+  const newBest = lastResult && lastResult.isNewBest ? '<p class="newbest">신기록!</p>' : '';
   overlay.innerHTML = `
     <div class="result">
       <h2>${title}</h2>
@@ -148,13 +148,13 @@ let botHoldsShown = false;
 // Decide the next bot action, with a message + how long to "think" first.
 function decideBot() {
   const p = game.currentPlayer();
-  if (!game.rolled) return { kind: 'roll', msg: '🎲 주사위를 굴려요', delay: 650 };
+  if (!game.rolled) return { kind: 'roll', msg: '주사위를 굴려요', delay: 650 };
 
   if (game.rollsLeft > 0 && wantsReroll(game.dice, p.scores, game.rollsLeft)) {
-    if (!botHoldsShown) return { kind: 'hold', msg: '🤔 남길 주사위 고르는 중…', delay: 850 };
-    return { kind: 'reroll', msg: '🎲 나머지를 다시 굴려요', delay: 1100 };
+    if (!botHoldsShown) return { kind: 'hold', msg: '남길 주사위 고르는 중…', delay: 850 };
+    return { kind: 'reroll', msg: '나머지를 다시 굴려요', delay: 1100 };
   }
-  return { kind: 'choose', msg: '🤔 점수칸 고르는 중…', delay: 1200 };
+  return { kind: 'choose', msg: '점수칸 고르는 중…', delay: 1200 };
 }
 
 function scheduleBot() {

@@ -150,7 +150,7 @@ export class Game {
     // Extra-Yacht bonus: rolling another Yacht once the Yacht slot holds 50.
     if (hadYacht && scoreFor('yacht', this.dice) === 50) {
       player.scores.yachtBonus = (player.scores.yachtBonus || 0) + YACHT_BONUS;
-      this.onEvent({ type: 'yachtBonus', text: `YACHT BONUS +${YACHT_BONUS}! 🎉` });
+      this.onEvent({ type: 'yachtBonus', text: `YACHT BONUS +${YACHT_BONUS}!` });
     }
 
     this._announce(categoryId, score, bonusBefore, upperBonus(player.scores));
@@ -159,11 +159,11 @@ export class Game {
 
   // Fire celebratory events for standout results.
   _announce(categoryId, score, bonusBefore, bonusAfter) {
-    if (categoryId === 'yacht' && score === 50) this.onEvent({ type: 'yacht', text: 'YACHT! 🎉' });
-    else if (categoryId === 'largeStraight' && score === 30) this.onEvent({ type: 'largeStraight', text: 'L. STRAIGHT! ✨' });
+    if (categoryId === 'yacht' && score === 50) this.onEvent({ type: 'yacht', text: 'YACHT!' });
+    else if (categoryId === 'largeStraight' && score === 30) this.onEvent({ type: 'largeStraight', text: 'L. STRAIGHT!' });
     else if (categoryId === 'smallStraight' && score === 15) this.onEvent({ type: 'smallStraight', text: 'S. STRAIGHT!' });
     else if (categoryId === 'fullHouse' && score > 0) this.onEvent({ type: 'fullHouse', text: 'FULL HOUSE!' });
-    if (bonusBefore === 0 && bonusAfter > 0) this.onEvent({ type: 'bonus', text: '상단 보너스 +35! 🎉' });
+    if (bonusBefore === 0 && bonusAfter > 0) this.onEvent({ type: 'bonus', text: '상단 보너스 +35!' });
   }
 
   // ----- turn lifecycle -----

@@ -31,7 +31,7 @@ function handleState(state, payload) {
     bestEl.textContent = best;
     showOverlay(
       'GAME OVER',
-      `점수 ${payload.score}${isNewBest ? ' · 🎉 신기록!' : ` · 최고 ${best}`}`,
+      `점수 ${payload.score}${isNewBest ? ' · 신기록!' : ` · 최고 ${best}`}`,
       '다시하기',
       () => game.start(),
     );
