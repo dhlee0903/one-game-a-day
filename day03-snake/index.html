@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SNAKE · Day 03</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>SNAKE</h1>
+      <p class="sub">DAY 03</p>
+    </header>
+
+    <div class="hud">
+      <div class="stat"><span class="label">SCORE</span><span class="val" id="score">0</span></div>
+      <div class="stat"><span class="label">BEST</span><span class="val" id="best">0</span></div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board" width="440" height="440"></canvas>
+      <div class="overlay show" id="overlay"></div>
+    </div>
+
+    <p class="keys">방향키 / WASD 이동 · <b>P</b> 일시정지 · 모바일은 스와이프</p>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
