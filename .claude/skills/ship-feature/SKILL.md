@@ -25,7 +25,7 @@ what reading code doesn't.
 
 ### 1. Pick the feature and read the ground truth
 
-- Open the target game's `DEVLOG.md`. Features live under `🚧 개발 예정 (Planned)`.
+- Open the target game's `DEVLOG.md`. Features live under `개발 예정 (Planned)`.
 - If the user named a feature not in the list, that's fine — just implement it and log it
   in step 4 anyway.
 - Skim the game's `src/` to see where the change lands. The modules follow a one-way
@@ -82,7 +82,7 @@ Then, using the browser tools:
 ### 4. Update the docs
 
 - In the game's `DEVLOG.md`, move the shipped item out of `개발 예정` and add a dated entry
-  under `✅ 개발 적용 (Changelog)` (today's date). Note any notable bug fixed along the way —
+  under `개발 적용 (Changelog)` (today's date). Note any notable bug fixed along the way —
   future-you learns from it.
 - Update the game's `README.md` if controls or the feature list changed.
 - Update the root `index.html` gallery card tags if the feature is headline-worthy.
