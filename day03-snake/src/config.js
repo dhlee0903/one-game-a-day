@@ -5,9 +5,9 @@ export const ROWS = 20;
 export const CELL = 22; // canvas = 440 x 440
 
 // Gravity of the game: how often the snake advances. It speeds up as you eat.
-export const BASE_TICK_MS = 145;
-export const MIN_TICK_MS = 70;
-export const SPEEDUP_MS = 4; // faster per food eaten
+export const BASE_TICK_MS = 200;
+export const MIN_TICK_MS = 100;
+export const SPEEDUP_MS = 3; // faster per food eaten
 
 export const DIRS = {
   up: { x: 0, y: -1 },
