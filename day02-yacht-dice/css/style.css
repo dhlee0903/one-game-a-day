@@ -35,6 +35,24 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.home {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 50;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .3);
+  color: #f3ecd8;
+  transition: background .12s;
+}
+
+.home:hover { background: rgba(255, 255, 255, .26); }
+
 /* ---- dice skins (1 ivory / 2 red / 3 onyx) ---- */
 :root, .dice-ivory {
   --die-grad: linear-gradient(155deg, #fffdf5 0%, #efe6d0 100%);

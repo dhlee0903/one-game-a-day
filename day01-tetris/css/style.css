@@ -14,6 +14,24 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.home {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 50;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  background: rgba(22, 27, 34, .92);
+  border: 1px solid #2a3341;
+  color: #8b949e;
+  transition: color .12s, border-color .12s;
+}
+
+.home:hover { color: #e6edf3; border-color: #3d4757; }
+
 html,
 body {
   height: 100%;

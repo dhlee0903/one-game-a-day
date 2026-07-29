@@ -15,6 +15,25 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.home {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 50;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  background: #ffffff;
+  border: 1px solid #dbe2ee;
+  color: #74809a;
+  box-shadow: 0 4px 12px rgba(40, 60, 100, .1);
+  transition: color .12s, border-color .12s;
+}
+
+.home:hover { color: #2b3550; border-color: #c3cddd; }
+
 html, body { height: 100%; }
 
 body {
