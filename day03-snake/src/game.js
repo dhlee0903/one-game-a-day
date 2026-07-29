@@ -3,7 +3,7 @@
 // the game never touches the DOM.
 
 import {
-  COLS, ROWS, BASE_TICK_MS, MIN_TICK_MS, SPEEDUP_MS,
+  COLS, ROWS, BASE_TICK_MS, MIN_TICK_MS, SPEEDUP_MS, CRASH_DELAY_MS,
 } from './config.js';
 import { Snake } from './snake.js';
 
@@ -22,7 +22,9 @@ export class Game {
     this.tickMs = BASE_TICK_MS;
     this.acc = 0;
     this.last = 0;
-    this.phase = 'ready'; // ready | playing | paused | over
+    this.effects = []; // transient eat/grow bursts { x, y, age, dur }
+    this.crash = null; // { x, y } where the snake died
+    this.phase = 'ready'; // ready | playing | paused | dying | over
   }
 
   start() {
@@ -68,12 +70,12 @@ export class Game {
     const nh = this.snake.nextHead();
 
     // Wall collision.
-    if (nh.x < 0 || nh.x >= COLS || nh.y < 0 || nh.y >= ROWS) return this._gameOver();
+    if (nh.x < 0 || nh.x >= COLS || nh.y < 0 || nh.y >= ROWS) return this._crash(nh);
 
     const willGrow = this.food && nh.x === this.food.x && nh.y === this.food.y;
 
     // Self collision — the tail cell is free next step unless we grow into it.
-    if (this.snake.occupies(nh.x, nh.y, !willGrow)) return this._gameOver();
+    if (this.snake.occupies(nh.x, nh.y, !willGrow)) return this._crash(nh);
 
     if (willGrow) this.snake.grow(1);
     this.snake.step();
@@ -82,10 +84,22 @@ export class Game {
       this.score += 1;
       this.onScore(this.score);
       this.tickMs = Math.max(MIN_TICK_MS, this.tickMs - SPEEDUP_MS);
+      this.effects.push({ x: nh.x, y: nh.y, age: 0, dur: 420 }); // eat/grow burst
       this.food = this._spawnFood();
       if (!this.food) return this._gameOver(); // filled the whole board
     }
     return undefined;
+  }
+
+  // Show the fatal move before ending: drive the head into the cell it hit,
+  // pointed the right way, so it's clear what killed you.
+  _crash(nh) {
+    this.snake.dir = this.snake._pending(); // orient the head toward the crash
+    this.snake.body.unshift(nh);
+    this.crash = { x: nh.x, y: nh.y };
+    this.phase = 'dying';
+    this.renderer.render(this);
+    setTimeout(() => this._gameOver(), CRASH_DELAY_MS);
   }
 
   _gameOver() {
@@ -96,8 +110,15 @@ export class Game {
   _loop(t) {
     if (this.phase !== 'playing') return;
     if (!this.last) this.last = t;
-    this.acc += t - this.last;
+    const dt = t - this.last;
+    this.acc += dt;
     this.last = t;
+
+    // advance transient effects
+    if (this.effects.length) {
+      this.effects.forEach((e) => { e.age += dt; });
+      this.effects = this.effects.filter((e) => e.age < e.dur);
+    }
 
     while (this.acc >= this.tickMs) {
       this._tick();

@@ -14,7 +14,7 @@ export class Snake {
     // Start length 3, heading right.
     this.body = [{ x: cx, y: cy }, { x: cx - 1, y: cy }, { x: cx - 2, y: cy }];
     this.dir = DIRS.right;
-    this.queued = DIRS.right;
+    this.queue = []; // buffered turns, applied one per step
     this.growBy = 0;
   }
 
@@ -22,23 +22,33 @@ export class Snake {
     return this.body[0];
   }
 
-  // Queue a direction for the next step; ignore 180° reversals into the neck.
+  // Buffer a turn. Validating against the LAST buffered/current direction (not
+  // just the current one) lets two quick presses — e.g. a corner turn near a
+  // wall — both register instead of the second being swallowed.
   setDir(d) {
-    if (d.x === -this.dir.x && d.y === -this.dir.y) return;
-    this.queued = d;
+    const ref = this.queue.length ? this.queue[this.queue.length - 1] : this.dir;
+    if (d.x === -ref.x && d.y === -ref.y) return; // no 180° reversal
+    if (d.x === ref.x && d.y === ref.y) return;   // no duplicate
+    if (this.queue.length < 2) this.queue.push(d); // keep at most 2 pending
+  }
+
+  // The direction that will be applied on the next step.
+  _pending() {
+    return this.queue.length ? this.queue[0] : this.dir;
   }
 
   // The cell the head will move into next step.
   nextHead() {
     const h = this.head();
-    return { x: h.x + this.queued.x, y: h.y + this.queued.y };
+    const d = this._pending();
+    return { x: h.x + d.x, y: h.y + d.y };
   }
 
-  // Advance one cell: commit the queued direction, add a head, drop the tail
-  // unless we're still growing.
+  // Advance one cell: commit the next buffered direction, add a head, drop the
+  // tail unless we're still growing.
   step() {
-    this.dir = this.queued;
-    this.body.unshift(this.nextHead());
+    if (this.queue.length) this.dir = this.queue.shift();
+    this.body.unshift({ x: this.head().x + this.dir.x, y: this.head().y + this.dir.y });
     if (this.growBy > 0) this.growBy -= 1;
     else this.body.pop();
   }
