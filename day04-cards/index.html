@@ -22,10 +22,10 @@
           <h3>블랙잭</h3>
           <p>딜러와 21 승부</p>
         </button>
-        <button class="game-card soon" data-game="holdem" disabled>
+        <button class="game-card" data-game="holdem">
           <span class="g-suit red">♥</span>
           <h3>홀덤</h3>
-          <p>준비 중</p>
+          <p>봇 2명과 대결</p>
         </button>
       </div>
       <p class="hub-note">칩으로 베팅하고 즐기세요. 카드는 계속 추가됩니다.</p>
@@ -54,6 +54,22 @@
       </div>
 
       <div class="controls" id="bjControls"></div>
+    </section>
+
+    <section id="holdem" hidden>
+      <button class="back-btn" id="hdBack">&larr; 게임 선택</button>
+
+      <div class="table">
+        <div class="seats" id="hdSeats"></div>
+        <div class="board">
+          <div class="pot">팟 <b id="hdPot">0</b></div>
+          <div class="community" id="hdCommunity"></div>
+        </div>
+        <div class="hd-msg" id="hdMsg"></div>
+        <div class="you-seat" id="hdYou"></div>
+      </div>
+
+      <div class="controls" id="hdControls"></div>
     </section>
   </div>
 

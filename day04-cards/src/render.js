@@ -36,6 +36,58 @@ function controlsHTML(bj) {
   return '';
 }
 
+// ---- Hold'em ----
+
+function cardHTML(card, faceDown = false) {
+  if (faceDown || !card) return '<div class="card sm back"></div>';
+  return `<div class="card sm${card.red ? ' red' : ''}">`
+    + `<span class="corner tl">${card.rank}<i>${card.suit}</i></span>`
+    + `<span class="pip">${card.suit}</span></div>`;
+}
+
+function seatHTML(p, g, isYou) {
+  const bi = g.players.indexOf(p);
+  const reveal = isYou || (g.handOver && !p.folded && p.hole);
+  const cards = (p.hole || []).map((c) => cardHTML(c, !reveal)).join('');
+  const active = !g.handOver && g.toAct === bi && !p.folded && !p.allIn;
+  const badges = `${bi === g.button ? '<span class="badge">D</span>' : ''}`
+    + `${p.folded ? '<span class="badge fold">폴드</span>' : ''}`
+    + `${p.allIn ? '<span class="badge allin">올인</span>' : ''}`;
+  const bet = p.bet > 0 ? `<div class="seat-bet">${p.bet}</div>` : '';
+  return `<div class="seat${active ? ' active' : ''}${p.folded ? ' folded' : ''}">
+      <div class="seat-cards">${cards}</div>
+      <div class="seat-info"><span class="seat-name">${p.name} ${badges}</span><span class="seat-chips">${p.chips}</span></div>
+      ${bet}
+    </div>`;
+}
+
+function holdemControls(g) {
+  if (g.stage === 'idle' || g.handOver) {
+    return `<button class="btn primary" data-a="next">${g.stage === 'idle' ? '핸드 시작' : '다음 핸드'}</button>`;
+  }
+  if (!g.isHumanToAct()) return '<span class="waiting">상대 진행 중…</span>';
+  const o = g.options();
+  let html = '<button class="btn" data-a="fold">폴드</button>';
+  html += o.canCheck ? '<button class="btn" data-a="check">체크</button>'
+    : `<button class="btn" data-a="call">콜 ${o.toCall}</button>`;
+  if (o.canRaise) {
+    const potRaise = Math.min(o.maxRaiseTo, g.currentBet + g.pot());
+    const opts = [...new Set([o.minRaiseTo, potRaise, o.maxRaiseTo])].filter((v) => v > g.currentBet);
+    html += opts.map((v) => `<button class="btn primary" data-a="raise" data-v="${v}">${v >= o.maxRaiseTo ? `올인 ${v}` : `레이즈 ${v}`}</button>`).join('');
+  }
+  return html;
+}
+
+export function renderHoldem(g, els) {
+  els.seats.innerHTML = [1, 2].map((i) => seatHTML(g.players[i], g, false)).join('');
+  els.you.innerHTML = seatHTML(g.players[0], g, true);
+  els.community.innerHTML = Array.from({ length: 5 }, (_, k) => (g.community[k] ? cardHTML(g.community[k]) : '<div class="card sm empty"></div>')).join('');
+  els.pot.textContent = g.pot();
+  els.msg.innerHTML = g.message
+    + (g.results ? `<div class="showdown">${g.results.map((r) => `${r.name} · ${r.hand}${r.won ? ` (+${r.won})` : ''}`).join('<br>')}</div>` : '');
+  els.controls.innerHTML = holdemControls(g);
+}
+
 export function renderBlackjack(bj, els) {
   els.dealerCards.innerHTML = '';
   bj.dealer.forEach((c, i) => els.dealerCards.appendChild(cardEl(c, bj.hideHole && i === 1)));

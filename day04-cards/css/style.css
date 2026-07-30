@@ -261,3 +261,73 @@ h1 {
 .chip:hover { background: #0f6b46; }
 .chip:active { transform: scale(.94); }
 .chip.ghost { background: transparent; border-style: solid; border-color: rgba(255, 255, 255, .3); }
+
+/* ---------- holdem ---------- */
+
+.table {
+  background: rgba(0, 0, 0, .18);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 18px;
+  padding: 16px 12px;
+}
+
+.seats { display: flex; justify-content: space-around; gap: 8px; }
+
+.seat {
+  text-align: center;
+  padding: 6px;
+  border-radius: 12px;
+  transition: background .2s, opacity .2s;
+}
+.seat.folded { opacity: .45; }
+.seat.active { background: rgba(255, 214, 64, .1); box-shadow: 0 0 0 1px rgba(255, 214, 64, .4) inset; }
+
+.seat-cards { display: flex; justify-content: center; gap: 4px; min-height: 66px; }
+
+.seat-info { margin-top: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 1px; }
+.seat-name { color: var(--cream); font-weight: 700; }
+.seat.active .seat-name { color: #ffe08a; }
+.seat-chips { color: var(--gold); font-variant-numeric: tabular-nums; }
+.seat-bet { margin-top: 3px; font-size: 12px; color: var(--dim); }
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .2);
+  margin-left: 3px;
+  vertical-align: middle;
+}
+.badge.fold { background: #8f2b2b; }
+.badge.allin { background: var(--gold); color: #201500; }
+
+.board { text-align: center; margin: 14px 0; }
+.pot { font-size: 13px; color: var(--dim); margin-bottom: 8px; letter-spacing: .05em; }
+.pot b { color: var(--gold); font-size: 18px; font-variant-numeric: tabular-nums; }
+.community { display: flex; justify-content: center; gap: 6px; min-height: 66px; }
+
+.card.sm { width: 46px; height: 66px; border-radius: 6px; }
+.card.sm .corner { font-size: 11px; }
+.card.sm .corner i { font-size: 10px; }
+.card.sm .corner.tl { top: 4px; left: 4px; }
+.card.sm .pip { font-size: 21px; }
+.card.sm.empty {
+  background: rgba(255, 255, 255, .05);
+  border: 1px dashed rgba(255, 255, 255, .16);
+  box-shadow: none;
+  animation: none;
+}
+
+.hd-msg {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--cream);
+  min-height: 22px;
+  margin: 8px 0 12px;
+}
+.hd-msg .showdown { font-size: 12px; font-weight: 400; color: var(--dim); margin-top: 6px; line-height: 1.6; }
+
+.you-seat .seat { margin: 0 auto; max-width: 220px; }
+.waiting { color: var(--dim); font-size: 14px; padding: 12px; }

@@ -1,7 +1,8 @@
 // Entry point: hub (game selection) + routing, and Blackjack wiring/input.
 
 import { Blackjack } from './blackjack.js';
-import { renderBlackjack } from './render.js';
+import { Holdem } from './holdem.js';
+import { renderBlackjack, renderHoldem } from './render.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -18,26 +19,72 @@ const els = {
 
 const blackjack = new Blackjack({ onChange: () => renderBlackjack(blackjack, els) });
 
+const hdEls = {
+  seats: $('hdSeats'),
+  you: $('hdYou'),
+  community: $('hdCommunity'),
+  pot: $('hdPot'),
+  msg: $('hdMsg'),
+  controls: $('hdControls'),
+};
+
+const holdem = new Holdem({
+  onChange: () => { renderHoldem(holdem, hdEls); scheduleBot(); },
+});
+
+// bots act on a timer so the human can follow the action
+let botTimer = null;
+function scheduleBot() {
+  if ($('holdem').hidden || botTimer || !holdem.isBotToAct()) return;
+  botTimer = setTimeout(() => { botTimer = null; holdem.botAct(); }, 700);
+}
+
 // ----- routing -----
 
 function showHub() {
   $('hub').hidden = false;
   $('blackjack').hidden = true;
+  $('holdem').hidden = true;
 }
 
 function showBlackjack() {
   $('hub').hidden = true;
   $('blackjack').hidden = false;
+  $('holdem').hidden = true;
   renderBlackjack(blackjack, els);
+}
+
+function showHoldem() {
+  $('hub').hidden = true;
+  $('blackjack').hidden = true;
+  $('holdem').hidden = false;
+  renderHoldem(holdem, hdEls);
+  scheduleBot();
 }
 
 document.querySelectorAll('.game-card').forEach((btn) => {
   btn.addEventListener('click', () => {
     if (btn.dataset.game === 'blackjack') showBlackjack();
+    else if (btn.dataset.game === 'holdem') showHoldem();
   });
 });
 
 $('bjBack').addEventListener('click', showHub);
+$('hdBack').addEventListener('click', showHub);
+
+const HD_ACTIONS = {
+  fold: () => holdem.fold(),
+  check: () => holdem.check(),
+  call: () => holdem.call(),
+  raise: (el) => holdem.raiseTo(Number(el.dataset.v)),
+  next: () => holdem.startHand(),
+};
+
+hdEls.controls.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-a]');
+  if (!el) return;
+  HD_ACTIONS[el.dataset.a]?.(el);
+});
 
 // ----- blackjack controls (delegated) -----
 
