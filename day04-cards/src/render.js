@@ -72,10 +72,23 @@ const CHIP_TIERS = [[1500, 'gold'], [700, 'green'], [300, 'blue'], [100, 'red'],
 function chipStack(amount) {
   if (amount <= 0) return '';
   const tier = (CHIP_TIERS.find(([t]) => amount >= t) || [0, 'white'])[1];
-  const n = Math.min(6, 2 + Math.floor(amount / 150));
+  const n = Math.min(4, 1 + Math.floor(amount / 250)); // bounded so the stack fits its box
   let discs = '';
-  for (let i = 0; i < n; i += 1) discs += `<span class="chip-disc ${tier}" style="bottom:${i * 4}px"></span>`;
+  for (let i = 0; i < n; i += 1) discs += `<span class="chip-disc ${tier}" style="bottom:${i * 3}px"></span>`;
   return `<span class="chip-stack">${discs}</span>`;
+}
+
+function bannerSVG(kind) {
+  const stops = kind === 'win'
+    ? '<stop offset="0" stop-color="#c7ffd8"/><stop offset="1" stop-color="#22c55e"/>'
+    : '<stop offset="0" stop-color="#ffc0c0"/><stop offset="1" stop-color="#e5484d"/>';
+  const label = kind === 'win' ? 'WIN' : 'LOSE';
+  return `<svg viewBox="0 0 340 120" xmlns="http://www.w3.org/2000/svg" class="banner-svg">
+    <defs><linearGradient id="bg-${kind}" x1="0" y1="0" x2="0" y2="1">${stops}</linearGradient></defs>
+    <text x="170" y="64" text-anchor="middle" dominant-baseline="central" paint-order="stroke"
+      font-family="'Arial Black','Segoe UI',Impact,sans-serif" font-weight="900" font-size="90"
+      fill="url(#bg-${kind})" stroke="rgba(0,0,0,.55)" stroke-width="4" style="letter-spacing:3px">${label}</text>
+  </svg>`;
 }
 
 function holdemControls(g) {
@@ -143,7 +156,7 @@ export class HoldemView {
     if (g.handOver && !this.prevHandOver) {
       const you = g.players[0];
       const won = g.results ? g.results.some((r) => r.name === 'You' && r.won > 0) : !you.folded;
-      this._banner(won ? '이겼다!' : '졌다…', won ? 'win' : 'lose');
+      this._banner(won ? 'win' : 'lose');
     }
     this.prevHandOver = g.handOver;
   }
@@ -164,11 +177,11 @@ export class HoldemView {
     setTimeout(() => f.remove(), 1200);
   }
 
-  _banner(text, cls) {
+  _banner(kind) {
     if (!this.els.fx) return;
     const b = document.createElement('div');
-    b.className = `fx-banner ${cls}`;
-    b.textContent = text;
+    b.className = `fx-banner ${kind}`;
+    b.innerHTML = bannerSVG(kind);
     this.els.fx.appendChild(b);
     setTimeout(() => b.remove(), 1700);
   }
