@@ -81,3 +81,21 @@ export function bestHand(cards) {
 export function handName(score) {
   return NAMES[score[0]];
 }
+
+const RN = (v) => (v === 14 ? 'A' : v === 13 ? 'K' : v === 12 ? 'Q' : v === 11 ? 'J' : String(v));
+
+// Human-readable detail so ties within a category are understandable
+// (which pair, which kicker, etc.).
+export function handDetail(score) {
+  switch (score[0]) {
+    case 8: return score[1] === 14 ? '로열 플러시' : `스트레이트 플러시 ${RN(score[1])}`;
+    case 7: return `포카드 ${RN(score[1])}`;
+    case 6: return `풀하우스 ${RN(score[1])}·${RN(score[2])}`;
+    case 5: return `플러시 ${RN(score[1])} 하이`;
+    case 4: return `스트레이트 ${RN(score[1])} 하이`;
+    case 3: return `트리플 ${RN(score[1])}`;
+    case 2: return `투페어 ${RN(score[1])}·${RN(score[2])} (키커 ${RN(score[3])})`;
+    case 1: return `원페어 ${RN(score[1])} (키커 ${RN(score[2])})`;
+    default: return `하이카드 ${RN(score[1])}`;
+  }
+}

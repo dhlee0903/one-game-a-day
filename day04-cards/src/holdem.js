@@ -3,7 +3,8 @@
 // (it calls botAct on a timer); the logic itself is synchronous and testable.
 
 import { Deck } from './deck.js';
-import { bestHand, compareScore, handName, rankVal } from './poker.js';
+import { SUITS, RANKS } from './config.js';
+import { bestHand, compareScore, handDetail } from './poker.js';
 
 export const SB = 10;
 export const BB = 20;
@@ -237,7 +238,7 @@ export class Holdem {
     });
 
     this.results = contenders
-      .map((p) => ({ name: p.name, hand: handName(p.score), won: won.get(p) || 0 }))
+      .map((p) => ({ name: p.name, hand: handDetail(p.score), won: won.get(p) || 0 }))
       .sort((a, b) => b.won - a.won);
     const top = this.results.find((r) => r.won > 0);
     this.message = top ? `${top.name} 승리 · ${top.hand}` : '쇼다운';
@@ -252,34 +253,61 @@ export class Holdem {
     if (!this.isBotToAct()) return;
     const p = this.current();
     const o = this.options();
-    const s = this._strength(p);
+    const eq = this._equity(p);          // Monte-Carlo win probability
+    const pot = this.pot();
     const r = Math.random();
+    const raiseAmt = (frac) => Math.min(o.maxRaiseTo, this.currentBet + Math.max(BB, Math.floor(pot * frac)));
 
     if (o.toCall === 0) {
-      if (s > 0.62 && r < 0.55) this.raiseTo(this.currentBet + Math.max(BB, Math.floor(this.pot() * 0.6)));
+      // no bet to us: value bet / semibluff when strong, sometimes bluff
+      if (eq > 0.6 || (eq > 0.5 && r < 0.4)) this.raiseTo(raiseAmt(0.6));
+      else if (r < 0.1 && o.canRaise) this.raiseTo(raiseAmt(0.45)); // occasional bluff
       else this.check();
       return;
     }
-    // facing a bet
-    if (s < 0.34 && o.toCall > BB) { this.fold(); return; }
-    if (s > 0.78 && r < 0.5 && o.canRaise) {
-      this.raiseTo(Math.min(o.maxRaiseTo, this.currentBet + Math.max(BB, Math.floor(this.pot() * 0.6))));
-      return;
-    }
-    if (o.toCall > p.chips * 0.6 && s < 0.5) { this.fold(); return; } // too pricey for a weak hand
-    this.call();
+
+    // facing a bet: compare equity to pot odds
+    const potOdds = o.toCall / (pot + o.toCall);
+    if (eq > 0.78 && o.canRaise && r < 0.65) { this.raiseTo(raiseAmt(0.75)); return; }
+    if (eq >= potOdds + 0.04) { this.call(); return; }        // profitable call
+    if (r < 0.05 && o.canRaise && eq > 0.3) { this.raiseTo(raiseAmt(0.6)); return; } // rare bluff-raise
+    this.fold();
   }
 
-  _strength(p) {
-    if (this.community.length === 0) {
-      const [a, b] = p.hole.map((c) => rankVal(c.rank)).sort((x, y) => y - x);
-      let s = (a - 2) / 24 + (b - 2) / 60;
-      if (a === b) s += 0.35;
-      if (p.hole[0].suit === p.hole[1].suit) s += 0.06;
-      if (a - b === 1) s += 0.05;
-      return Math.min(1, s);
+  // Monte-Carlo equity: bot's chance to win/tie against the remaining opponents,
+  // simulating random completions of the board and opponents' hole cards.
+  _equity(p, samples = 150) {
+    const oppCount = this.players.filter((q) => q !== p && !q.folded).length;
+    const used = new Set([...p.hole, ...this.community].map((c) => c.rank + c.suit));
+    const rest = [];
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        if (!used.has(rank + suit.s)) rest.push({ rank, suit: suit.s, red: suit.red });
+      }
     }
-    const cat = bestHand([...p.hole, ...this.community])[0];
-    return [0.12, 0.36, 0.56, 0.68, 0.78, 0.85, 0.92, 0.97, 1][cat];
+    let score = 0;
+    for (let s = 0; s < samples; s += 1) {
+      // partial Fisher-Yates: only shuffle the cards we draw
+      let top = rest.length;
+      const take = () => {
+        const j = Math.floor(Math.random() * top);
+        top -= 1;
+        [rest[j], rest[top]] = [rest[top], rest[j]];
+        return rest[top];
+      };
+      const board = this.community.slice();
+      while (board.length < 5) board.push(take());
+      const mine = bestHand([...p.hole, ...board]);
+      let win = true;
+      let tie = false;
+      for (let o = 0; o < oppCount; o += 1) {
+        const other = bestHand([take(), take(), ...board]);
+        const cmp = compareScore(mine, other);
+        if (cmp < 0) { win = false; break; }
+        if (cmp === 0) tie = true;
+      }
+      if (win) score += tie ? 0.5 : 1;
+    }
+    return score / samples;
   }
 }
