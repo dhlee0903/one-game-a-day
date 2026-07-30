@@ -36,30 +36,36 @@ function controlsHTML(bj) {
   return '';
 }
 
-// ---- Hold'em ----
+// ---- Hold'em (incremental rendering to avoid flicker) ----
 
-function cardHTML(card, faceDown = false) {
-  if (faceDown || !card) return '<div class="card sm back"></div>';
-  return `<div class="card sm${card.red ? ' red' : ''}">`
-    + `<span class="corner tl">${card.rank}<i>${card.suit}</i></span>`
-    + `<span class="pip">${card.suit}</span></div>`;
+function cardMiniEl(card, faceDown) {
+  const el = document.createElement('div');
+  if (faceDown || !card) { el.className = 'card sm back'; return el; }
+  el.className = `card sm${card.red ? ' red' : ''}`;
+  el.innerHTML = `<span class="corner tl">${card.rank}<i>${card.suit}</i></span><span class="pip">${card.suit}</span>`;
+  return el;
 }
 
-function seatHTML(p, g, isYou) {
-  const bi = g.players.indexOf(p);
-  const reveal = isYou || (g.handOver && !p.folded && p.hole);
-  const cards = (p.hole || []).map((c) => cardHTML(c, !reveal)).join('');
-  const active = !g.handOver && g.toAct === bi && !p.folded && !p.allIn;
-  const badges = `${bi === g.button ? '<span class="badge">D</span>' : ''}`
-    + `${p.folded ? '<span class="badge fold">폴드</span>' : ''}`
-    + `${p.allIn ? '<span class="badge allin">올인</span>' : ''}`;
-  const bet = p.bet > 0 ? `<div class="seat-bet">${p.bet}</div>` : '';
-  return `<div class="seat${active ? ' active' : ''}${p.folded ? ' folded' : ''}">
-      <div class="seat-cards">${cards}</div>
-      <div class="seat-info"><span class="seat-name">${p.name} ${badges}</span><span class="seat-chips">${p.chips}</span></div>
-      ${bet}
-    </div>`;
+const cardKey = (card, faceDown) => (faceDown || !card ? 'back' : card.rank + card.suit);
+
+// Update a card row in place — only add/replace cards that actually changed, so
+// unchanged cards keep their DOM element (no re-created flicker or re-animation).
+function syncCards(container, cards, faceDownFn) {
+  while (container.children.length > cards.length) container.lastChild.remove();
+  cards.forEach((c, i) => {
+    const fd = faceDownFn ? faceDownFn(i) : false;
+    const key = cardKey(c, fd);
+    const cur = container.children[i];
+    if (cur && cur.dataset.key === key) return;
+    const el = cardMiniEl(c, fd);
+    el.dataset.key = key;
+    if (cur) container.replaceChild(el, cur);
+    else container.appendChild(el);
+  });
 }
+
+function setText(el, val) { if (el.textContent !== val) el.textContent = val; }
+function setHTML(el, val) { if (el.dataset.sig !== val) { el.innerHTML = val; el.dataset.sig = val; } }
 
 function holdemControls(g) {
   if (g.stage === 'idle' || g.handOver) {
@@ -78,14 +84,50 @@ function holdemControls(g) {
   return html;
 }
 
-export function renderHoldem(g, els) {
-  els.seats.innerHTML = [1, 2].map((i) => seatHTML(g.players[i], g, false)).join('');
-  els.you.innerHTML = seatHTML(g.players[0], g, true);
-  els.community.innerHTML = Array.from({ length: 5 }, (_, k) => (g.community[k] ? cardHTML(g.community[k]) : '<div class="card sm empty"></div>')).join('');
-  els.pot.textContent = g.pot();
-  els.msg.innerHTML = g.message
-    + (g.results ? `<div class="showdown">${g.results.map((r) => `${r.name} · ${r.hand}${r.won ? ` (+${r.won})` : ''}`).join('<br>')}</div>` : '');
-  els.controls.innerHTML = holdemControls(g);
+export class HoldemView {
+  constructor(els) {
+    this.els = els;
+    this.seatRefs = [];
+    for (let i = 0; i < 3; i += 1) {
+      const root = document.createElement('div');
+      root.className = 'seat';
+      root.innerHTML = '<div class="seat-cards"></div>'
+        + '<div class="seat-info"><span class="seat-name"></span><span class="seat-chips"></span></div>'
+        + '<div class="seat-bet"></div>';
+      this.seatRefs.push({
+        root,
+        cards: root.querySelector('.seat-cards'),
+        name: root.querySelector('.seat-name'),
+        chips: root.querySelector('.seat-chips'),
+        bet: root.querySelector('.seat-bet'),
+      });
+      (i === 0 ? els.you : els.seats).appendChild(root);
+    }
+  }
+
+  update(g) {
+    this.seatRefs.forEach((refs, i) => this._seat(refs, g.players[i], g, i === 0));
+    syncCards(this.els.community, g.community, () => false);
+    setText(this.els.pot, String(g.pot()));
+    const msg = g.message
+      + (g.results ? `<div class="showdown">${g.results.map((r) => `${r.name} · ${r.hand}${r.won ? ` (+${r.won})` : ''}`).join('<br>')}</div>` : '');
+    setHTML(this.els.msg, msg);
+    setHTML(this.els.controls, holdemControls(g));
+  }
+
+  _seat(refs, p, g, isYou) {
+    const bi = g.players.indexOf(p);
+    const reveal = isYou || (g.handOver && !p.folded && p.hole);
+    syncCards(refs.cards, p.hole || [], () => !reveal);
+    const badges = `${bi === g.button ? '<span class="badge">D</span>' : ''}`
+      + `${p.folded ? '<span class="badge fold">폴드</span>' : ''}`
+      + `${p.allIn ? '<span class="badge allin">올인</span>' : ''}`;
+    setHTML(refs.name, `${p.name} ${badges}`);
+    setText(refs.chips, String(p.chips));
+    setText(refs.bet, p.bet > 0 ? String(p.bet) : '');
+    refs.root.classList.toggle('active', !g.handOver && g.toAct === bi && !p.folded && !p.allIn);
+    refs.root.classList.toggle('folded', p.folded);
+  }
 }
 
 export function renderBlackjack(bj, els) {

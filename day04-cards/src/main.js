@@ -2,7 +2,7 @@
 
 import { Blackjack } from './blackjack.js';
 import { Holdem } from './holdem.js';
-import { renderBlackjack, renderHoldem } from './render.js';
+import { renderBlackjack, HoldemView } from './render.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,8 +28,9 @@ const hdEls = {
   controls: $('hdControls'),
 };
 
+const hdView = new HoldemView(hdEls);
 const holdem = new Holdem({
-  onChange: () => { renderHoldem(holdem, hdEls); scheduleBot(); },
+  onChange: () => { hdView.update(holdem); scheduleBot(); },
 });
 
 // bots act on a timer so the human can follow the action
@@ -58,7 +59,7 @@ function showHoldem() {
   $('hub').hidden = true;
   $('blackjack').hidden = true;
   $('holdem').hidden = false;
-  renderHoldem(holdem, hdEls);
+  hdView.update(holdem);
   scheduleBot();
 }
 
