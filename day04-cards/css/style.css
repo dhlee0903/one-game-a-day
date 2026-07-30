@@ -265,20 +265,117 @@ h1 {
 /* ---------- holdem ---------- */
 
 .table {
+  position: relative;
   background: rgba(0, 0, 0, .18);
   border: 1px solid rgba(255, 255, 255, .12);
   border-radius: 18px;
   padding: 16px 12px;
 }
 
+/* effects layer */
+.hd-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.fx-banner {
+  position: absolute;
+  font-size: 46px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, .6);
+  animation: bannerPop 1.7s ease-out forwards;
+}
+.fx-banner.win { color: #7ee29a; }
+.fx-banner.lose { color: #ff8a8a; }
+@keyframes bannerPop {
+  0% { opacity: 0; transform: scale(.5); }
+  15% { opacity: 1; transform: scale(1.14); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
 .seats { display: flex; justify-content: space-around; gap: 8px; }
 
 .seat {
+  position: relative;
   text-align: center;
   padding: 6px;
   border-radius: 12px;
   transition: background .2s, opacity .2s;
 }
+.seat.me { background: rgba(216, 168, 56, .08); }
+.seat.me .chip-num { font-size: 16px; }
+
+/* floating "+N" and ALL IN over a seat */
+.fx-float {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  color: #ffe08a;
+  font-weight: 800;
+  font-size: 16px;
+  pointer-events: none;
+  animation: floatUp .85s ease-out forwards;
+}
+@keyframes floatUp {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(.8); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
+}
+.fx-allin {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  background: linear-gradient(180deg, #e8bb4c, #cf9526);
+  color: #3a2500;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: allinPop 1.2s ease-out forwards;
+}
+@keyframes allinPop {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(.4); }
+  25% { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -22px) scale(1); }
+}
+
+/* poker chip discs */
+.chip-stack {
+  position: relative;
+  display: inline-block;
+  width: 16px;
+  height: 22px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.chip-disc {
+  position: absolute;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, .7);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+}
+.chip-disc.white { background: #e9edf3; }
+.chip-disc.red { background: #d5333b; }
+.chip-disc.blue { background: #2f6fd0; }
+.chip-disc.green { background: #2f9a5a; }
+.chip-disc.gold { background: #d8a838; }
+.chip-num { color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+.bet-num { color: var(--cream); font-size: 12px; font-variant-numeric: tabular-nums; }
 .seat.folded { opacity: .45; }
 .seat.active { background: rgba(255, 214, 64, .1); box-shadow: 0 0 0 1px rgba(255, 214, 64, .4) inset; }
 
@@ -287,8 +384,8 @@ h1 {
 .seat-info { margin-top: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 1px; }
 .seat-name { color: var(--cream); font-weight: 700; }
 .seat.active .seat-name { color: #ffe08a; }
-.seat-chips { color: var(--gold); font-variant-numeric: tabular-nums; }
-.seat-bet { margin-top: 3px; font-size: 12px; color: var(--dim); }
+.seat-chips { display: flex; align-items: center; justify-content: center; }
+.seat-bet { margin-top: 4px; display: flex; align-items: center; justify-content: center; min-height: 20px; }
 
 .badge {
   display: inline-block;

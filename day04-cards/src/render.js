@@ -67,6 +67,17 @@ function syncCards(container, cards, faceDownFn) {
 function setText(el, val) { if (el.textContent !== val) el.textContent = val; }
 function setHTML(el, val) { if (el.dataset.sig !== val) { el.innerHTML = val; el.dataset.sig = val; } }
 
+// A little stack of chip discs whose count/color scales with the amount.
+const CHIP_TIERS = [[1500, 'gold'], [700, 'green'], [300, 'blue'], [100, 'red'], [0, 'white']];
+function chipStack(amount) {
+  if (amount <= 0) return '';
+  const tier = (CHIP_TIERS.find(([t]) => amount >= t) || [0, 'white'])[1];
+  const n = Math.min(6, 2 + Math.floor(amount / 150));
+  let discs = '';
+  for (let i = 0; i < n; i += 1) discs += `<span class="chip-disc ${tier}" style="bottom:${i * 4}px"></span>`;
+  return `<span class="chip-stack">${discs}</span>`;
+}
+
 function holdemControls(g) {
   if (g.stage === 'idle' || g.handOver) {
     return `<button class="btn primary" data-a="next">${g.stage === 'idle' ? '핸드 시작' : '다음 핸드'}</button>`;
@@ -103,6 +114,10 @@ export class HoldemView {
       });
       (i === 0 ? els.you : els.seats).appendChild(root);
     }
+    this.seatRefs[0].root.classList.add('me');
+    this.prevBet = [0, 0, 0];
+    this.prevAllIn = [false, false, false];
+    this.prevHandOver = true;
   }
 
   update(g) {
@@ -113,6 +128,49 @@ export class HoldemView {
       + (g.results ? `<div class="showdown">${g.results.map((r) => `${r.name} · ${r.hand}${r.won ? ` (+${r.won})` : ''}`).join('<br>')}</div>` : '');
     setHTML(this.els.msg, msg);
     setHTML(this.els.controls, holdemControls(g));
+    this._effects(g);
+  }
+
+  // Detect bet increases / all-ins / hand results and spawn transient effects.
+  _effects(g) {
+    const newHand = !g.handOver && this.prevHandOver;
+    g.players.forEach((p, i) => {
+      if (!newHand && p.bet > this.prevBet[i]) this._float(i, `+${p.bet - this.prevBet[i]}`);
+      this.prevBet[i] = p.bet;
+      if (!newHand && p.allIn && !this.prevAllIn[i]) this._allin(i);
+      this.prevAllIn[i] = p.allIn;
+    });
+    if (g.handOver && !this.prevHandOver) {
+      const you = g.players[0];
+      const won = g.results ? g.results.some((r) => r.name === 'You' && r.won > 0) : !you.folded;
+      this._banner(won ? '이겼다!' : '졌다…', won ? 'win' : 'lose');
+    }
+    this.prevHandOver = g.handOver;
+  }
+
+  _float(i, text) {
+    const f = document.createElement('div');
+    f.className = 'fx-float';
+    f.textContent = text;
+    this.seatRefs[i].root.appendChild(f);
+    setTimeout(() => f.remove(), 850);
+  }
+
+  _allin(i) {
+    const f = document.createElement('div');
+    f.className = 'fx-allin';
+    f.textContent = 'ALL IN';
+    this.seatRefs[i].root.appendChild(f);
+    setTimeout(() => f.remove(), 1200);
+  }
+
+  _banner(text, cls) {
+    if (!this.els.fx) return;
+    const b = document.createElement('div');
+    b.className = `fx-banner ${cls}`;
+    b.textContent = text;
+    this.els.fx.appendChild(b);
+    setTimeout(() => b.remove(), 1700);
   }
 
   _seat(refs, p, g, isYou) {
@@ -123,8 +181,8 @@ export class HoldemView {
       + `${p.folded ? '<span class="badge fold">폴드</span>' : ''}`
       + `${p.allIn ? '<span class="badge allin">올인</span>' : ''}`;
     setHTML(refs.name, `${p.name} ${badges}`);
-    setText(refs.chips, String(p.chips));
-    setText(refs.bet, p.bet > 0 ? String(p.bet) : '');
+    setHTML(refs.chips, `${chipStack(p.chips)}<span class="chip-num">${p.chips}</span>`);
+    setHTML(refs.bet, p.bet > 0 ? `${chipStack(p.bet)}<span class="bet-num">${p.bet}</span>` : '');
     refs.root.classList.toggle('active', !g.handOver && g.toAct === bi && !p.folded && !p.allIn);
     refs.root.classList.toggle('folded', p.folded);
   }

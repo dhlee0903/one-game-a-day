@@ -26,6 +26,7 @@ const hdEls = {
   pot: $('hdPot'),
   msg: $('hdMsg'),
   controls: $('hdControls'),
+  fx: $('hdFx'),
 };
 
 const hdView = new HoldemView(hdEls);
