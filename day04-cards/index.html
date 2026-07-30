@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CARD GAMES · Day 04</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="home" href="../">&larr; 홈</a>
+
+  <div class="wrap">
+    <header>
+      <h1>CARD GAMES</h1>
+      <p class="sub">DAY 04</p>
+    </header>
+
+    <section id="hub">
+      <div class="games">
+        <button class="game-card" data-game="blackjack">
+          <span class="g-suit">♠</span>
+          <h3>블랙잭</h3>
+          <p>딜러와 21 승부</p>
+        </button>
+        <button class="game-card soon" data-game="holdem" disabled>
+          <span class="g-suit red">♥</span>
+          <h3>홀덤</h3>
+          <p>준비 중</p>
+        </button>
+      </div>
+      <p class="hub-note">칩으로 베팅하고 즐기세요. 카드는 계속 추가됩니다.</p>
+    </section>
+
+    <section id="blackjack" hidden>
+      <button class="back-btn" id="bjBack">&larr; 게임 선택</button>
+
+      <div class="felt">
+        <div class="hand-area">
+          <div class="hand-label">딜러 <span class="hval" id="dealerVal"></span></div>
+          <div class="cards" id="dealerCards"></div>
+        </div>
+
+        <div class="msg" id="bjMsg"></div>
+
+        <div class="hand-area">
+          <div class="hand-label">플레이어 <span class="hval" id="playerVal"></span></div>
+          <div class="cards" id="playerCards"></div>
+        </div>
+      </div>
+
+      <div class="bank">
+        <span>칩 <b id="chips">0</b></span>
+        <span>베팅 <b id="betAmt">0</b></span>
+      </div>
+
+      <div class="controls" id="bjControls"></div>
+    </section>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
