@@ -8,11 +8,12 @@ export function isSolid(level, tx, ty) {
   if (tx < 0) return true;                 // left wall
   if (ty < 0) return false;                // open sky
   if (tx >= level.cols || ty >= level.rows) return false; // right / below open (fall)
-  return level.solid[ty][tx];
+  return level.tiles[ty][tx] !== 0;        // any non-empty tile is solid
 }
 
 export function moveEntity(e, level) {
   e.hitWall = false;
+  e.bump = null;
 
   e.x += e.vx;
   _resolveX(e, level);
@@ -52,7 +53,12 @@ function _resolveY(e, level) {
   } else if (e.vy < 0) {
     const ty = Math.floor(e.y / CELL);
     for (let tx = x0; tx <= x1; tx += 1) {
-      if (isSolid(level, tx, ty)) { e.y = (ty + 1) * CELL; e.vy = 0; return; }
+      if (isSolid(level, tx, ty)) {
+        e.y = (ty + 1) * CELL;
+        e.vy = 0;
+        e.bump = { tx, ty }; // report the block hit from below (for ?/brick logic)
+        return;
+      }
     }
   }
 }

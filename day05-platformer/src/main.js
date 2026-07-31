@@ -10,10 +10,11 @@ const renderer = new Renderer($('board'));
 const overlay = $('overlay');
 
 const game = new Game(renderer, {
-  onHud: ({ score, lives, coins }) => {
+  onHud: ({ score, lives, coins, stage }) => {
     $('score').textContent = score;
     $('lives').textContent = lives;
     $('coins').textContent = coins;
+    $('stage').textContent = stage;
   },
   onState: handleState,
 });
@@ -29,7 +30,7 @@ function startIfIdle() {
 function handleState(state, payload) {
   if (state === 'playing') { hideOverlay(); return; }
   if (state === 'win') {
-    showOverlay('클리어!', `점수 ${payload.score}`, '다시 하기');
+    showOverlay('올 클리어!', `점수 ${payload.score}`, '다시 하기');
   } else if (state === 'dead') {
     showOverlay('게임 오버', `점수 ${payload.score}`, '다시 하기');
   }
