@@ -42,8 +42,10 @@ function _resolveX(e, level) {
 function _resolveY(e, level) {
   const x0 = Math.floor(e.x / CELL);
   const x1 = Math.floor((e.x + e.w - 1) / CELL);
-  if (e.vy > 0) {
-    const ty = Math.floor((e.y + e.h - 1) / CELL);
+  if (e.vy >= 0) {
+    // check the tile the feet rest on (not one pixel above), so a body sitting
+    // exactly on a tile boundary stays grounded instead of flickering
+    const ty = Math.floor((e.y + e.h) / CELL);
     for (let tx = x0; tx <= x1; tx += 1) {
       if (isSolid(level, tx, ty)) { e.y = ty * CELL - e.h; e.vy = 0; e.onGround = true; return; }
     }
