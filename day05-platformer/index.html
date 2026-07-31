@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>PLATFORMER · Day 05</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="home" href="../">&larr; 홈</a>
+
+  <div class="wrap">
+    <header>
+      <h1>PLATFORMER</h1>
+      <p class="sub">DAY 05</p>
+    </header>
+
+    <div class="hud">
+      <div class="stat"><span class="label">SCORE</span><span class="val" id="score">0</span></div>
+      <div class="stat"><span class="label">COINS</span><span class="val" id="coins">0</span></div>
+      <div class="stat"><span class="label">LIVES</span><span class="val" id="lives">3</span></div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board" width="640" height="480"></canvas>
+      <div class="overlay show" id="overlay"></div>
+    </div>
+
+    <div class="touch">
+      <div class="dpad">
+        <button id="btnLeft" aria-label="왼쪽">&larr;</button>
+        <button id="btnRight" aria-label="오른쪽">&rarr;</button>
+      </div>
+      <button id="btnJump" class="jump" aria-label="점프">점프</button>
+    </div>
+
+    <p class="keys">&larr; &rarr; 이동 · <b>&uarr; / Space</b> 점프 · 적을 밟아 처치</p>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
