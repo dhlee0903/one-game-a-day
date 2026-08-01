@@ -188,24 +188,26 @@ export class Renderer {
   _obstacle(c, e) {
     const p = project(e.lane, e.d);
     const t = p.t;
-    const laneW = ROAD_HALF * LANE_SPREAD * 0.9 * t;
+    // half-width in lane-units: kept < 0.5 so an obstacle stays inside its own
+    // lane and never visually spills into the neighbouring lanes.
+    const laneW = ROAD_HALF * LANE_SPREAD * 0.44 * t;
     const unit = 70 * t;
 
     // contact shadow
     c.fillStyle = COLORS.shadow;
     c.beginPath();
-    c.ellipse(p.x, p.y, laneW * 0.62, laneW * 0.2, 0, 0, Math.PI * 2);
+    c.ellipse(p.x, p.y, laneW * 1.0, laneW * 0.32, 0, 0, Math.PI * 2);
     c.fill();
 
     if (e.kind === OB.BLOCK) {
       // tall container — cannot be jumped, must change lane
       const h = unit * 2.5;
-      this._prism(c, p.x, p.y, laneW * 1.1, h, e.lane, COLORS.block, COLORS.blockDark, COLORS.blockLight);
+      this._prism(c, p.x, p.y, laneW, h, e.lane, COLORS.block, COLORS.blockDark, COLORS.blockLight);
       // warning chevrons
       c.fillStyle = 'rgba(0,0,0,.22)';
       for (let i = 0; i < 3; i += 1) {
         const yy = p.y - h + h * (0.28 + i * 0.22);
-        c.fillRect(p.x - laneW * 1.1, yy, laneW * 2.2, Math.max(2, h * 0.05));
+        c.fillRect(p.x - laneW, yy, laneW * 2, Math.max(2, h * 0.05));
       }
     } else if (e.kind === OB.LOW) {
       // low hurdle — jump it. striped bar on two posts.
@@ -229,10 +231,10 @@ export class Renderer {
       const beamH = Math.max(5, unit * 0.5);
       const postW = Math.max(2, 7 * t);
       c.fillStyle = COLORS.highDark;
-      c.fillRect(p.x - laneW * 1.15, topY, postW, postH);
-      c.fillRect(p.x + laneW * 1.15 - postW, topY, postW, postH);
+      c.fillRect(p.x - laneW * 1.08, topY, postW, postH);
+      c.fillRect(p.x + laneW * 1.08 - postW, topY, postW, postH);
       // beam
-      this._prismAt(c, p.x, topY, laneW * 1.25, beamH, e.lane, COLORS.high, COLORS.highDark, COLORS.highLight);
+      this._prismAt(c, p.x, topY, laneW * 1.12, beamH, e.lane, COLORS.high, COLORS.highDark, COLORS.highLight);
       // sign glow
       c.fillStyle = 'rgba(196,176,255,.5)';
       c.fillRect(p.x - laneW * 0.5, topY + beamH * 0.25, laneW, Math.max(2, beamH * 0.3));
