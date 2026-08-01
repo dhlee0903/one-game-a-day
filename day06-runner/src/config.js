@@ -31,7 +31,10 @@ export const LANE_LERP = 0.42;    // horizontal ease toward the target lane (sna
 // Collision: an object hits when it is within HIT_DEPTH of the camera plane AND
 // the player's *visual* lane position overlaps it by more than LANE_HIT.
 export const HIT_DEPTH = 0.85;
-export const LANE_HIT = 0.58;     // lane-units of overlap that counts as a hit
+// lane-units of centre-to-centre overlap that counts as a hit. Tuned to match
+// the drawn obstacle half-width (~0.44) plus the player half-width (~0.17), so
+// a hit registers right as the two visually touch — no phantom or missed hits.
+export const LANE_HIT = 0.6;
 
 // Spawning: rows are spaced by TIME (frames), not raw distance, so the gap in
 // front of the player stays reactable no matter how fast the world scrolls.
