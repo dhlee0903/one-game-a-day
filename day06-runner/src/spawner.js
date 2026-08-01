@@ -27,6 +27,7 @@ export class Spawner {
 
   reset() {
     this.rowCount = 0;
+    this.prevSafe = [0, 1, 2]; // safe lanes of the last obstacle row
     uid = 0;
   }
 
@@ -47,19 +48,24 @@ export class Spawner {
     let blocked = 1;
     if (n > 6 && rand() < 0.45) blocked = 2;
 
-    const lanes = [0, 1, 2];
-    // shuffle
-    for (let i = lanes.length - 1; i > 0; i -= 1) {
+    // Keep one lane that was safe last row free, so consecutive obstacle rows
+    // always share a safe lane — the forced move is never more than the player
+    // can reach in the (time-based) gap between rows.
+    const keep = pick(this.prevSafe);
+    const others = [0, 1, 2].filter((l) => l !== keep);
+    for (let i = others.length - 1; i > 0; i -= 1) {
       const j = Math.floor(rand() * (i + 1));
-      [lanes[i], lanes[j]] = [lanes[j], lanes[i]];
+      [others[i], others[j]] = [others[j], others[i]];
     }
-    const chosen = lanes.slice(0, blocked);
+    const chosen = others.slice(0, blocked);
 
     const kinds = n > 4 ? [OB.BLOCK, OB.LOW, OB.HIGH] : [OB.BLOCK, OB.LOW];
     for (const lane of chosen) out.push(make(pick(kinds), lane));
 
+    const free = [0, 1, 2].filter((l) => !chosen.includes(l));
+    this.prevSafe = free;
+
     // Drop a coin into one of the free lanes now and then.
-    const free = lanes.slice(blocked);
     if (free.length && rand() < 0.5) out.push(make(OB.COIN, pick(free)));
 
     return out;
