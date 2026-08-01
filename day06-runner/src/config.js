@@ -28,9 +28,11 @@ export const LANE_LERP = 0.28;    // horizontal ease toward the target lane
 // The depth window (around d = 0) where an object collides with the player.
 export const HIT_DEPTH = 0.9;
 
-// Spawning: a new row every SPAWN_GAP distance, tightening as speed climbs.
-export const SPAWN_GAP = 6.2;
-export const MIN_SPAWN_GAP = 3.4;
+// Spawning: rows are spaced by TIME (frames), not raw distance, so the gap in
+// front of the player stays reactable no matter how fast the world scrolls.
+export const ROW_FRAMES_START = 52;   // frames between rows early (~0.87s)
+export const ROW_FRAMES_MIN = 34;     // tightest spacing (~0.57s) — still reactable
+export const ROW_FRAMES_RAMP = 0.0016; // frames shaved per distance travelled
 
 export const START_LIVES = 3;
 export const INVULN_FRAMES = 78;

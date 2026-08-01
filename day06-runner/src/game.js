@@ -4,8 +4,8 @@
 
 import {
   START_SPEED, MAX_SPEED, SPEED_RAMP, DRAW_DIST, HIT_DEPTH,
-  SPAWN_GAP, MIN_SPAWN_GAP, START_LIVES, COIN_SCORE, DIST_SCORE,
-  OB, BEST_KEY,
+  ROW_FRAMES_START, ROW_FRAMES_MIN, ROW_FRAMES_RAMP,
+  START_LIVES, COIN_SCORE, DIST_SCORE, OB, BEST_KEY,
 } from './config.js';
 import { Player } from './player.js';
 import { Spawner } from './spawner.js';
@@ -97,8 +97,10 @@ export class Game {
     if (this.distance < this.nextSpawn) return;
     const row = this.spawner.buildRow();
     for (const e of row) this.entities.push(e);
-    const gap = Math.max(MIN_SPAWN_GAP, SPAWN_GAP - this.distance * 0.0009);
-    this.nextSpawn = this.distance + gap;
+    // space rows by a shrinking frame budget, converted to distance via speed,
+    // so the reaction time between rows never collapses at high speed
+    const frames = Math.max(ROW_FRAMES_MIN, ROW_FRAMES_START - this.distance * ROW_FRAMES_RAMP);
+    this.nextSpawn = this.distance + this.speed * frames;
   }
 
   _collisions() {
