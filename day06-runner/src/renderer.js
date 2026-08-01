@@ -182,7 +182,7 @@ export class Renderer {
   // Roadside streetlights, flowing toward the camera — the sense of speed the
   // old neon lines were trying (and failing) to convey, but readable this time.
   _streetlights(c, distance) {
-    const step = 5.0;
+    const step = 10.0; // sparse — a few poles per side, not a dense fence
     const off = distance % step;
     // draw far-to-near so nearer poles overlap correctly
     for (let d = DRAW_DIST - off; d > PASS_D; d -= step) {
@@ -349,126 +349,158 @@ export class Renderer {
     c.translate(x, groundY - lift);
     if (p.invuln > 0 && Math.floor(p.invuln / 4) % 2 === 0) c.globalAlpha = 0.4;
     if (p.sliding) this._runnerSlide(c, p);
+    else if (p.jumping) this._runnerJump(c, p);
     else this._runnerRun(c, p);
     c.globalAlpha = 1;
     c.restore();
   }
 
-  // Athletic runner: beanie, hoodie, backpack, joggers, sneakers. Origin at the
-  // feet (0,0), drawn upward.
+  // Back-view runner (we chase the character): beanie, hoodie, prominent
+  // backpack, joggers, sneakers. Origin at the feet (0,0), drawn upward.
   _runnerRun(c, p) {
-    const s = Math.sin(p.runT * 0.36);
-    const bob = Math.sin(p.runT * 0.72) * 2;
+    const s = Math.sin(p.runT * 0.34);
+    const bob = Math.abs(Math.cos(p.runT * 0.34)) * 2.5;
     c.save();
     c.translate(0, -bob);
-
-    // --- legs (behind body) ---
-    this._leg(c, -6, s * 12);
-    this._leg(c, 6, -s * 12);
-
-    // --- backpack (behind torso) ---
-    c.fillStyle = COLORS.pack;
-    this._rr(c, -22, -70, 16, 30, 6); c.fill();
-    c.fillStyle = COLORS.packLight;
-    this._rr(c, -20, -66, 8, 14, 4); c.fill();
-
-    // --- torso: hoodie ---
-    const g = c.createLinearGradient(-16, -74, 16, -34);
-    g.addColorStop(0, COLORS.hoodieLight);
-    g.addColorStop(0.55, COLORS.hoodie);
-    g.addColorStop(1, COLORS.hoodieDark);
-    c.fillStyle = g;
-    this._rr(c, -17, -76, 34, 46, 13); c.fill();
-    // hood at the neck
-    c.fillStyle = COLORS.hoodieDark;
-    this._rr(c, -13, -80, 26, 12, 6); c.fill();
-    // drawstring pocket line
-    c.strokeStyle = 'rgba(0,0,0,.16)'; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(-12, -44); c.lineTo(12, -44); c.stroke();
-
-    // --- arms ---
-    this._arm(c, -17, -s * 13);
-    this._arm(c, 17, s * 13);
-
-    // --- head ---
-    this._head(c, -83);
-
+    this._legRun(c, -8, s);
+    this._legRun(c, 8, -s);
+    this._torsoPackHead(c);
+    this._armRun(c, -1, -s);
+    this._armRun(c, 1, s);
     c.restore();
   }
 
-  _leg(c, hipX, swing) {
-    const footX = hipX + swing;
-    // jogger
-    c.strokeStyle = COLORS.pants; c.lineWidth = 11; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(hipX, -34); c.lineTo(footX, -6); c.stroke();
-    c.strokeStyle = COLORS.pantsDark; c.lineWidth = 4;
-    c.beginPath(); c.moveTo(hipX, -34); c.lineTo(footX, -8); c.stroke();
-    // sneaker
-    c.fillStyle = COLORS.shoe;
-    this._rr(c, footX - 7, -8, 15, 8, 4); c.fill();
-    c.fillStyle = COLORS.shoeSole;
-    c.fillRect(footX - 7, -2, 15, 3);
-  }
-
-  _arm(c, shoulderX, swing) {
-    const dir = shoulderX < 0 ? -1 : 1;
-    const handX = shoulderX + dir * 5 + swing * 0.4;
-    const handY = -50 + Math.abs(swing) * 0.2;
-    c.strokeStyle = COLORS.hoodie; c.lineWidth = 8; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(shoulderX, -70); c.lineTo(handX, handY); c.stroke();
-    c.fillStyle = COLORS.skin;
-    c.beginPath(); c.arc(handX, handY, 4, 0, Math.PI * 2); c.fill();
-  }
-
-  _head(c, cy) {
-    // face
-    c.fillStyle = COLORS.skin;
-    c.beginPath(); c.arc(0, cy, 15, 0, Math.PI * 2); c.fill();
-    c.fillStyle = COLORS.skinDark;
-    c.beginPath(); c.arc(2, cy + 2, 15, -0.3, 0.9); c.fill();
-    // beanie
-    c.fillStyle = COLORS.beanie;
-    c.beginPath(); c.arc(0, cy, 15, Math.PI * 1.04, Math.PI * 2.04); c.fill();
-    c.fillStyle = COLORS.beanieCuff;
-    c.fillRect(-15, cy - 3, 30, 5);
-    c.fillStyle = COLORS.beanie;
-    c.beginPath(); c.arc(0, cy - 15, 4, 0, Math.PI * 2); c.fill(); // pom
+  _runnerJump(c, p) {
+    c.save();
+    this._legTuck(c, -8);
+    this._legTuck(c, 8);
+    this._torsoPackHead(c);
+    this._armJump(c, -1);
+    this._armJump(c, 1);
+    c.restore();
   }
 
   _runnerSlide(c, p) {
-    // leaning-back slide: low, elongated, with a dust puff behind
-    c.save();
-    // dust
-    const dust = (Math.floor(p.slideT / 3) % 2) ? 0.5 : 0.35;
-    c.fillStyle = `rgba(200,205,215,${dust})`;
+    // dust kicked up behind the slide
+    const puff = (Math.floor(p.slideT / 3) % 2) ? 0.45 : 0.3;
+    c.fillStyle = `rgba(205,210,220,${puff})`;
     for (let i = 0; i < 4; i += 1) {
-      c.beginPath(); c.arc(24 + i * 10, -6, 5 + i * 2, 0, Math.PI * 2); c.fill();
+      c.beginPath();
+      c.arc((i % 2 ? 1 : -1) * (10 + i * 6), -5 - (i % 2) * 4, 5 + i * 2, 0, Math.PI * 2);
+      c.fill();
     }
+    // ducked back-view body: squashed low so it clearly slides under a beam
+    c.save();
+    c.translate(0, 5);
+    c.scale(1.06, 0.6);
+    this._legRun(c, -9, 0.25);
+    this._legRun(c, 9, -0.25);
+    this._torsoPackHead(c);
+    c.restore();
+  }
 
-    // legs extended forward (to the left/front)
-    c.strokeStyle = COLORS.pants; c.lineWidth = 11; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(2, -18); c.lineTo(-30, -10); c.stroke();
-    c.fillStyle = COLORS.shoe;
-    this._rr(c, -38, -14, 15, 9, 4); c.fill();
-    c.fillStyle = COLORS.shoeSole; c.fillRect(-38, -14, 15, 3);
+  // ----- shared body parts (origin at feet) -----
 
-    // torso reclined
-    const g = c.createLinearGradient(-20, -34, 20, -10);
+  _torsoPackHead(c) {
+    // torso (hoodie back)
+    const g = c.createLinearGradient(0, -88, 0, -40);
     g.addColorStop(0, COLORS.hoodieLight);
+    g.addColorStop(0.5, COLORS.hoodie);
     g.addColorStop(1, COLORS.hoodieDark);
     c.fillStyle = g;
-    c.save();
-    c.rotate(-0.5);
-    this._rr(c, -6, -30, 46, 26, 12); c.fill();
-    c.restore();
+    this._rr(c, -19, -88, 38, 48, 14); c.fill();
+    // centre back seam
+    c.strokeStyle = 'rgba(0,0,0,.12)'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(0, -84); c.lineTo(0, -46); c.stroke();
+    // collar / hood down
+    c.fillStyle = COLORS.hoodieDark;
+    this._rr(c, -14, -92, 28, 11, 5); c.fill();
 
-    // head (leaned back, toward front)
-    c.translate(-14, -26);
+    // backpack straps over the shoulders
+    c.strokeStyle = COLORS.packLight; c.lineWidth = 4; c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(-11, -86); c.lineTo(-11, -58);
+    c.moveTo(11, -86); c.lineTo(11, -58);
+    c.stroke();
+    // backpack body (closest to camera in back view)
+    c.fillStyle = COLORS.pack;
+    this._rr(c, -14, -82, 28, 40, 9); c.fill();
+    c.fillStyle = COLORS.packLight;
+    this._rr(c, -10, -78, 20, 15, 5); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(0, -60); c.lineTo(0, -46); c.stroke();
+
+    this._headBack(c, -104);
+  }
+
+  _headBack(c, cy) {
+    // nape peeking below the beanie
     c.fillStyle = COLORS.skin;
-    c.beginPath(); c.arc(0, 0, 13, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(0, cy + 7, 12, 0, Math.PI * 2); c.fill();
+    // beanie covers the back of the head
     c.fillStyle = COLORS.beanie;
-    c.beginPath(); c.arc(0, 0, 13, Math.PI * 0.7, Math.PI * 1.9); c.fill();
-    c.restore();
+    c.beginPath(); c.arc(0, cy, 15, 0, Math.PI * 2); c.fill();
+    // knit ribs
+    c.strokeStyle = COLORS.beanieCuff; c.lineWidth = 1.3;
+    for (let i = -2; i <= 2; i += 1) {
+      c.beginPath(); c.moveTo(i * 6, cy - 13); c.lineTo(i * 6, cy + 9); c.stroke();
+    }
+    // cuff band + pom
+    c.fillStyle = COLORS.beanieCuff;
+    this._rr(c, -15, cy + 8, 30, 7, 3); c.fill();
+    c.beginPath(); c.arc(0, cy - 15, 4, 0, Math.PI * 2); c.fill();
+  }
+
+  _legRun(c, hipX, phase) {
+    const lift = Math.max(0, -phase);
+    const kneeX = hipX + phase * 4;
+    const kneeY = -22 - lift * 7;
+    const footX = hipX + phase * 9;
+    const footY = -lift * 15;
+    c.lineCap = 'round';
+    c.strokeStyle = COLORS.pants; c.lineWidth = 12;
+    c.beginPath(); c.moveTo(hipX, -40); c.lineTo(kneeX, kneeY); c.lineTo(footX, footY); c.stroke();
+    c.strokeStyle = COLORS.pantsDark; c.lineWidth = 4;
+    c.beginPath(); c.moveTo(hipX, -40); c.lineTo(kneeX, kneeY); c.stroke();
+    this._sneaker(c, footX, footY, lift > 0.3);
+  }
+
+  _legTuck(c, hipX) {
+    const kneeX = hipX + (hipX < 0 ? -5 : 5);
+    const footX = hipX * 0.4;
+    c.lineCap = 'round';
+    c.strokeStyle = COLORS.pants; c.lineWidth = 12;
+    c.beginPath(); c.moveTo(hipX, -40); c.lineTo(kneeX, -30); c.lineTo(footX, -20); c.stroke();
+    this._sneaker(c, footX, -20, true);
+  }
+
+  _sneaker(c, x, y, sole) {
+    c.fillStyle = COLORS.shoe;
+    this._rr(c, x - 8, y - 5, 16, 8, 4); c.fill();
+    c.fillStyle = COLORS.shoeSole;
+    c.fillRect(x - 8, y + 1, 16, 3);
+    if (sole) { c.fillStyle = COLORS.shoeSole; this._rr(c, x - 8, y - 2, 16, 4, 2); c.fill(); }
+  }
+
+  _armRun(c, side, phase) {
+    const shX = side * 18; const shY = -84;
+    const elX = side * 20; const elY = -64 + phase * 4;
+    const haX = side * 13; const haY = -50 + phase * 9;
+    c.lineCap = 'round';
+    c.strokeStyle = COLORS.hoodie; c.lineWidth = 8;
+    c.beginPath(); c.moveTo(shX, shY); c.lineTo(elX, elY); c.lineTo(haX, haY); c.stroke();
+    c.fillStyle = COLORS.skin;
+    c.beginPath(); c.arc(haX, haY, 3.6, 0, Math.PI * 2); c.fill();
+  }
+
+  _armJump(c, side) {
+    const shX = side * 18; const shY = -84;
+    const haX = side * 24; const haY = -102;
+    c.lineCap = 'round';
+    c.strokeStyle = COLORS.hoodie; c.lineWidth = 8;
+    c.beginPath(); c.moveTo(shX, shY); c.lineTo(side * 24, -94); c.lineTo(haX, haY); c.stroke();
+    c.fillStyle = COLORS.skin;
+    c.beginPath(); c.arc(haX, haY, 3.6, 0, Math.PI * 2); c.fill();
   }
 
   // ---------- effects ----------
