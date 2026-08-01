@@ -8,6 +8,11 @@
 | Day | 게임 | 스택 | 패턴 |
 | --- | --- | --- | --- |
 | 01 | [테트리스](./day01-tetris) | Vanilla JS + Canvas | ES Modules · 관심사 분리(OOP) |
+| 02 | [야추 다이스](./day02-yacht-dice) | Vanilla JS | ES Modules · 관심사 분리(OOP) |
+| 03 | [스네이크](./day03-snake) | Vanilla JS + Canvas | ES Modules · 관심사 분리(OOP) |
+| 04 | [카드](./day04-cards) | Vanilla JS | ES Modules · 관심사 분리(OOP) |
+| 05 | [플랫포머](./day05-platformer) | Vanilla JS + Canvas | ES Modules · 관심사 분리(OOP) |
+| 06 | [러너 (3라인)](./day06-runner) | Vanilla JS + Canvas | ES Modules · 의사 3D 원근 |
 
 ## 공통 규칙
 
