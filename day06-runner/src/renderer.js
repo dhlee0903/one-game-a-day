@@ -188,9 +188,10 @@ export class Renderer {
   _obstacle(c, e) {
     const p = project(e.lane, e.d);
     const t = p.t;
-    // half-width in lane-units: kept < 0.5 so an obstacle stays inside its own
-    // lane and never visually spills into the neighbouring lanes.
-    const laneW = ROAD_HALF * LANE_SPREAD * 0.44 * t;
+    // half-width as a fraction of the lane spacing. Kept small enough that the
+    // solid face PLUS the pseudo-3D side/top depth still stays inside the lane
+    // (< 0.5), so an obstacle never visually reaches into a neighbouring lane.
+    const laneW = ROAD_HALF * LANE_SPREAD * 0.38 * t;
     const unit = 70 * t;
 
     // contact shadow
@@ -231,10 +232,10 @@ export class Renderer {
       const beamH = Math.max(5, unit * 0.5);
       const postW = Math.max(2, 7 * t);
       c.fillStyle = COLORS.highDark;
-      c.fillRect(p.x - laneW * 1.08, topY, postW, postH);
-      c.fillRect(p.x + laneW * 1.08 - postW, topY, postW, postH);
+      c.fillRect(p.x - laneW * 1.0, topY, postW, postH);
+      c.fillRect(p.x + laneW * 1.0 - postW, topY, postW, postH);
       // beam
-      this._prismAt(c, p.x, topY, laneW * 1.12, beamH, e.lane, COLORS.high, COLORS.highDark, COLORS.highLight);
+      this._prismAt(c, p.x, topY, laneW * 1.05, beamH, e.lane, COLORS.high, COLORS.highDark, COLORS.highLight);
       // sign glow
       c.fillStyle = 'rgba(196,176,255,.5)';
       c.fillRect(p.x - laneW * 0.5, topY + beamH * 0.25, laneW, Math.max(2, beamH * 0.3));
@@ -248,7 +249,8 @@ export class Renderer {
   }
 
   _prismAt(c, x, topY, halfW, height, lane, face, dark, light) {
-    const depth = Math.min(18, height * 0.22);
+    // small depth — kept modest so the side/top faces don't jut past the lane
+    const depth = Math.min(9, height * 0.13);
     const dir = lane < 0 ? 1 : -1; // show the side that faces the vanishing point
     // side face
     c.fillStyle = dark;
