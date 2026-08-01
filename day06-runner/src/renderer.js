@@ -359,12 +359,13 @@ export class Renderer {
   // backpack, joggers, sneakers. Origin at the feet (0,0), drawn upward.
   _runnerRun(c, p) {
     const s = Math.sin(p.runT * 0.34);
-    const bob = Math.abs(Math.cos(p.runT * 0.34)) * 2.5;
+    const bob = Math.abs(Math.cos(p.runT * 0.34)) * 2;
     c.save();
     c.translate(0, -bob);
-    this._legRun(c, -8, s);
-    this._legRun(c, 8, -s);
+    this._legRun(c, -6, s);
+    this._legRun(c, 6, -s);
     this._torsoPackHead(c);
+    // arms drawn last but positioned OUTSIDE the torso, swinging at the sides
     this._armRun(c, -1, -s);
     this._armRun(c, 1, s);
     c.restore();
@@ -440,23 +441,25 @@ export class Renderer {
     // beanie covers the back of the head
     c.fillStyle = COLORS.beanie;
     c.beginPath(); c.arc(0, cy, 15, 0, Math.PI * 2); c.fill();
-    // knit ribs
+    // knit ribs — clipped to the beanie so they never poke out as spikes
+    c.save();
+    c.beginPath(); c.arc(0, cy, 15, 0, Math.PI * 2); c.clip();
     c.strokeStyle = COLORS.beanieCuff; c.lineWidth = 1.3;
     for (let i = -2; i <= 2; i += 1) {
-      c.beginPath(); c.moveTo(i * 6, cy - 13); c.lineTo(i * 6, cy + 9); c.stroke();
+      c.beginPath(); c.moveTo(i * 6, cy - 15); c.lineTo(i * 6, cy + 12); c.stroke();
     }
-    // cuff band + pom
+    c.restore();
+    // cuff band
     c.fillStyle = COLORS.beanieCuff;
-    this._rr(c, -15, cy + 8, 30, 7, 3); c.fill();
-    c.beginPath(); c.arc(0, cy - 15, 4, 0, Math.PI * 2); c.fill();
+    this._rr(c, -14, cy + 7, 28, 6, 3); c.fill();
   }
 
   _legRun(c, hipX, phase) {
     const lift = Math.max(0, -phase);
-    const kneeX = hipX + phase * 4;
-    const kneeY = -22 - lift * 7;
-    const footX = hipX + phase * 9;
-    const footY = -lift * 15;
+    const kneeX = hipX;
+    const kneeY = -22 - lift * 6;
+    const footX = hipX + phase * 6;
+    const footY = -lift * 14;
     c.lineCap = 'round';
     c.strokeStyle = COLORS.pants; c.lineWidth = 12;
     c.beginPath(); c.moveTo(hipX, -40); c.lineTo(kneeX, kneeY); c.lineTo(footX, footY); c.stroke();
@@ -483,9 +486,10 @@ export class Renderer {
   }
 
   _armRun(c, side, phase) {
-    const shX = side * 18; const shY = -84;
-    const elX = side * 20; const elY = -64 + phase * 4;
-    const haX = side * 13; const haY = -50 + phase * 9;
+    // arms hang and swing at the SIDES (outside the torso), never across the back
+    const shX = side * 16; const shY = -82;
+    const elX = side * 22; const elY = -62 + phase * 3;
+    const haX = side * 20; const haY = -46 + phase * 8;
     c.lineCap = 'round';
     c.strokeStyle = COLORS.hoodie; c.lineWidth = 8;
     c.beginPath(); c.moveTo(shX, shY); c.lineTo(elX, elY); c.lineTo(haX, haY); c.stroke();
