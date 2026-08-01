@@ -2,43 +2,19 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>RUNNER · Day 06</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <a class="home" href="../">&larr; 홈</a>
 
-  <div class="wrap">
-    <header>
-      <h1>RUNNER</h1>
-      <p class="sub">DAY 06</p>
-    </header>
-
-    <div class="hud">
-      <div class="stat"><span class="label">SCORE</span><span class="val" id="score">0</span></div>
-      <div class="stat"><span class="label">COIN</span><span class="val" id="coins">0</span></div>
-      <div class="stat"><span class="label">SPEED</span><span class="val" id="speed">1.0x</span></div>
-      <div class="stat"><span class="label">BEST</span><span class="val" id="best">0</span></div>
-    </div>
-
-    <div class="board-wrap">
-      <canvas id="board" width="480" height="640"></canvas>
-      <div class="lives"><span id="hearts">♥♥♥</span></div>
-      <div class="overlay show" id="overlay"></div>
-    </div>
-
-    <div class="touch">
-      <button id="btnLeft" aria-label="왼쪽">&larr;</button>
-      <div class="mid">
-        <button id="btnJump" class="act" aria-label="점프">점프</button>
-        <button id="btnSlide" class="act" aria-label="슬라이드">슬라이드</button>
-      </div>
-      <button id="btnRight" aria-label="오른쪽">&rarr;</button>
-    </div>
-
-    <p class="keys">&larr; &rarr; 라인 이동 · <b>&uarr;</b> 점프 · <b>&darr;</b> 슬라이드 · 모바일 스와이프</p>
+  <div class="board-wrap">
+    <canvas id="board" width="480" height="720"></canvas>
+    <div class="overlay show" id="overlay"></div>
   </div>
+
+  <p class="keys">&larr; &rarr; 라인 이동 · <b>&uarr;</b> 점프 · <b>&darr;</b> 슬라이드</p>
 
   <script type="module" src="src/main.js"></script>
 </body>
