@@ -53,24 +53,46 @@ export const OB = { BLOCK: 'block', LOW: 'low', HIGH: 'high', COIN: 'coin' };
 export const BEST_KEY = 'day06-runner-best';
 
 export const COLORS = {
-  sky0: '#0a1330',
-  sky1: '#1b2b57',
-  sky2: '#5a4a86',
-  sky3: '#e8794f',
-  sky4: '#ffd0a0',
-  hill: '#241a3a',
-  hillFar: '#2f2350',
-  ground: '#141d33',
-  roadA: '#2b3550',
-  roadB: '#323d5c',
-  roadEdge: '#6a7bb0',
-  roadEdgeGlow: '#9db0ff',
-  laneLine: '#e9d38a',
-  rail: '#3a4868',
-  player: '#3fe0cf',
-  playerDark: '#1f9f92',
-  playerLight: '#8ff5ec',
-  playerSkin: '#f4cda4',
+  // dusk sky
+  sky0: '#0b1332',
+  sky1: '#213257',
+  sky2: '#6b5488',
+  sky3: '#e07a4e',
+  sky4: '#ffcf9c',
+  hill: '#241d3c',
+  hillFar: '#332a54',
+  fog: '#7a6a8e',            // horizon haze that road/objects fade into
+
+  // roadside terrain (grass/dirt shoulders) + asphalt
+  grass1: '#1d2a20',
+  grass2: '#0e1512',
+  asphalt1: '#2a2e37',
+  asphalt2: '#2f333d',
+  edgeLine: '#e2e7ef',       // solid painted road edge
+  laneLine: '#e9d38a',       // dashed lane divider
+
+  // streetlights
+  pole: '#4c515d',
+  poleDark: '#31353d',
+  lampGlow: '#ffd9a0',
+  lampHead: '#cdd4df',
+
+  // player (athletic runner)
+  hoodie: '#ff7a3d',
+  hoodieDark: '#cf5a22',
+  hoodieLight: '#ff9e63',
+  pants: '#2a3350',
+  pantsDark: '#1a2138',
+  shoe: '#f1f4f9',
+  shoeSole: '#ff5a5f',
+  skin: '#f4cda4',
+  skinDark: '#d7a67c',
+  beanie: '#243050',
+  beanieCuff: '#3a4870',
+  pack: '#2b6f6a',
+  packLight: '#3f938c',
+
+  // obstacles
   block: '#e0574f',
   blockDark: '#a23129',
   blockLight: '#ff8a7f',
@@ -79,10 +101,11 @@ export const COLORS = {
   high: '#9a7bf0',
   highDark: '#5f45b8',
   highLight: '#c4b0ff',
+
   coin: '#ffd23f',
   coinEdge: '#c98f00',
   coinShine: '#fff2b0',
-  shadow: 'rgba(0,0,0,.32)',
+  shadow: 'rgba(0,0,0,.34)',
   hud: '#eaf2ff',
   hudDim: '#9fb0cf',
   heart: '#ff5a6a',
