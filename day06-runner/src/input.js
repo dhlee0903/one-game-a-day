@@ -1,5 +1,6 @@
-// Keyboard (arrows / WASD), on-screen buttons, and swipe gestures → the shared
-// input state the game samples each step (edge-detected there for taps).
+// Keyboard (arrows / WASD) plus swipe gestures on the play surface. On touch
+// devices swiping is the only control — and it never scrolls the page, because
+// every touch on the surface is preventDefault-ed.
 
 export class InputController {
   constructor(state, { onStartKey } = {}) {
@@ -20,31 +21,15 @@ export class InputController {
     window.addEventListener('keyup', (e) => set(e.key, false));
   }
 
-  bindTouch(els) {
-    const tap = (el, prop) => {
-      const on = (e) => { e.preventDefault(); this.state[prop] = true; };
-      const off = (e) => { e.preventDefault(); this.state[prop] = false; };
-      el.addEventListener('touchstart', on, { passive: false });
-      el.addEventListener('touchend', off);
-      el.addEventListener('touchcancel', off);
-      el.addEventListener('mousedown', on);
-      el.addEventListener('mouseup', off);
-      el.addEventListener('mouseleave', off);
-    };
-    if (els.left) tap(els.left, 'left');
-    if (els.right) tap(els.right, 'right');
-    if (els.up) tap(els.up, 'up');
-    if (els.down) tap(els.down, 'down');
-  }
-
-  // Swipe on the play surface: flick direction maps to one tap.
+  // Swipe on the surface → one directional tap. Taps (no movement) start/restart.
   bindSwipe(surface, { onStartKey } = {}) {
     let sx = 0; let sy = 0; let active = false;
-    const TH = 26; // min px for a swipe
+    const TH = 24; // min px for a swipe
 
     const fire = (prop) => {
       this.state[prop] = true;
-      setTimeout(() => { this.state[prop] = false; }, 60);
+      // released next frame; the game edge-detects the rising edge as one tap
+      setTimeout(() => { this.state[prop] = false; }, 70);
     };
 
     const start = (x, y) => { sx = x; sy = y; active = true; };
@@ -52,20 +37,24 @@ export class InputController {
       if (!active) return;
       active = false;
       const dx = x - sx; const dy = y - sy;
-      if (Math.abs(dx) < TH && Math.abs(dy) < TH) {
-        if (onStartKey) onStartKey();
-        return;
-      }
+      if (Math.abs(dx) < TH && Math.abs(dy) < TH) { if (onStartKey) onStartKey(); return; }
       if (Math.abs(dx) > Math.abs(dy)) fire(dx > 0 ? 'right' : 'left');
       else fire(dy > 0 ? 'down' : 'up');
     };
 
+    // Touch: swallow every touch event so the page never scrolls or bounces.
     surface.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       const t = e.changedTouches[0]; start(t.clientX, t.clientY);
-    }, { passive: true });
+    }, { passive: false });
+    surface.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
     surface.addEventListener('touchend', (e) => {
+      e.preventDefault();
       const t = e.changedTouches[0]; end(t.clientX, t.clientY);
-    });
+    }, { passive: false });
+    surface.addEventListener('touchcancel', () => { active = false; });
+
+    // Mouse: drag to swipe (desktop convenience / testing).
     surface.addEventListener('mousedown', (e) => start(e.clientX, e.clientY));
     surface.addEventListener('mouseup', (e) => end(e.clientX, e.clientY));
   }

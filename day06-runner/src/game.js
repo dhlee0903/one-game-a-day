@@ -3,7 +3,7 @@
 // coins, speed and lives. The renderer only reads this state.
 
 import {
-  START_SPEED, MAX_SPEED, SPEED_RAMP, DRAW_DIST, HIT_DEPTH,
+  START_SPEED, MAX_SPEED, SPEED_RAMP, HIT_DEPTH, LANE_HIT, PASS_D,
   ROW_FRAMES_START, ROW_FRAMES_MIN, ROW_FRAMES_RAMP,
   START_LIVES, COIN_SCORE, DIST_SCORE, OB, BEST_KEY,
 } from './config.js';
@@ -35,7 +35,9 @@ export class Game {
     this.score = 0;
     this.lives = START_LIVES;
     this.speed = START_SPEED;
-    this.nextSpawn = 4; // first row a little ahead
+    this.frames = 0;      // elapsed play frames → time
+    this.shake = 0;       // screen-shake frames left
+    this.nextSpawn = 5;   // first row a little ahead
     this.effects = [];
     this.acc = 0;
     this.last = 0;
@@ -66,6 +68,8 @@ export class Game {
   _step() {
     this._consumeInput();
     this.player.update();
+    this.frames += 1;
+    if (this.shake > 0) this.shake -= 1;
 
     // ramp speed with distance, then scroll the world toward the camera
     this.speed = Math.min(MAX_SPEED, START_SPEED + this.distance * SPEED_RAMP);
@@ -78,8 +82,9 @@ export class Game {
     this._collisions();
     this._advanceEffects();
 
-    // drop entities that passed the camera
-    this.entities = this.entities.filter((e) => e.d > -2);
+    // keep entities until they have slid well past the camera, so they flow off
+    // the bottom of the screen instead of popping out at the edge
+    this.entities = this.entities.filter((e) => e.d > PASS_D);
     this._emit();
   }
 
@@ -107,13 +112,14 @@ export class Game {
     const p = this.player;
     for (const e of this.entities) {
       if (e.resolved || Math.abs(e.d) > HIT_DEPTH) continue;
-      if (e.laneIndex !== p.lane) continue;
+      // overlap by the player's *visual* lane position, so what you see is what
+      // you get — a glancing, off-centre hit still counts.
+      if (Math.abs(e.lane - p.laneX) > LANE_HIT) continue;
 
       if (e.kind === OB.COIN) {
-        if (p.jumping && e.d < 0.2) continue; // let a jump sail over a low coin
         e.resolved = true; e.taken = true;
         this.coins += 1; this.score += COIN_SCORE;
-        this.effects.push({ type: 'spark', lane: e.lane, laneIndex: e.laneIndex, t: 0, life: 20 });
+        this.effects.push({ type: 'spark', lane: e.lane, t: 0, life: 20 });
         continue;
       }
 
@@ -132,6 +138,7 @@ export class Game {
     if (this.player.invuln > 0) return;
     this.player.hurt();
     this.lives -= 1;
+    this.shake = 16;
     this.effects.push({ type: 'flash', t: 0, life: 16 });
     if (this.lives <= 0) {
       this.phase = 'dead';
