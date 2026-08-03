@@ -8,6 +8,7 @@ export class InputController {
     this.canvas = canvas;
     this.game = game;
     this.start = null;
+    this.lastTap = null; // for double-tap detection
 
     const toBoard = (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -33,10 +34,22 @@ export class InputController {
       const cell = this.start.cell;
       this.start = null;
       if (Math.abs(dx) < 12 && Math.abs(dy) < 12) {
-        game.click(cell); // tap
+        // tap — detect a double-tap on the same cell to detonate a special
+        const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
+        const lt = this.lastTap;
+        if (lt && now - lt.t < 320 && lt.r === cell.r && lt.c === cell.c) {
+          this.lastTap = null;
+          const g = game.board.at(cell.r, cell.c);
+          if (g && g.special) { game.activateSpecial(cell); return; }
+          game.click(cell); // normal (toggles selection off)
+          return;
+        }
+        this.lastTap = { r: cell.r, c: cell.c, t: now };
+        game.click(cell);
         return;
       }
       // drag → swap with the neighbour in the dominant direction
+      this.lastTap = null;
       let nr = cell.r; let nc = cell.c;
       if (Math.abs(dx) > Math.abs(dy)) nc += dx > 0 ? 1 : -1;
       else nr += dy > 0 ? 1 : -1;

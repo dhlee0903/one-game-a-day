@@ -8,6 +8,11 @@ export const PAD = 8;
 export const BOARD_W = COLS * CELL + PAD * 2;
 export const BOARD_H = ROWS * CELL + PAD * 2;
 
+// In-canvas HUD strip above the grid, so score/stage/moves live inside the game.
+export const HUD_H = 86;
+export const CANVAS_W = BOARD_W;
+export const CANVAS_H = HUD_H + BOARD_H;
+
 // Special block kinds and the match shape that creates each (modern match-3):
 //  - 가로 4  → ROW    : clears the whole row
 //  - 세로 4  → COL    : clears the whole column
