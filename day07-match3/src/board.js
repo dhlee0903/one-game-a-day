@@ -165,21 +165,23 @@ export class Board {
         consider(a.r, a.c, run.dir === 'h' ? SP.ROW : SP.COL, this.grid[a.r][a.c].color, 2);
       }
     }
+    // any match containing a 2x2 → missile (bat), even a 5-match that includes
+    // a square; the pure ㄱ/ㄴ/T intersection (no square) below → bomb.
+    const squareCells = new Set();
     for (const sq of squares) {
       const cells = [
         { r: sq.r, c: sq.c }, { r: sq.r, c: sq.c + 1 },
         { r: sq.r + 1, c: sq.c }, { r: sq.r + 1, c: sq.c + 1 },
       ];
+      for (const p of cells) squareCells.add(this.key(p.r, p.c));
       const a = anchor(cells);
-      // a *clean* 2x2 (no cell in a 3+ run) → missile; a 2x2 that's part of a
-      // larger 5-cell shape (touches a run) → bomb, like the ㄱ/ㄴ/T corners.
-      const touchesRun = cells.some((p) => hset.has(this.key(p.r, p.c)) || vset.has(this.key(p.r, p.c)));
-      consider(a.r, a.c, touchesRun ? SP.BOMB : SP.MISSILE, sq.color, 3);
+      consider(a.r, a.c, SP.MISSILE, sq.color, 3);
     }
 
-    // ㄱ자(L/T): a cell in both an h-run and a v-run → bomb at the corner
+    // ㄱ자(L/T): a cell in both an h-run and a v-run → bomb at the corner,
+    // unless that corner is part of a 2x2 (then it's a bat, handled above).
     for (const k of hset) {
-      if (!vset.has(k)) continue;
+      if (!vset.has(k) || squareCells.has(k)) continue;
       const r = Math.floor(k / COLS); const c = k % COLS;
       const g = this.grid[r][c];
       consider(r, c, SP.BOMB, g ? g.color : 0, 3);
