@@ -9,7 +9,7 @@ import {
 import { Board } from './board.js';
 
 const EASE = 0.3;
-const CLEAR_LIFE = 10;
+const CLEAR_LIFE = 16; // long enough to read the monster's dying face
 
 export class Game {
   constructor({ onHud, onState } = {}) {
