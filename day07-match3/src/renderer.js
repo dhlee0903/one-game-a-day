@@ -5,7 +5,7 @@
 
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_W, BOARD_H, CANVAS_W, CANVAS_H,
-  SP, GEM_COLORS, UI, VERSION,
+  SP, GEM_COLORS, UI, VERSION, CLEAR_LIFE,
 } from './config.js';
 
 export class Renderer {
@@ -153,7 +153,7 @@ export class Renderer {
 
   _clearing(c, game) {
     for (const cl of game.clearing) {
-      const k = Math.max(0, 1 - cl.t / 16);
+      const k = Math.max(0, 1 - cl.t / CLEAR_LIFE);
       // dead = true → the monster shows its dying face as it shrinks away
       this.drawGem(c, cl.gem.x, cl.gem.y, cl.gem.color, cl.gem.special, 0.5 + k * 0.5, k, true);
     }
