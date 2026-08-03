@@ -1,16 +1,21 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.9';
+export const VERSION = 'v7.11';
+
+// Continue after running out of moves: pay gold for +N moves, cost doubles each
+// time within the same stage attempt.
+export const CONTINUE_MOVES = 3;
+export const CONTINUE_BASE = 100;
 
 // Active items (bottom bar). `target: true` → arm, then tap a board cell.
 // `price` scales with how powerful the item is (gold to buy one when out).
 export const ITEMS = [
-  { id: 'hammer', name: '망치', target: true, price: 60 }, // 1 cell
-  { id: 'shuffle', name: '섞기', target: false, price: 90 }, // board reshuffle
-  { id: 'bomb', name: '폭탄', target: true, price: 140 }, // 3x3
-  { id: 'cross', name: '십자', target: true, price: 170 }, // row + column
-  { id: 'color', name: '색폭탄', target: true, price: 240 }, // whole colour
+  { id: 'hammer', name: '망치', target: true, price: 60, desc: '한 칸 제거' },
+  { id: 'shuffle', name: '섞기', target: false, price: 90, desc: '보드 섞기' },
+  { id: 'bomb', name: '폭탄', target: true, price: 140, desc: '주변 3×3 제거' },
+  { id: 'cross', name: '십자', target: true, price: 170, desc: '가로·세로 줄 제거' },
+  { id: 'color', name: '색폭탄', target: true, price: 240, desc: '같은 색 전체 제거' },
 ];
 export const ITEM_START = 2;   // uses of each item at a fresh game start
 export const START_GOLD = 200;
