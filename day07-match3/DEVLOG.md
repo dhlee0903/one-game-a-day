@@ -16,6 +16,11 @@
 
 ## 개발 적용 (Changelog)
 
+### 2026-08-03 — Pointer Events 전환 · 버전 라벨 (v7.4)
+
+- 입력을 **Pointer Events**(pointerdown/up)로 전환 — 마우스·터치·펜 통합, `touches/changedTouches` 함정 자체를 제거해 모바일 스와이프를 근본적으로 안정화. `setPointerCapture`로 드래그 추적
+- 캔버스 우측 하단에 **빌드 버전 라벨**(`VERSION`) 표시 — 라이브가 최신 수정본인지 한눈에 확인(캐시 여부 판별)
+
 ### 2026-08-03 — 모바일 터치 스와이프 수정
 
 - `touchend`는 좌표가 `changedTouches`에 있는데 `e.touches[0]`(빈 리스트)을 읽어 NaN이 되던 문제 → `changedTouches` 우선 사용

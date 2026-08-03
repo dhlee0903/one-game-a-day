@@ -1,5 +1,8 @@
 // Match-3 constants — single source of truth.
 
+// Bump this on every gameplay/patch change so the live build is identifiable.
+export const VERSION = 'v7.4';
+
 export const COLS = 8;
 export const ROWS = 8;
 export const NUM_COLORS = 6;

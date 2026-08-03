@@ -5,7 +5,7 @@
 
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_W, BOARD_H, CANVAS_W, CANVAS_H,
-  SP, GEM_COLORS, UI,
+  SP, GEM_COLORS, UI, VERSION,
 } from './config.js';
 
 export class Renderer {
@@ -31,6 +31,13 @@ export class Renderer {
     this._clearing(c, game);
     this._effects(c, game);
     c.restore();
+
+    // small build tag so the live version is identifiable at a glance
+    c.font = '600 10px "Segoe UI", system-ui, sans-serif';
+    c.fillStyle = 'rgba(143,160,181,.55)';
+    c.textAlign = 'right'; c.textBaseline = 'alphabetic';
+    c.fillText(VERSION, CANVAS_W - 8, CANVAS_H - 7);
+    c.textAlign = 'left';
   }
 
   // ---- HUD ----
