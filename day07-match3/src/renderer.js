@@ -31,6 +31,7 @@ export class Renderer {
     this._hint(c, game);
     this._clearing(c, game);
     this._effects(c, game);
+    this._missiles(c, game);
     this._armed(c, game);
     c.restore();
 
@@ -376,14 +377,16 @@ export class Renderer {
       return;
     }
     if (kind === 'pumpkin') {
+      // big round eyes → friendlier than the classic triangle jack-o cut-outs
+      this._roundEye(c, lx, eyeY, s * 0.12, '#fff');
+      this._roundEye(c, rx, eyeY, s * 0.12, '#fff');
+      // cute curved grin with two little teeth
+      const my = top + s * 0.66;
+      c.strokeStyle = '#3a2410'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
+      c.beginPath(); c.arc(cx, my, s * 0.18, 0.1 * Math.PI, 0.9 * Math.PI); c.stroke();
       c.fillStyle = '#3a2410';
-      const eye = (ex) => { c.beginPath(); c.moveTo(ex - s * 0.1, eyeY + s * 0.06); c.lineTo(ex + s * 0.1, eyeY + s * 0.06); c.lineTo(ex, eyeY - s * 0.09); c.closePath(); c.fill(); };
-      eye(lx); eye(rx);
-      const mw = s * 0.5; const mx = cx - mw / 2; const my = top + s * 0.68; const steps = 6;
-      c.beginPath(); c.moveTo(mx, my);
-      for (let i = 0; i <= steps; i += 1) c.lineTo(mx + (mw * i) / steps, my + (i % 2 ? s * 0.12 : 0));
-      for (let i = steps; i >= 0; i -= 1) c.lineTo(mx + (mw * i) / steps, my + s * 0.05 + (i % 2 ? 0 : s * 0.1));
-      c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(cx - s * 0.09, my + s * 0.07); c.lineTo(cx - s * 0.02, my + s * 0.07); c.lineTo(cx - s * 0.055, my + s * 0.15); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(cx + s * 0.09, my + s * 0.07); c.lineTo(cx + s * 0.02, my + s * 0.07); c.lineTo(cx + s * 0.055, my + s * 0.15); c.closePath(); c.fill();
       return;
     }
     if (kind === 'ghost') {
@@ -407,17 +410,10 @@ export class Renderer {
       c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = Math.max(1.5, s * 0.04); c.lineCap = 'round';
       c.beginPath(); c.moveTo(lx - s * 0.12, eyeY - s * 0.2); c.lineTo(lx + s * 0.05, eyeY - s * 0.13); c.stroke();
       c.beginPath(); c.moveTo(rx + s * 0.12, eyeY - s * 0.2); c.lineTo(rx - s * 0.05, eyeY - s * 0.13); c.stroke();
-      // rosy cheeks
-      c.fillStyle = 'rgba(255,120,120,.5)';
-      c.beginPath(); c.arc(lx - s * 0.06, eyeY + s * 0.17, s * 0.06, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(rx + s * 0.06, eyeY + s * 0.17, s * 0.06, 0, Math.PI * 2); c.fill();
-      // small friendly smile with two little fangs
+      // simple friendly smile (no fangs)
       const my = top + s * 0.68;
       c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = Math.max(1.5, s * 0.045); c.lineCap = 'round';
       c.beginPath(); c.arc(cx, my, s * 0.15, 0.12 * Math.PI, 0.88 * Math.PI); c.stroke();
-      c.fillStyle = '#fff';
-      c.beginPath(); c.moveTo(cx - s * 0.09, my + s * 0.02); c.lineTo(cx - s * 0.03, my + s * 0.02); c.lineTo(cx - s * 0.06, my + s * 0.1); c.closePath(); c.fill();
-      c.beginPath(); c.moveTo(cx + s * 0.09, my + s * 0.02); c.lineTo(cx + s * 0.03, my + s * 0.02); c.lineTo(cx + s * 0.06, my + s * 0.1); c.closePath(); c.fill();
       return;
     }
     if (kind === 'zombie') {
@@ -453,6 +449,35 @@ export class Renderer {
     c.moveTo(ex - r, ey - r); c.lineTo(ex + r, ey + r);
     c.moveTo(ex + r, ey - r); c.lineTo(ex - r, ey + r);
     c.stroke();
+  }
+
+  // ---- guided missiles ----
+
+  _missiles(c, game) {
+    for (const m of game.missiles) {
+      // target reticle
+      c.strokeStyle = 'rgba(255,210,63,.7)'; c.lineWidth = 2;
+      const pulse = 8 + (m.t % 12) * 0.4;
+      c.beginPath(); c.arc(m.tx, m.ty, pulse, 0, Math.PI * 2); c.stroke();
+      c.beginPath();
+      c.moveTo(m.tx - 13, m.ty); c.lineTo(m.tx - 5, m.ty); c.moveTo(m.tx + 5, m.ty); c.lineTo(m.tx + 13, m.ty);
+      c.moveTo(m.tx, m.ty - 13); c.lineTo(m.tx, m.ty - 5); c.moveTo(m.tx, m.ty + 5); c.lineTo(m.tx, m.ty + 13);
+      c.stroke();
+      // trail
+      for (let i = 0; i < m.trail.length; i += 1) {
+        const p = m.trail[i]; const a = (i + 1) / m.trail.length;
+        c.fillStyle = `rgba(255,180,60,${a * 0.5})`;
+        c.beginPath(); c.arc(p.x, p.y, 2 + a * 3, 0, Math.PI * 2); c.fill();
+      }
+      // head: small glowing dart pointing along its velocity
+      const ang = Math.atan2(m.ty - m.sy, m.tx - m.sx);
+      c.save(); c.translate(m.x, m.y); c.rotate(ang);
+      c.fillStyle = '#ff9a2e';
+      c.beginPath(); c.moveTo(10, 0); c.lineTo(-6, -5); c.lineTo(-3, 0); c.lineTo(-6, 5); c.closePath(); c.fill();
+      c.fillStyle = '#ffe14d';
+      c.beginPath(); c.moveTo(9, 0); c.lineTo(-2, -2.4); c.lineTo(-2, 2.4); c.closePath(); c.fill();
+      c.restore();
+    }
   }
 
   // ---- effects ----
@@ -509,7 +534,7 @@ export class Renderer {
         c.beginPath(); c.arc(0, 0, rr, 0, Math.PI * 1.5); c.stroke();
         c.restore();
       } else if (fx.type === 'warn') {
-        const blink = Math.sin(p * Math.PI * 6) > 0 ? 1 : 0.35;
+        const blink = Math.sin(fx.t * 0.35) > 0 ? 1 : 0.4;
         const alpha = p < 0.85 ? blink : (1 - p) / 0.15 * blink;
         c.save();
         c.globalAlpha = Math.max(0, alpha);

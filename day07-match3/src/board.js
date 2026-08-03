@@ -186,10 +186,12 @@ export class Board {
   }
 
   // Cells a special clears when it detonates (does not recurse; the game chains).
+  // BOMB no longer clears an area here — it is fired as a guided missile by the
+  // game (see Game._launchBombMissiles); caught in a chain it just clears itself.
   effectCells(r, c, gem) {
     const out = [];
     if (gem.special === SP.ROW) { for (let cc = 0; cc < COLS; cc += 1) out.push({ r, c: cc }); } else if (gem.special === SP.COL) { for (let rr = 0; rr < ROWS; rr += 1) out.push({ r: rr, c }); } else if (gem.special === SP.BOMB) {
-      for (let rr = r - 1; rr <= r + 1; rr += 1) for (let cc = c - 1; cc <= c + 1; cc += 1) if (this.inBounds(rr, cc)) out.push({ r: rr, c: cc });
+      out.push({ r, c });
     } else if (gem.special === SP.COLOR) {
       const color = this._commonColor();
       for (let rr = 0; rr < ROWS; rr += 1) for (let cc = 0; cc < COLS; cc += 1) {
@@ -197,6 +199,41 @@ export class Board {
       }
     }
     return out;
+  }
+
+  // Missile auto-aim heuristic: how many gems would match if (r0,c0) were
+  // removed and the board fell (existing gems only; refills unknown → ignored).
+  // Higher = removing that cell triggers a bigger cascade.
+  simulateRemoveScore(r0, c0) {
+    const col = new Array(ROWS);
+    for (let r = 0; r < ROWS; r += 1) {
+      col[r] = new Array(COLS);
+      for (let c = 0; c < COLS; c += 1) {
+        const g = this.grid[r][c];
+        col[r][c] = !g ? null : (g.special === SP.NONE && g.color >= 0 ? g.color : -2);
+      }
+    }
+    col[r0][c0] = null;
+    for (let c = 0; c < COLS; c += 1) { // gravity
+      let w = ROWS - 1;
+      for (let r = ROWS - 1; r >= 0; r -= 1) { if (col[r][c] !== null) { const v = col[r][c]; col[r][c] = null; col[w][c] = v; w -= 1; } }
+    }
+    const matched = new Set();
+    for (let r = 0; r < ROWS; r += 1) { // horizontal runs
+      let run = 1;
+      for (let c = 1; c <= COLS; c += 1) {
+        const a = col[r][c - 1]; const b = c < COLS ? col[r][c] : null;
+        if (b !== null && b === a && a >= 0) { run += 1; } else { if (run >= 3 && a >= 0) for (let k = 0; k < run; k += 1) matched.add(r * COLS + (c - 1 - k)); run = 1; }
+      }
+    }
+    for (let c = 0; c < COLS; c += 1) { // vertical runs
+      let run = 1;
+      for (let r = 1; r <= ROWS; r += 1) {
+        const a = col[r - 1][c]; const b = r < ROWS ? col[r][c] : null;
+        if (b !== null && b === a && a >= 0) { run += 1; } else { if (run >= 3 && a >= 0) for (let k = 0; k < run; k += 1) matched.add((r - 1 - k) * COLS + c); run = 1; }
+      }
+    }
+    return matched.size;
   }
 
   // All cells of a given colour (used when a COLOR block is swapped with a gem).
