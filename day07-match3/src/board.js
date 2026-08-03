@@ -171,7 +171,7 @@ export class Board {
         { r: sq.r + 1, c: sq.c }, { r: sq.r + 1, c: sq.c + 1 },
       ];
       const a = anchor(cells);
-      consider(a.r, a.c, SP.BOMB, sq.color, 3);
+      consider(a.r, a.c, SP.MISSILE, sq.color, 3); // 2x2 → guided missile (bat)
     }
 
     // ㄱ자(L/T): a cell in both an h-run and a v-run → bomb at the corner
@@ -186,11 +186,13 @@ export class Board {
   }
 
   // Cells a special clears when it detonates (does not recurse; the game chains).
-  // BOMB no longer clears an area here — it is fired as a guided missile by the
-  // game (see Game._launchBombMissiles); caught in a chain it just clears itself.
+  // MISSILE is fired as a guided missile by the game (see Game._launchMissiles);
+  // caught in a chain it just clears itself.
   effectCells(r, c, gem) {
     const out = [];
     if (gem.special === SP.ROW) { for (let cc = 0; cc < COLS; cc += 1) out.push({ r, c: cc }); } else if (gem.special === SP.COL) { for (let rr = 0; rr < ROWS; rr += 1) out.push({ r: rr, c }); } else if (gem.special === SP.BOMB) {
+      for (let rr = r - 1; rr <= r + 1; rr += 1) for (let cc = c - 1; cc <= c + 1; cc += 1) if (this.inBounds(rr, cc)) out.push({ r: rr, c: cc });
+    } else if (gem.special === SP.MISSILE) {
       out.push({ r, c });
     } else if (gem.special === SP.COLOR) {
       const color = this._commonColor();

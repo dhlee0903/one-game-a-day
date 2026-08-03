@@ -1,7 +1,7 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.23';
+export const VERSION = 'v7.24';
 
 // Frames a matched gem takes to shrink/fade out (its dying face + the pop).
 // Higher = the "터지는" pop reads a touch slower.
@@ -49,12 +49,13 @@ export const HUD_H = 86;
 export const CANVAS_W = BOARD_W;
 export const CANVAS_H = HUD_H + BOARD_H;
 
-// Special block kinds and the match shape that creates each (modern match-3):
-//  - 가로 4  → ROW    : clears the whole row
-//  - 세로 4  → COL    : clears the whole column
-//  - 2 x 2   → BOMB   : clears the surrounding 3x3
-//  - 5 매치  → COLOR  : clears every gem of one colour (rainbow)
-export const SP = { NONE: 0, ROW: 'row', COL: 'col', BOMB: 'bomb', COLOR: 'color' };
+// Special block kinds and the match shape that creates each:
+//  - 가로 4       → ROW     : clears the whole row (firework)
+//  - 세로 4       → COL     : clears the whole column (firework)
+//  - 2 x 2        → MISSILE : bat flies to the best cell, removes 1 block
+//  - ㄱ/ㄴ/T (5)  → BOMB    : clears the surrounding 3x3
+//  - 5 일자       → COLOR   : clears every gem of one colour (rainbow)
+export const SP = { NONE: 0, ROW: 'row', COL: 'col', BOMB: 'bomb', MISSILE: 'missile', COLOR: 'color' };
 export const COLOR_GEM = -1; // colour used by a rainbow (COLOR) block
 
 export const POINTS_PER_GEM = 20;

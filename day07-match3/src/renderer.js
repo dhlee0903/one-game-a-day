@@ -204,94 +204,111 @@ export class Renderer {
   _specialBlock(c, special, color, left, top, s, cx, cy) {
     if (special === SP.COLOR) { this._colorBlock(c, left, top, s, cx, cy); return; }
     const m = GEM_COLORS[color] || GEM_COLORS[0];
-    if (special === SP.ROW || special === SP.COL) this._rocket(c, special === SP.ROW, m, cx, cy, s);
-    else if (special === SP.BOMB) this._bombBlock(c, cx, cy, s);
+    if (special === SP.ROW || special === SP.COL) this._firework(c, special === SP.ROW, m, cx, cy, s);
+    else if (special === SP.BOMB) this._bombSphere(c, m, cx, cy, s);
+    else if (special === SP.MISSILE) this._batBlock(c, m, cx, cy, s);
   }
 
-  // 4-match rocket: flies along the line it clears (horizontal = whole row).
-  _rocket(c, horiz, m, cx, cy, s) {
+  // 4-match line special: a firework burst, elongated along the line it clears.
+  _firework(c, horiz, m, cx, cy, s) {
     c.save();
     c.translate(cx, cy);
-    if (horiz) c.rotate(Math.PI / 2); // default nose-up (COL); rotate for ROW
-    const w = s * 0.30;        // body width
-    const noseY = -s * 0.42;   // nose tip
-    const shTop = -s * 0.22;   // shoulder (body top)
-    const bot = s * 0.24;      // tail
-    // exhaust flame
-    const fl = c.createLinearGradient(0, bot, 0, bot + s * 0.26);
-    fl.addColorStop(0, '#ffe14d'); fl.addColorStop(0.5, 'rgba(255,150,40,.85)'); fl.addColorStop(1, 'rgba(255,90,40,0)');
-    c.fillStyle = fl;
-    c.beginPath(); c.moveTo(-w * 0.4, bot); c.quadraticCurveTo(0, bot + s * 0.3, w * 0.4, bot); c.closePath(); c.fill();
-    // fins
-    c.fillStyle = m.dark;
-    c.beginPath(); c.moveTo(-w * 0.48, bot - s * 0.14); c.lineTo(-w * 0.92, bot + s * 0.04); c.lineTo(-w * 0.48, bot); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(w * 0.48, bot - s * 0.14); c.lineTo(w * 0.92, bot + s * 0.04); c.lineTo(w * 0.48, bot); c.closePath(); c.fill();
-    // body + nose (rounded fuselage with a bright centre stripe)
-    const bg = c.createLinearGradient(-w * 0.5, 0, w * 0.5, 0);
-    bg.addColorStop(0, m.dark); bg.addColorStop(0.35, m.base); bg.addColorStop(0.5, m.light); bg.addColorStop(0.65, m.base); bg.addColorStop(1, m.dark);
-    c.fillStyle = bg;
-    c.beginPath();
-    c.moveTo(-w * 0.5, bot);
-    c.lineTo(-w * 0.5, shTop);
-    c.quadraticCurveTo(-w * 0.5, noseY, 0, noseY);
-    c.quadraticCurveTo(w * 0.5, noseY, w * 0.5, shTop);
-    c.lineTo(w * 0.5, bot);
-    c.closePath(); c.fill();
-    c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = Math.max(1, s * 0.025); c.stroke();
-    // cockpit window
-    c.fillStyle = '#bfeaff';
-    c.beginPath(); c.arc(0, shTop + s * 0.13, w * 0.3, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = Math.max(1, s * 0.02); c.stroke();
-    c.fillStyle = 'rgba(255,255,255,.75)';
-    c.beginPath(); c.arc(-w * 0.09, shTop + s * 0.09, w * 0.1, 0, Math.PI * 2); c.fill();
+    if (horiz) c.rotate(Math.PI / 2);
+    // long axis = the clear direction; draw rays fanning out, longest vertically
+    const rays = 14;
+    for (let i = 0; i < rays; i += 1) {
+      const ang = (i / rays) * Math.PI * 2;
+      const axial = Math.abs(Math.cos(ang)); // 1 near the clear axis
+      const len = s * (0.18 + 0.26 * axial * axial);
+      const ex = Math.sin(ang) * len; const ey = -Math.cos(ang) * len;
+      const g = c.createLinearGradient(0, 0, ex, ey);
+      g.addColorStop(0, m.light); g.addColorStop(1, `rgba(255,255,255,0)`);
+      c.strokeStyle = g; c.lineWidth = Math.max(1.4, s * 0.045); c.lineCap = 'round';
+      c.beginPath(); c.moveTo(0, 0); c.lineTo(ex, ey); c.stroke();
+      // spark dot at the tip
+      c.fillStyle = i % 2 ? m.light : '#ffffff';
+      c.beginPath(); c.arc(ex * 0.94, ey * 0.94, s * 0.028, 0, Math.PI * 2); c.fill();
+    }
+    // glowing core
+    const cg = c.createRadialGradient(0, 0, 0, 0, 0, s * 0.2);
+    cg.addColorStop(0, '#ffffff'); cg.addColorStop(0.5, m.light); cg.addColorStop(1, m.base);
+    c.fillStyle = cg;
+    c.beginPath(); c.arc(0, 0, s * 0.16, 0, Math.PI * 2); c.fill();
     c.restore();
   }
 
-  // 2x2 guided missile: metallic warhead with a targeting reticle — distinct
-  // from the (coloured) line rocket and the rainbow orb.
-  _bombBlock(c, cx, cy, s) {
-    const w = s * 0.24;
-    const noseY = cy - s * 0.4;
-    const shTop = cy - s * 0.14; // shoulder (body top / nose base)
-    const bot = cy + s * 0.26;
-    // exhaust flame
-    const fl = c.createLinearGradient(0, 0, 0, s * 0.2);
-    fl.addColorStop(0, '#ffe14d'); fl.addColorStop(0.5, 'rgba(255,150,40,.8)'); fl.addColorStop(1, 'rgba(255,90,40,0)');
-    c.save(); c.translate(cx, bot);
-    c.fillStyle = fl;
-    c.beginPath(); c.moveTo(-w * 0.34, 0); c.quadraticCurveTo(0, s * 0.22, w * 0.34, 0); c.closePath(); c.fill();
-    c.restore();
-    // fins
-    c.fillStyle = '#39424f';
-    c.beginPath(); c.moveTo(cx - w * 0.5, bot - s * 0.12); c.lineTo(cx - w * 0.95, bot + s * 0.03); c.lineTo(cx - w * 0.5, bot); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(cx + w * 0.5, bot - s * 0.12); c.lineTo(cx + w * 0.95, bot + s * 0.03); c.lineTo(cx + w * 0.5, bot); c.closePath(); c.fill();
-    // metallic body
-    const bg = c.createLinearGradient(cx - w * 0.5, 0, cx + w * 0.5, 0);
-    bg.addColorStop(0, '#5a6577'); bg.addColorStop(0.5, '#cdd6e2'); bg.addColorStop(1, '#5a6577');
+  // ㄱ/ㄴ/T 5-match: a classic bomb sphere in the gem's colour, fuse inside cell.
+  _bombSphere(c, m, cx, cy, s) {
+    const r = s * 0.38;
+    const by = cy + s * 0.05;
+    const bg = c.createRadialGradient(cx - r * 0.35, by - r * 0.4, r * 0.15, cx, by, r);
+    bg.addColorStop(0, m.light); bg.addColorStop(0.55, m.base); bg.addColorStop(1, m.dark);
     c.fillStyle = bg;
-    this._round(c, cx - w * 0.5, shTop, w, bot - shTop, w * 0.28); c.fill();
-    // red warhead nose
-    c.fillStyle = '#e2483c';
+    c.beginPath(); c.arc(cx, by, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = Math.max(1, s * 0.025);
+    c.beginPath(); c.arc(cx, by, r, 0, Math.PI * 2); c.stroke();
+    // sheen
+    c.fillStyle = 'rgba(255,255,255,.5)';
+    c.beginPath(); c.ellipse(cx - r * 0.34, by - r * 0.36, r * 0.26, r * 0.16, -0.6, 0, Math.PI * 2); c.fill();
+    // cap + short fuse + spark, kept within the cell
+    c.fillStyle = m.dark;
+    this._round(c, cx - r * 0.22, by - r - s * 0.03, r * 0.44, s * 0.08, s * 0.02); c.fill();
+    const fx = cx + r * 0.1; const fy = by - r;
+    c.strokeStyle = '#caa23a'; c.lineWidth = Math.max(1.5, s * 0.045); c.lineCap = 'round';
+    c.beginPath(); c.moveTo(fx, fy); c.quadraticCurveTo(fx + s * 0.13, fy - s * 0.05, fx + s * 0.07, fy - s * 0.1); c.stroke();
+    c.fillStyle = 'rgba(255,170,60,.6)';
+    c.beginPath(); c.arc(fx + s * 0.07, fy - s * 0.1, s * 0.1, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ffe14d';
+    c.beginPath(); c.arc(fx + s * 0.07, fy - s * 0.1, s * 0.05, 0, Math.PI * 2); c.fill();
+  }
+
+  // 2x2 guided missile: a bat (coloured), NOT a rounded-square block.
+  _batBlock(c, m, cx, cy, s) {
+    this._bat(c, cx, cy, s * 0.5, m, 0); // flapPhase 0 (static in-grid)
+  }
+
+  // Reusable bat silhouette centred at (cx,cy), half-span R, tinted by m, wings
+  // raised/lowered by `flap` (radians-ish, -1..1).
+  _bat(c, cx, cy, R, m, flap) {
+    const wy = cy - R * 0.1 - flap * R * 0.35; // wing tip vertical offset
+    // wings (scalloped) — draw both from the body outward
+    c.fillStyle = m.base; c.strokeStyle = m.dark; c.lineWidth = Math.max(1, R * 0.06);
+    // left wing
     c.beginPath();
-    c.moveTo(cx - w * 0.5, shTop + s * 0.02);
-    c.quadraticCurveTo(cx - w * 0.5, noseY, cx, noseY);
-    c.quadraticCurveTo(cx + w * 0.5, noseY, cx + w * 0.5, shTop + s * 0.02);
-    c.closePath(); c.fill();
-    // dark band between nose and body
-    c.fillStyle = '#39424f';
-    c.fillRect(cx - w * 0.5, shTop + s * 0.02, w, s * 0.045);
-    // targeting reticle (the "guided" signifier)
-    c.strokeStyle = 'rgba(255,210,63,.95)'; c.lineWidth = Math.max(1.4, s * 0.03);
-    const rr = s * 0.15; const ry = cy + s * 0.04;
-    c.beginPath(); c.arc(cx, ry, rr, 0, Math.PI * 2); c.stroke();
+    c.moveTo(cx - R * 0.12, cy - R * 0.05);
+    c.quadraticCurveTo(cx - R * 0.6, wy - R * 0.35, cx - R * 1.0, wy);
+    c.quadraticCurveTo(cx - R * 0.72, wy + R * 0.1, cx - R * 0.7, cy + R * 0.28);
+    c.quadraticCurveTo(cx - R * 0.5, cy + R * 0.12, cx - R * 0.4, cy + R * 0.4);
+    c.quadraticCurveTo(cx - R * 0.3, cy + R * 0.16, cx - R * 0.12, cy + R * 0.3);
+    c.closePath(); c.fill(); c.stroke();
+    // right wing (mirror)
     c.beginPath();
-    c.moveTo(cx - rr - s * 0.05, ry); c.lineTo(cx - rr + s * 0.03, ry);
-    c.moveTo(cx + rr - s * 0.03, ry); c.lineTo(cx + rr + s * 0.05, ry);
-    c.moveTo(cx, ry - rr - s * 0.05); c.lineTo(cx, ry - rr + s * 0.03);
-    c.moveTo(cx, ry + rr - s * 0.03); c.lineTo(cx, ry + rr + s * 0.05);
-    c.stroke();
-    c.fillStyle = 'rgba(255,210,63,.95)';
-    c.beginPath(); c.arc(cx, ry, s * 0.03, 0, Math.PI * 2); c.fill();
+    c.moveTo(cx + R * 0.12, cy - R * 0.05);
+    c.quadraticCurveTo(cx + R * 0.6, wy - R * 0.35, cx + R * 1.0, wy);
+    c.quadraticCurveTo(cx + R * 0.72, wy + R * 0.1, cx + R * 0.7, cy + R * 0.28);
+    c.quadraticCurveTo(cx + R * 0.5, cy + R * 0.12, cx + R * 0.4, cy + R * 0.4);
+    c.quadraticCurveTo(cx + R * 0.3, cy + R * 0.16, cx + R * 0.12, cy + R * 0.3);
+    c.closePath(); c.fill(); c.stroke();
+    // ears
+    c.fillStyle = m.dark;
+    c.beginPath(); c.moveTo(cx - R * 0.28, cy - R * 0.4); c.lineTo(cx - R * 0.16, cy - R * 0.9); c.lineTo(cx - R * 0.02, cy - R * 0.42); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(cx + R * 0.28, cy - R * 0.4); c.lineTo(cx + R * 0.16, cy - R * 0.9); c.lineTo(cx + R * 0.02, cy - R * 0.42); c.closePath(); c.fill();
+    // body
+    const bg = c.createLinearGradient(cx, cy - R * 0.5, cx, cy + R * 0.5);
+    bg.addColorStop(0, m.light); bg.addColorStop(1, m.dark);
+    c.fillStyle = bg;
+    c.beginPath(); c.ellipse(cx, cy, R * 0.34, R * 0.5, 0, 0, Math.PI * 2); c.fill();
+    // eyes
+    c.fillStyle = '#fff';
+    c.beginPath(); c.arc(cx - R * 0.14, cy - R * 0.06, R * 0.11, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(cx + R * 0.14, cy - R * 0.06, R * 0.11, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#1a2230';
+    c.beginPath(); c.arc(cx - R * 0.14, cy - R * 0.04, R * 0.05, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(cx + R * 0.14, cy - R * 0.04, R * 0.05, 0, Math.PI * 2); c.fill();
+    // tiny fangs
+    c.fillStyle = '#fff';
+    c.beginPath(); c.moveTo(cx - R * 0.09, cy + R * 0.16); c.lineTo(cx - R * 0.02, cy + R * 0.16); c.lineTo(cx - R * 0.055, cy + R * 0.3); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(cx + R * 0.09, cy + R * 0.16); c.lineTo(cx + R * 0.02, cy + R * 0.16); c.lineTo(cx + R * 0.055, cy + R * 0.3); c.closePath(); c.fill();
   }
 
   // 5-match colour bomb: dark glossy orb with fixed rainbow sprinkles.
@@ -499,14 +516,10 @@ export class Renderer {
         c.lineWidth = 0.5 + a * 2.4;
         c.beginPath(); c.moveTo(p0.x, p0.y); c.lineTo(p1.x, p1.y); c.stroke();
       }
-      // head: small glowing dart pointing along its velocity
-      const ang = Math.atan2(m.ty - m.sy, m.tx - m.sx);
-      c.save(); c.translate(m.x, m.y); c.rotate(ang);
-      c.fillStyle = '#ff9a2e';
-      c.beginPath(); c.moveTo(10, 0); c.lineTo(-6, -5); c.lineTo(-3, 0); c.lineTo(-6, 5); c.closePath(); c.fill();
-      c.fillStyle = '#ffe14d';
-      c.beginPath(); c.moveTo(9, 0); c.lineTo(-2, -2.4); c.lineTo(-2, 2.4); c.closePath(); c.fill();
-      c.restore();
+      // head: a flapping bat (coloured to match its source block)
+      const bm = GEM_COLORS[m.color] || GEM_COLORS[4];
+      const flap = Math.sin(m.t * 0.6); // wing beat
+      this._bat(c, m.x, m.y, CELL * 0.24, bm, flap);
     }
   }
 
