@@ -114,7 +114,16 @@ export class Board {
       }
     }
 
-    for (const run of runs) for (const cell of runCells(run)) matched.add(this.key(cell.r, cell.c));
+    // track which cells belong to horizontal vs vertical runs, to find the
+    // ㄱ자(L/T) intersections where an h-run meets a v-run
+    const hset = new Set(); const vset = new Set();
+    for (const run of runs) {
+      for (const cell of runCells(run)) {
+        const k = this.key(cell.r, cell.c);
+        matched.add(k);
+        (run.dir === 'h' ? hset : vset).add(k);
+      }
+    }
     for (const sq of squares) {
       matched.add(this.key(sq.r, sq.c)); matched.add(this.key(sq.r, sq.c + 1));
       matched.add(this.key(sq.r + 1, sq.c)); matched.add(this.key(sq.r + 1, sq.c + 1));
@@ -144,6 +153,14 @@ export class Board {
       ];
       const a = anchor(cells);
       consider(a.r, a.c, SP.BOMB, sq.color, 3);
+    }
+
+    // ㄱ자(L/T): a cell in both an h-run and a v-run → bomb at the corner
+    for (const k of hset) {
+      if (!vset.has(k)) continue;
+      const r = Math.floor(k / COLS); const c = k % COLS;
+      const g = this.grid[r][c];
+      consider(r, c, SP.BOMB, g ? g.color : 0, 3);
     }
 
     return { matched, specials };
