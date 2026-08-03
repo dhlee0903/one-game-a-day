@@ -31,7 +31,6 @@ export class Game {
     this.tick = 0;
     this.paused = false;
     this.warned = false;   // low-moves alarm fired this stage
-    this.chainMax = 0;     // highest combo in the current cascade chain
     this.seqActive = false; // rainbow+special sequential detonation in progress
     this.convertedGems = null;
     this.gold = START_GOLD;
@@ -57,7 +56,6 @@ export class Game {
     this.hint = null;
     this.idle = 0;
     this.warned = false;
-    this.chainMax = 0;
     this.seqActive = false;
     this.convertedGems = null;
     this.continues = 0; // times continued (paid) this stage attempt
@@ -385,12 +383,12 @@ export class Game {
 
     const mult = Math.min(3, 1 + this.cascade * 0.3);
     this.score += Math.round(remove.size * POINTS_PER_GEM * mult);
-    if (this.cascade === 0) this.chainMax = 1;
     if (this.cascade >= 1) {
-      this.chainMax = this.cascade + 1;
-      // keep only the latest combo banner (fast during the chain)
+      // one combo banner at a time: replacing it makes the previous vanish at
+      // once when the next chain connects, and the last one lingers ~1.7s then
+      // fades slowly (no separate re-pop when the chain ends).
       this.effects = this.effects.filter((e) => e.type !== 'combo');
-      this.effects.push({ type: 'combo', n: this.chainMax, t: 0, life: 30 });
+      this.effects.push({ type: 'combo', n: this.cascade + 1, t: 0, life: 105 });
     }
     if (this.sound) {
       this.sound.clear(this.cascade);
@@ -435,12 +433,7 @@ export class Game {
       this.cascade += 1;
       this._beginClear(res.matched, res.specials);
     } else {
-      // chain ended — let the final combo linger so it's readable
-      if (this.chainMax >= 2) {
-        this.effects = this.effects.filter((e) => e.type !== 'combo');
-        this.effects.push({ type: 'combo', n: this.chainMax, t: 0, life: 78, final: true });
-      }
-      this.chainMax = 0;
+      // chain ended — the last combo banner keeps fading on its own (see above)
       this.cascade = 0;
       if (!this.board.hasMoves()) { this.board.reshuffle(); this._sync(false); return; }
       this._settle();
