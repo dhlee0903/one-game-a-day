@@ -300,6 +300,30 @@ export class Game {
     this.phase = 'missile';
   }
 
+  // rainbow + bat: every gem of `color` becomes a homing bat aimed at the best
+  // cells (each removes one block on arrival), fired in a quick stagger.
+  _launchColorMissiles(rainbowCell, color) {
+    const sources = this.board.cellsOfColor(color);
+    const ex = new Set(sources.map((s) => this.board.key(s.r, s.c)));
+    ex.add(this.board.key(rainbowCell.r, rainbowCell.c));
+    const targets = this._bestTargets(sources.length, ex);
+    if (!sources.length || !targets.length) {
+      if (this.sound) this.sound.boom();
+      this._consumeCells([rainbowCell]);
+      this._beginClear(new Set(sources.map((s) => this.board.key(s.r, s.c))), new Map(), 'boom');
+      return;
+    }
+    this._consumeCells([rainbowCell, ...sources]);
+    for (let i = 0; i < sources.length; i += 1) {
+      this._spawnMissile(sources[i], targets[i % targets.length], i * 6, color);
+    }
+    this._missileKind = 'single';
+    this._missileDeliver = null;
+    this._missileTargets = targets;
+    if (this.sound) this.sound.special();
+    this.phase = 'missile';
+  }
+
   _consumeCells(cells) {
     for (const s of cells) {
       const g = this.board.at(s.r, s.c);
@@ -377,6 +401,23 @@ export class Game {
     return S;
   }
 
+  // Burst visuals matching _comboCells — fired all at once with the combo.
+  _comboFx(a, ga, b, gb) {
+    const line = (s) => s === SP.ROW || s === SP.COL;
+    const aS = ga.special; const bS = gb.special;
+    const beamRow = (r) => { if (r >= 0 && r < ROWS) this.effects.push({ type: 'beam', axis: 'row', r, c: 0, color: -1, t: 0, life: 46 }); };
+    const beamCol = (c) => { if (c >= 0 && c < COLS) this.effects.push({ type: 'beam', axis: 'col', r: 0, c, color: -1, t: 0, life: 46 }); };
+    if (aS === SP.COLOR || bS === SP.COLOR) { this.effects.push({ type: 'flash', t: 0, life: 70 }); return; }
+    if (aS === SP.BOMB && bS === SP.BOMB) { // 5x5
+      this.effects.push({ type: 'ring', x: Game.px(a.c) + CELL / 2, y: Game.py(a.r) + CELL / 2, color: -1, t: 0, life: 62 });
+      return;
+    }
+    if (line(aS) && line(bS)) { beamRow(a.r); beamCol(a.c); beamRow(b.r); beamCol(b.c); return; } // 십자
+    // line + bomb → 3 rows + 3 cols, all at once
+    beamRow(a.r - 1); beamRow(a.r); beamRow(a.r + 1);
+    beamCol(a.c - 1); beamCol(a.c); beamCol(a.c + 1);
+  }
+
   trySwap(a, b) {
     if (this.phase !== 'idle' || !this._adjacent(a, b)) return;
     const ga = this.board.at(a.r, a.c); const gb = this.board.at(b.r, b.c);
@@ -389,7 +430,13 @@ export class Game {
     if (aC || bC) {
       const other = aC ? gb : ga;
       const os = other.special;
-      if (os === SP.ROW || os === SP.COL || os === SP.BOMB || os === SP.MISSILE) {
+      if (os === SP.MISSILE) { // rainbow + bat → every gem of that colour becomes a homing bat
+        this.movesLeft -= 1; this._emit();
+        this.cascade = 0;
+        this._launchColorMissiles(aC ? a : b, other.color);
+        return;
+      }
+      if (os === SP.ROW || os === SP.COL || os === SP.BOMB) {
         this.movesLeft -= 1; this._emit();
         this.cascade = 0;
         this._startColorConvert(aC ? a : b, other);
@@ -419,6 +466,7 @@ export class Game {
       this.movesLeft -= 1; this._emit();
       this.cascade = 0;
       if (this.sound) { this.sound.special(); this.sound.boom(); }
+      this._comboFx(a, ga, b, gb);
       this._beginClear(this._comboCells(a, ga, b, gb), new Map(), 'boom');
       return;
     }

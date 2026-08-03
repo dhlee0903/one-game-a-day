@@ -171,7 +171,10 @@ export class Board {
         { r: sq.r + 1, c: sq.c }, { r: sq.r + 1, c: sq.c + 1 },
       ];
       const a = anchor(cells);
-      consider(a.r, a.c, SP.MISSILE, sq.color, 3); // 2x2 → guided missile (bat)
+      // a *clean* 2x2 (no cell in a 3+ run) → missile; a 2x2 that's part of a
+      // larger 5-cell shape (touches a run) → bomb, like the ㄱ/ㄴ/T corners.
+      const touchesRun = cells.some((p) => hset.has(this.key(p.r, p.c)) || vset.has(this.key(p.r, p.c)));
+      consider(a.r, a.c, touchesRun ? SP.BOMB : SP.MISSILE, sq.color, 3);
     }
 
     // ㄱ자(L/T): a cell in both an h-run and a v-run → bomb at the corner
