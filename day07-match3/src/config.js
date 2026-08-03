@@ -1,7 +1,10 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.13';
+export const VERSION = 'v7.14';
+
+// Moves-left threshold that triggers the low-moves alarm + urgent tempo.
+export const LOW_MOVES = 5;
 
 // Continue after running out of moves: pay gold for +N moves, cost doubles each
 // time within the same stage attempt.

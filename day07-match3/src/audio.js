@@ -116,6 +116,12 @@ export class Sound {
 
   lose() { [392, 330, 262].forEach((f, i) => this._tone(f, 0.26, { type: 'sawtooth', gain: 0.12, delay: i * 0.14 })); }
 
+  // urgent double-beep when moves run low
+  alarm() {
+    this._tone(1200, 0.14, { type: 'square', gain: 0.16 });
+    this._tone(900, 0.18, { type: 'square', gain: 0.16, delay: 0.2 });
+  }
+
   // ---- background music ----
 
   startMusic() {

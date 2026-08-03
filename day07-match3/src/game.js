@@ -6,7 +6,7 @@
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_H, SP, COLOR_GEM, POINTS_PER_GEM, STAGES,
   ITEMS, ITEM_START, START_GOLD, STAGE_GOLD, HINT_DELAY, stageColors,
-  CONTINUE_MOVES, CONTINUE_BASE,
+  CONTINUE_MOVES, CONTINUE_BASE, LOW_MOVES,
 } from './config.js';
 import { Board } from './board.js';
 
@@ -30,6 +30,8 @@ export class Game {
     this.idle = 0;
     this.tick = 0;
     this.paused = false;
+    this.warned = false;   // low-moves alarm fired this stage
+    this.chainMax = 0;     // highest combo in the current cascade chain
     this.gold = START_GOLD;
     this.items = {};
     this._raf = 0;
@@ -52,6 +54,8 @@ export class Game {
     this.preview = null;
     this.hint = null;
     this.idle = 0;
+    this.warned = false;
+    this.chainMax = 0;
     this.continues = 0; // times continued (paid) this stage attempt
     if (fresh) {
       this.gold = START_GOLD;
@@ -327,7 +331,13 @@ export class Game {
 
     const mult = Math.min(3, 1 + this.cascade * 0.3);
     this.score += Math.round(remove.size * POINTS_PER_GEM * mult);
-    if (this.cascade >= 1) this.effects.push({ type: 'combo', n: this.cascade + 1, t: 0, life: 36 });
+    if (this.cascade === 0) this.chainMax = 1;
+    if (this.cascade >= 1) {
+      this.chainMax = this.cascade + 1;
+      // keep only the latest combo banner (fast during the chain)
+      this.effects = this.effects.filter((e) => e.type !== 'combo');
+      this.effects.push({ type: 'combo', n: this.chainMax, t: 0, life: 30 });
+    }
     if (this.sound) {
       this.sound.clear(this.cascade);
       if (specials.size > 0) this.sound.special();
@@ -363,6 +373,12 @@ export class Game {
       this.cascade += 1;
       this._beginClear(res.matched, res.specials);
     } else {
+      // chain ended — let the final combo linger so it's readable
+      if (this.chainMax >= 2) {
+        this.effects = this.effects.filter((e) => e.type !== 'combo');
+        this.effects.push({ type: 'combo', n: this.chainMax, t: 0, life: 78, final: true });
+      }
+      this.chainMax = 0;
       this.cascade = 0;
       if (!this.board.hasMoves()) { this.board.reshuffle(); this._sync(false); return; }
       this._settle();
@@ -468,7 +484,12 @@ export class Game {
   }
 
   _emit() {
-    if (this.sound) this.sound.setTempo(this.movesLeft <= 3); // urgency when low
+    if (this.sound) this.sound.setTempo(this.movesLeft <= LOW_MOVES); // urgent BGM
+    if (this.movesLeft <= LOW_MOVES && !this.warned && this.phase !== 'won' && this.phase !== 'lost') {
+      this.warned = true;
+      if (this.sound) this.sound.alarm();
+      this.effects.push({ type: 'warn', text: `${this.movesLeft}회 남음!`, t: 0, life: 84 });
+    }
     this.onHud({
       stage: this.stageIndex + 1,
       score: this.score,
