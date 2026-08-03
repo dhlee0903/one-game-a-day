@@ -447,16 +447,16 @@ export class Game {
       // rainbow+rainbow / rainbow+normal fall through to the combo swap below
     }
 
-    // 2) Missile (bat) combos — no rainbow involved.
+    // 2) Missile (bat) combos with ANOTHER special — swapping a bat onto a normal
+    //    gem is just a plain swap (the bat only fires on double-tap, or when it
+    //    ends up in a match). Only bat+special combos trigger on the swap.
     const aM = ga.special === SP.MISSILE; const bM = gb.special === SP.MISSILE;
-    if (aM || bM) {
+    if ((aM || bM) && ga.special !== SP.NONE && gb.special !== SP.NONE) {
       const other = aM ? gb : ga;
-      const missileCell = aM ? a : b;
       this.movesLeft -= 1; this._emit();
       this.cascade = 0;
-      if (aM && bM) this._launchMissiles([a, b], 3);                             // 유도탄 + 유도탄 → 3발
-      else if (other.special === SP.NONE) this._launchMissiles([missileCell], 1); // 유도탄 + 일반
-      else this._launchDeliverMissile([a, b], other.special);                    // 특수 + 유도탄 → 유도 위치서 발동
+      if (aM && bM) this._launchMissiles([a, b], 3);        // 유도탄 + 유도탄 → 3발
+      else this._launchDeliverMissile([a, b], other.special); // 특수 + 유도탄 → 유도 위치서 발동
       return;
     }
 
