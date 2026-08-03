@@ -209,66 +209,41 @@ export class Renderer {
     else if (special === SP.MISSILE) this._batBlock(c, m, cx, cy, s);
   }
 
-  // 4-match line special: a firecracker rocket (striped cone + curly fuse with a
-  // starburst spark), oriented along the line it clears.
+  // 4-match line special: a striped rocket with a sharp triangular nose (no
+  // fuse/tail), oriented along the line it clears.
   _firework(c, horiz, m, cx, cy, s) {
     c.save();
     c.translate(cx, cy);
     if (horiz) c.rotate(Math.PI / 2); // point up for COL, sideways for ROW
-    const hw = s * 0.17;          // body half-width
-    const noseTip = -s * 0.42;
-    const shoulder = -s * 0.16;   // where nose meets the body
-    const botY = s * 0.24;        // open bottom
-    // body outline (bullet/cone)
-    const body = () => {
+    const hw = s * 0.18;          // body half-width
+    const noseTip = -s * 0.4;     // sharp triangular tip
+    const shoulder = -s * 0.1;    // where the triangle nose meets the body
+    const botY = s * 0.36;        // flat bottom
+    // outline: triangle nose + rectangular body
+    const shape = () => {
       c.beginPath();
       c.moveTo(-hw, botY);
       c.lineTo(-hw, shoulder);
-      c.quadraticCurveTo(-hw, noseTip + s * 0.05, 0, noseTip);
-      c.quadraticCurveTo(hw, noseTip + s * 0.05, hw, shoulder);
+      c.lineTo(0, noseTip);
+      c.lineTo(hw, shoulder);
       c.lineTo(hw, botY);
       c.closePath();
     };
     // fill body with the gem colour
     const bg = c.createLinearGradient(-hw, 0, hw, 0);
     bg.addColorStop(0, m.dark); bg.addColorStop(0.5, m.base); bg.addColorStop(1, m.dark);
-    body(); c.fillStyle = bg; c.fill();
+    shape(); c.fillStyle = bg; c.fill();
     // white diagonal stripes + a light band near the base, clipped to the body
-    c.save(); body(); c.clip();
+    c.save(); shape(); c.clip();
     c.fillStyle = 'rgba(255,255,255,.92)';
     c.save(); c.rotate(-0.5);
-    for (let i = -2; i <= 3; i += 1) { c.fillRect(-s * 0.5, i * s * 0.2, s, s * 0.075); }
+    for (let i = -2; i <= 3; i += 1) { c.fillRect(-s * 0.6, i * s * 0.22, s * 1.2, s * 0.08); }
     c.restore();
     c.fillStyle = '#eaf2ff';
     c.fillRect(-hw, botY - s * 0.12, hw * 2, s * 0.12); // base band
     c.restore();
     // bold dark outline (cartoon look)
-    body(); c.lineJoin = 'round'; c.strokeStyle = '#12161f'; c.lineWidth = Math.max(2, s * 0.06); c.stroke();
-    // curly fuse from the base, ending in a starburst spark
-    c.strokeStyle = '#12161f'; c.lineWidth = Math.max(2, s * 0.05); c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(0, botY);
-    c.quadraticCurveTo(-s * 0.12, botY + s * 0.14, -s * 0.26, botY + s * 0.05);
-    c.quadraticCurveTo(-s * 0.36, botY - s * 0.02, -s * 0.34, botY - s * 0.14);
-    c.stroke();
-    this._spark(c, -s * 0.34, botY - s * 0.2, s * 0.14);
-    c.restore();
-  }
-
-  // 8-point starburst spark (firecracker fuse tip).
-  _spark(c, x, y, r) {
-    c.save(); c.translate(x, y);
-    c.beginPath();
-    for (let i = 0; i < 16; i += 1) {
-      const ang = (i / 16) * Math.PI * 2;
-      const rad = i % 2 ? r * 0.44 : r;
-      c.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
-    }
-    c.closePath();
-    c.fillStyle = '#ff9a2e'; c.strokeStyle = '#12161f'; c.lineWidth = Math.max(1.5, r * 0.18); c.lineJoin = 'round';
-    c.fill(); c.stroke();
-    c.fillStyle = '#ffe14d';
-    c.beginPath(); c.arc(0, 0, r * 0.4, 0, Math.PI * 2); c.fill();
+    shape(); c.lineJoin = 'round'; c.strokeStyle = '#12161f'; c.lineWidth = Math.max(2, s * 0.06); c.stroke();
     c.restore();
   }
 
