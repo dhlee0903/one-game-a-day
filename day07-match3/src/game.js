@@ -6,12 +6,11 @@
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_H, SP, COLOR_GEM, POINTS_PER_GEM, STAGES,
   ITEMS, ITEM_START, START_GOLD, STAGE_GOLD, HINT_DELAY, stageColors,
-  CONTINUE_MOVES, CONTINUE_BASE, LOW_MOVES,
+  CONTINUE_MOVES, CONTINUE_BASE, LOW_MOVES, CLEAR_LIFE,
 } from './config.js';
 import { Board } from './board.js';
 
 const EASE = 0.3;
-const CLEAR_LIFE = 16; // long enough to read the monster's dying face
 
 export class Game {
   constructor({ onHud, onState, onItems, sound, haptic } = {}) {
@@ -148,7 +147,7 @@ export class Game {
     // instant: shuffle
     this.items[id] -= 1; this.armed = null;
     this.board.reshuffle(); this._sync(true);
-    this.effects.push({ type: 'swirl', t: 0, life: 26 });
+    this.effects.push({ type: 'swirl', t: 0, life: 38 });
     if (this.sound) this.sound.special();
     this.haptic('match');
     this._emitItems();
@@ -189,12 +188,12 @@ export class Game {
     // item-signature effect at the target
     const cx = Game.px(cell.c) + CELL / 2;
     const cy = Game.py(cell.r) + CELL / 2;
-    if (id === 'hammer') this.effects.push({ type: 'smash', x: cx, y: cy, t: 0, life: 18 });
-    else if (id === 'bomb') this.effects.push({ type: 'ring', x: cx, y: cy, color: -1, t: 0, life: 22 });
+    if (id === 'hammer') this.effects.push({ type: 'smash', x: cx, y: cy, t: 0, life: 30 });
+    else if (id === 'bomb') this.effects.push({ type: 'ring', x: cx, y: cy, color: -1, t: 0, life: 36 });
     else if (id === 'cross') {
-      this.effects.push({ type: 'beam', axis: 'row', r: cell.r, c: cell.c, color: -1, t: 0, life: 20 });
-      this.effects.push({ type: 'beam', axis: 'col', r: cell.r, c: cell.c, color: -1, t: 0, life: 20 });
-    } else if (id === 'color') this.effects.push({ type: 'flash', t: 0, life: 26 });
+      this.effects.push({ type: 'beam', axis: 'row', r: cell.r, c: cell.c, color: -1, t: 0, life: 34 });
+      this.effects.push({ type: 'beam', axis: 'col', r: cell.r, c: cell.c, color: -1, t: 0, life: 34 });
+    } else if (id === 'color') this.effects.push({ type: 'flash', t: 0, life: 40 });
 
     this.items[id] -= 1;
     this.armed = null;
@@ -297,7 +296,7 @@ export class Game {
     const bg = this.board.at(bombCell.r, bombCell.c);
     if (bg) {
       this.clearing.push({ gem: bg, t: 0 });
-      this.effects.push({ type: 'pop', x: Game.px(bombCell.c) + CELL / 2, y: Game.py(bombCell.r) + CELL / 2, color: -1, t: 0, life: 14 });
+      this.effects.push({ type: 'pop', x: Game.px(bombCell.c) + CELL / 2, y: Game.py(bombCell.r) + CELL / 2, color: -1, t: 0, life: 18 });
       this.board.grid[bombCell.r][bombCell.c] = null;
     }
     // convert every gem of that colour into the special
@@ -369,7 +368,7 @@ export class Game {
       const g = this.board.grid[r][c];
       if (g) {
         this.clearing.push({ gem: g, t: 0 });
-        this.effects.push({ type: 'pop', x: Game.px(c) + CELL / 2, y: Game.py(r) + CELL / 2, color: g.color, t: 0, life: 14 });
+        this.effects.push({ type: 'pop', x: Game.px(c) + CELL / 2, y: Game.py(r) + CELL / 2, color: g.color, t: 0, life: 18 });
         this.board.grid[r][c] = null;
       }
     }
@@ -407,10 +406,10 @@ export class Game {
   _detonateFx(r, c, g) {
     const cx = Game.px(c) + CELL / 2;
     const cy = Game.py(r) + CELL / 2;
-    if (g.special === SP.ROW) this.effects.push({ type: 'beam', axis: 'row', r, c, color: g.color, t: 0, life: 18 });
-    else if (g.special === SP.COL) this.effects.push({ type: 'beam', axis: 'col', r, c, color: g.color, t: 0, life: 18 });
-    else if (g.special === SP.BOMB) this.effects.push({ type: 'ring', x: cx, y: cy, color: g.color, t: 0, life: 20 });
-    else if (g.special === SP.COLOR) this.effects.push({ type: 'flash', t: 0, life: 26 });
+    if (g.special === SP.ROW) this.effects.push({ type: 'beam', axis: 'row', r, c, color: g.color, t: 0, life: 32 });
+    else if (g.special === SP.COL) this.effects.push({ type: 'beam', axis: 'col', r, c, color: g.color, t: 0, life: 32 });
+    else if (g.special === SP.BOMB) this.effects.push({ type: 'ring', x: cx, y: cy, color: g.color, t: 0, life: 34 });
+    else if (g.special === SP.COLOR) this.effects.push({ type: 'flash', t: 0, life: 40 });
   }
 
   _afterClear() {
