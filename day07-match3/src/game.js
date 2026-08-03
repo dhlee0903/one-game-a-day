@@ -22,6 +22,9 @@ export class Game {
     this.board = new Board();
     this.clearing = [];
     this.effects = [];
+    this.missiles = [];       // in-flight guided missiles (BOMB special)
+    this._missileKind = null; // 'single' | 'cross' | 'cross3'
+    this._missileTargets = null;
     this.selected = null;
     this.armed = null;   // armed active item id (targeted)
     this.preview = null; // cell under the pointer while an item is armed
@@ -49,6 +52,9 @@ export class Game {
     this.cascade = 0;
     this.clearing = [];
     this.effects = [];
+    this.missiles = [];
+    this._missileKind = null;
+    this._missileTargets = null;
     this.selected = null;
     this.armed = null;
     this.preview = null;
@@ -147,7 +153,7 @@ export class Game {
     // instant: shuffle
     this.items[id] -= 1; this.armed = null;
     this.board.reshuffle(); this._sync(true);
-    this.effects.push({ type: 'swirl', t: 0, life: 54 });
+    this.effects.push({ type: 'swirl', t: 0, life: 66 });
     if (this.sound) this.sound.special();
     this.haptic('match');
     this._emitItems();
@@ -188,12 +194,12 @@ export class Game {
     // item-signature effect at the target
     const cx = Game.px(cell.c) + CELL / 2;
     const cy = Game.py(cell.r) + CELL / 2;
-    if (id === 'hammer') this.effects.push({ type: 'smash', x: cx, y: cy, t: 0, life: 44 });
-    else if (id === 'bomb') this.effects.push({ type: 'ring', x: cx, y: cy, color: -1, t: 0, life: 50 });
+    if (id === 'hammer') this.effects.push({ type: 'smash', x: cx, y: cy, t: 0, life: 56 });
+    else if (id === 'bomb') this.effects.push({ type: 'ring', x: cx, y: cy, color: -1, t: 0, life: 62 });
     else if (id === 'cross') {
-      this.effects.push({ type: 'beam', axis: 'row', r: cell.r, c: cell.c, color: -1, t: 0, life: 48 });
-      this.effects.push({ type: 'beam', axis: 'col', r: cell.r, c: cell.c, color: -1, t: 0, life: 48 });
-    } else if (id === 'color') this.effects.push({ type: 'flash', t: 0, life: 56 });
+      this.effects.push({ type: 'beam', axis: 'row', r: cell.r, c: cell.c, color: -1, t: 0, life: 60 });
+      this.effects.push({ type: 'beam', axis: 'col', r: cell.r, c: cell.c, color: -1, t: 0, life: 60 });
+    } else if (id === 'color') this.effects.push({ type: 'flash', t: 0, life: 70 });
 
     this.items[id] -= 1;
     this.armed = null;
@@ -212,8 +218,124 @@ export class Game {
     this._act();
     this.movesLeft -= 1; this._emit();
     this.cascade = 0;
+    if (g.special === SP.BOMB) { this._launchBombMissiles([cell], 1); return; }
     if (this.sound) this.sound.boom();
     this._beginClear(new Set([this.board.key(cell.r, cell.c)]), new Map(), 'boom');
+  }
+
+  // ---- guided missiles (BOMB special auto-aims at the best cascade) ----
+
+  // Up to n distinct target cells, ranked by the cascade they would trigger.
+  _bestTargets(n, exclude) {
+    const ex = exclude || new Set();
+    const out = [];
+    for (let k = 0; k < n; k += 1) {
+      let best = null; let bestScore = -1;
+      for (let r = 0; r < ROWS; r += 1) for (let c = 0; c < COLS; c += 1) {
+        const g = this.board.grid[r][c];
+        if (!g || ex.has(this.board.key(r, c))) continue;
+        const score = this.board.simulateRemoveScore(r, c);
+        if (score > bestScore) { bestScore = score; best = { r, c }; }
+      }
+      if (!best) break;
+      if (bestScore <= 0) best = this._fallbackTarget(ex) || best; // no cascade → fallback
+      ex.add(this.board.key(best.r, best.c));
+      out.push(best);
+    }
+    return out;
+  }
+
+  // When no removal makes a match: prefer another special block, else the cell
+  // of the most common colour nearest the board centre.
+  _fallbackTarget(ex) {
+    for (let r = 0; r < ROWS; r += 1) for (let c = 0; c < COLS; c += 1) {
+      const g = this.board.grid[r][c];
+      if (g && g.special !== SP.NONE && !ex.has(this.board.key(r, c))) return { r, c };
+    }
+    const color = this.board._commonColor();
+    let best = null; let bestD = Infinity;
+    for (let r = 0; r < ROWS; r += 1) for (let c = 0; c < COLS; c += 1) {
+      const g = this.board.grid[r][c];
+      if (!g || g.color !== color || ex.has(this.board.key(r, c))) continue;
+      const d = (r - 3.5) ** 2 + (c - 3.5) ** 2;
+      if (d < bestD) { bestD = d; best = { r, c }; }
+    }
+    return best;
+  }
+
+  // Consume `sources` (the bomb blocks) and fire `count` missiles at the best
+  // targets; each removes one block on arrival. (bomb+bomb → count 3.)
+  _launchBombMissiles(sources, count) {
+    const ex = new Set(sources.map((s) => this.board.key(s.r, s.c)));
+    const targets = this._bestTargets(count, ex);
+    if (!targets.length) { if (this.sound) this.sound.boom(); this._beginClear(new Set(sources.map((s) => this.board.key(s.r, s.c))), new Map(), 'boom'); return; }
+    this._consumeCells(sources);
+    for (let i = 0; i < count; i += 1) {
+      const src = sources[i % sources.length];
+      this._spawnMissile(src, targets[i % targets.length]);
+    }
+    this._missileKind = 'single';
+    this._missileTargets = targets;
+    if (this.sound) this.sound.special();
+    this.phase = 'missile';
+  }
+
+  // Positional special combo (line+line, line+bomb): the combined effect flies
+  // to the best cell, then detonates there. kind: 'cross' | 'cross3'.
+  _launchComboMissile(sources, kind) {
+    const ex = new Set(sources.map((s) => this.board.key(s.r, s.c)));
+    const targets = this._bestTargets(1, ex);
+    if (!targets.length) { if (this.sound) this.sound.boom(); this._beginClear(new Set([...ex]), new Map(), 'boom'); return; }
+    this._consumeCells(sources);
+    const mid = { r: (sources[0].r + sources[sources.length - 1].r) / 2, c: (sources[0].c + sources[sources.length - 1].c) / 2 };
+    this._spawnMissile(mid, targets[0]);
+    this._missileKind = kind;
+    this._missileTargets = targets;
+    if (this.sound) { this.sound.special(); this.sound.boom(); }
+    this.phase = 'missile';
+  }
+
+  _consumeCells(cells) {
+    for (const s of cells) {
+      const g = this.board.at(s.r, s.c);
+      if (!g) continue;
+      this.clearing.push({ gem: g, t: 0 });
+      this.effects.push({ type: 'pop', x: Game.px(s.c) + CELL / 2, y: Game.py(s.r) + CELL / 2, color: g.color, t: 0, life: 32 });
+      this.board.grid[s.r][s.c] = null;
+    }
+  }
+
+  _spawnMissile(src, tgt) {
+    this.missiles.push({
+      sx: Game.px(src.c) + CELL / 2, sy: Game.py(src.r) + CELL / 2,
+      tx: Game.px(tgt.c) + CELL / 2, ty: Game.py(tgt.r) + CELL / 2,
+      x: Game.px(src.c) + CELL / 2, y: Game.py(src.r) + CELL / 2,
+      t: 0, dur: 16, trail: [],
+    });
+  }
+
+  _missilesLanded() { return this.missiles.length > 0 && this.missiles.every((m) => m.t >= m.dur); }
+
+  _resolveMissiles() {
+    const S = new Set();
+    const add = (r, c) => { if (this.board.inBounds(r, c)) S.add(this.board.key(r, c)); };
+    const addRow = (r) => { for (let c = 0; c < COLS; c += 1) add(r, c); };
+    const addCol = (c) => { for (let r = 0; r < ROWS; r += 1) add(r, c); };
+    const targets = this._missileTargets || [];
+    if (this._missileKind === 'single') {
+      for (const t of targets) { add(t.r, t.c); this.effects.push({ type: 'ring', x: Game.px(t.c) + CELL / 2, y: Game.py(t.r) + CELL / 2, color: -1, t: 0, life: 40 }); }
+    } else if (this._missileKind === 'cross' && targets[0]) {
+      addRow(targets[0].r); addCol(targets[0].c);
+    } else if (this._missileKind === 'cross3' && targets[0]) {
+      const t = targets[0];
+      addRow(t.r - 1); addRow(t.r); addRow(t.r + 1);
+      addCol(t.c - 1); addCol(t.c); addCol(t.c + 1);
+    }
+    this.missiles = [];
+    this._missileKind = null; this._missileTargets = null;
+    if (this.sound) this.sound.boom();
+    this.haptic('boom');
+    this._beginClear(S, new Map(), 'boom');
   }
 
   // Cell set cleared when two specials (or a rainbow) are swapped together.
@@ -267,9 +389,30 @@ export class Game {
       }
     }
 
+    // Positional special combos fly to the best cell as guided missile(s):
+    //  bomb + bomb → 3 missiles; line+bomb / line+line → combined effect flies.
+    const line = (s) => s === SP.ROW || s === SP.COL;
+    const aSp = ga.special; const bSp = gb.special;
+    const bothPositional = aSp !== SP.NONE && bSp !== SP.NONE && aSp !== SP.COLOR && bSp !== SP.COLOR;
+    if (bothPositional) {
+      this.movesLeft -= 1; this._emit();
+      this.cascade = 0;
+      if (aSp === SP.BOMB && bSp === SP.BOMB) this._launchBombMissiles([a, b], 3);
+      else this._launchComboMissile([a, b], (line(aSp) && line(bSp)) ? 'cross' : 'cross3');
+      return;
+    }
+
+    // Lone bomb swapped with a normal gem → fire the guided missile.
+    if ((aSp === SP.BOMB && bSp === SP.NONE) || (bSp === SP.BOMB && aSp === SP.NONE)) {
+      this.movesLeft -= 1; this._emit();
+      this.cascade = 0;
+      this._launchBombMissiles([aSp === SP.BOMB ? a : b], 1);
+      return;
+    }
+
     // Special activation swap: a rainbow can swap with anything, and any two
-    // specials combine. A single line/bomb + a normal gem is a plain swap
-    // (it activates only when the swap forms a match).
+    // specials combine. A single line + a normal gem is a plain swap (it
+    // activates only when the swap forms a match).
     const comboSwap = ga.special === SP.COLOR || gb.special === SP.COLOR
       || (ga.special !== SP.NONE && gb.special !== SP.NONE);
     if (comboSwap) {
@@ -296,7 +439,7 @@ export class Game {
     const bg = this.board.at(bombCell.r, bombCell.c);
     if (bg) {
       this.clearing.push({ gem: bg, t: 0 });
-      this.effects.push({ type: 'pop', x: Game.px(bombCell.c) + CELL / 2, y: Game.py(bombCell.r) + CELL / 2, color: -1, t: 0, life: 26 });
+      this.effects.push({ type: 'pop', x: Game.px(bombCell.c) + CELL / 2, y: Game.py(bombCell.r) + CELL / 2, color: -1, t: 0, life: 32 });
       this.board.grid[bombCell.r][bombCell.c] = null;
     }
     // convert every gem of that colour into the special
@@ -368,7 +511,7 @@ export class Game {
       const g = this.board.grid[r][c];
       if (g) {
         this.clearing.push({ gem: g, t: 0 });
-        this.effects.push({ type: 'pop', x: Game.px(c) + CELL / 2, y: Game.py(r) + CELL / 2, color: g.color, t: 0, life: 26 });
+        this.effects.push({ type: 'pop', x: Game.px(c) + CELL / 2, y: Game.py(r) + CELL / 2, color: g.color, t: 0, life: 32 });
         this.board.grid[r][c] = null;
       }
     }
@@ -406,10 +549,10 @@ export class Game {
   _detonateFx(r, c, g) {
     const cx = Game.px(c) + CELL / 2;
     const cy = Game.py(r) + CELL / 2;
-    if (g.special === SP.ROW) this.effects.push({ type: 'beam', axis: 'row', r, c, color: g.color, t: 0, life: 46 });
-    else if (g.special === SP.COL) this.effects.push({ type: 'beam', axis: 'col', r, c, color: g.color, t: 0, life: 46 });
-    else if (g.special === SP.BOMB) this.effects.push({ type: 'ring', x: cx, y: cy, color: g.color, t: 0, life: 50 });
-    else if (g.special === SP.COLOR) this.effects.push({ type: 'flash', t: 0, life: 56 });
+    if (g.special === SP.ROW) this.effects.push({ type: 'beam', axis: 'row', r, c, color: g.color, t: 0, life: 58 });
+    else if (g.special === SP.COL) this.effects.push({ type: 'beam', axis: 'col', r, c, color: g.color, t: 0, life: 58 });
+    else if (g.special === SP.BOMB) this.effects.push({ type: 'ring', x: cx, y: cy, color: g.color, t: 0, life: 62 });
+    else if (g.special === SP.COLOR) this.effects.push({ type: 'flash', t: 0, life: 70 });
   }
 
   _afterClear() {
@@ -514,6 +657,15 @@ export class Game {
     this.clearing = this.clearing.filter((cl) => cl.t < CLEAR_LIFE);
     for (const fx of this.effects) fx.t += 1;
     this.effects = this.effects.filter((fx) => fx.t < fx.life);
+    for (const m of this.missiles) { // guided missiles home in on their target
+      m.t += 1;
+      const p = Math.min(1, m.t / m.dur);
+      const e = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2; // easeInOut
+      m.x = m.sx + (m.tx - m.sx) * e;
+      m.y = m.sy + (m.ty - m.sy) * e;
+      m.trail.push({ x: m.x, y: m.y });
+      if (m.trail.length > 8) m.trail.shift();
+    }
   }
 
   setPaused(p) { this.paused = p; }
@@ -526,6 +678,7 @@ export class Game {
     else if (this.phase === 'swapback' && this._allArrived()) this.phase = 'idle';
     else if (this.phase === 'clearing' && this.clearing.length === 0) this._afterClear();
     else if (this.phase === 'falling' && this._allArrived()) this._afterFall();
+    else if (this.phase === 'missile' && this._missilesLanded()) this._resolveMissiles();
     else if (this.phase === 'idle') this._maybeHint();
     this._raf = requestAnimationFrame(() => this._loop());
   }
@@ -542,7 +695,7 @@ export class Game {
     if (this.movesLeft <= LOW_MOVES && !this.warned && this.phase !== 'won' && this.phase !== 'lost') {
       this.warned = true;
       if (this.sound) this.sound.alarm();
-      this.effects.push({ type: 'warn', text: `${this.movesLeft}회 남음!`, t: 0, life: 84 });
+      this.effects.push({ type: 'warn', text: `${this.movesLeft}회 남음!`, t: 0, life: 210 });
     }
     this.onHud({
       stage: this.stageIndex + 1,
