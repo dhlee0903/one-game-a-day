@@ -303,18 +303,23 @@ export class Renderer {
     const cx = left + s / 2;
     const k = m.kind;
     if (k === 'demon') {
-      // curved horns that hug the top corners
-      c.fillStyle = m.dark; c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = Math.max(1, s * 0.02);
+      // little stubby rounded horns (cute, don't poke far up)
+      c.fillStyle = m.dark; c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = Math.max(1, s * 0.02);
       c.beginPath();
-      c.moveTo(left + s * 0.13, top + s * 0.17);
-      c.quadraticCurveTo(left + s * 0.06, top - s * 0.03, left + s * 0.26, top);
-      c.quadraticCurveTo(left + s * 0.2, top + s * 0.1, left + s * 0.34, top + s * 0.2);
+      c.moveTo(left + s * 0.19, top + s * 0.15);
+      c.quadraticCurveTo(left + s * 0.15, top + s * 0.01, left + s * 0.3, top + s * 0.05);
+      c.quadraticCurveTo(left + s * 0.28, top + s * 0.11, left + s * 0.31, top + s * 0.17);
       c.closePath(); c.fill(); c.stroke();
       c.beginPath();
-      c.moveTo(left + s * 0.87, top + s * 0.17);
-      c.quadraticCurveTo(left + s * 0.94, top - s * 0.03, left + s * 0.74, top);
-      c.quadraticCurveTo(left + s * 0.8, top + s * 0.1, left + s * 0.66, top + s * 0.2);
+      c.moveTo(left + s * 0.81, top + s * 0.15);
+      c.quadraticCurveTo(left + s * 0.85, top + s * 0.01, left + s * 0.7, top + s * 0.05);
+      c.quadraticCurveTo(left + s * 0.72, top + s * 0.11, left + s * 0.69, top + s * 0.17);
       c.closePath(); c.fill(); c.stroke();
+    } else if (k === 'ghost') {
+      // wavy hem scallops along the bottom → floaty ghost silhouette
+      c.fillStyle = m.dark;
+      const n = 3; const bw = s * 0.26; const by = top + s * 0.92; const x0 = cx - (n * bw) / 2;
+      for (let i = 0; i < n; i += 1) { c.beginPath(); c.arc(x0 + bw * (i + 0.5), by, bw * 0.5, 0, Math.PI); c.fill(); }
     } else if (k === 'pumpkin') {
       c.fillStyle = '#5f7d2e';
       this._round(c, cx - s * 0.06, top - s * 0.08, s * 0.12, s * 0.16, s * 0.04); c.fill();
@@ -353,18 +358,21 @@ export class Renderer {
     }
 
     if (kind === 'skeleton') {
+      // hollow eye sockets — tall ovals, no glint (glint read as robot lenses)
       c.fillStyle = '#2a2f3a';
-      c.beginPath(); c.arc(lx, eyeY, s * 0.14, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(rx, eyeY, s * 0.14, 0, Math.PI * 2); c.fill();
-      c.fillStyle = 'rgba(255,255,255,.8)';
-      c.beginPath(); c.arc(lx + s * 0.02, eyeY, s * 0.045, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(rx + s * 0.02, eyeY, s * 0.045, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#2a2f3a';
-      c.beginPath(); c.moveTo(cx, eyeY + s * 0.12); c.lineTo(cx - s * 0.05, eyeY + s * 0.22); c.lineTo(cx + s * 0.05, eyeY + s * 0.22); c.closePath(); c.fill();
-      const mw = s * 0.36; const mx = cx - mw / 2; const my = top + s * 0.72; const mh = s * 0.12;
-      c.fillStyle = '#2a2f3a'; c.fillRect(mx, my, mw, mh);
-      c.strokeStyle = '#e7edf4'; c.lineWidth = Math.max(1, s * 0.03);
-      for (let i = 1; i < 4; i += 1) { const xx = mx + (mw * i) / 4; c.beginPath(); c.moveTo(xx, my); c.lineTo(xx, my + mh); c.stroke(); }
+      c.beginPath(); c.ellipse(lx, eyeY, s * 0.125, s * 0.155, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.ellipse(rx, eyeY, s * 0.125, s * 0.155, 0, 0, Math.PI * 2); c.fill();
+      // nasal cavity
+      c.beginPath(); c.moveTo(cx, eyeY + s * 0.14); c.lineTo(cx - s * 0.045, eyeY + s * 0.23); c.lineTo(cx + s * 0.045, eyeY + s * 0.23); c.closePath(); c.fill();
+      // grinning jaw with a rounded bottom + tooth gaps
+      const mw = s * 0.44; const mx = cx - mw / 2; const my = top + s * 0.7; const mh = s * 0.15;
+      c.beginPath();
+      c.moveTo(mx, my); c.lineTo(mx + mw, my);
+      c.lineTo(mx + mw, my + mh * 0.5);
+      c.quadraticCurveTo(cx, my + mh * 1.2, mx, my + mh * 0.5);
+      c.closePath(); c.fill();
+      c.strokeStyle = '#e7edf4'; c.lineWidth = Math.max(1.2, s * 0.03);
+      for (let i = 1; i < 4; i += 1) { const xx = mx + (mw * i) / 4; c.beginPath(); c.moveTo(xx, my); c.lineTo(xx, my + mh * 0.72); c.stroke(); }
       return;
     }
     if (kind === 'pumpkin') {
@@ -379,36 +387,37 @@ export class Renderer {
       return;
     }
     if (kind === 'ghost') {
+      // big round eyes glancing to the side (cute + characterful)
+      this._roundEye(c, lx, eyeY, s * 0.12, '#fff');
+      this._roundEye(c, rx, eyeY, s * 0.12, '#fff');
+      // blush
+      c.fillStyle = 'rgba(255,150,205,.42)';
+      c.beginPath(); c.arc(lx - s * 0.06, eyeY + s * 0.15, s * 0.055, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(rx + s * 0.06, eyeY + s * 0.15, s * 0.055, 0, Math.PI * 2); c.fill();
+      // open "boo" mouth
       c.fillStyle = '#2a2440';
-      c.beginPath(); c.ellipse(lx, eyeY, s * 0.09, s * 0.13, 0, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.ellipse(rx, eyeY, s * 0.09, s * 0.13, 0, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.ellipse(cx, top + s * 0.72, s * 0.08, s * 0.1, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.ellipse(cx, top + s * 0.72, s * 0.07, s * 0.1, 0, 0, Math.PI * 2); c.fill();
       return;
     }
     if (kind === 'demon') {
-      // glowing almond eyes with vertical slit pupils
-      const eye = (ex) => {
-        c.fillStyle = '#ffe14d';
-        c.beginPath(); c.ellipse(ex, eyeY, s * 0.12, s * 0.088, 0, 0, Math.PI * 2); c.fill();
-        c.fillStyle = '#b81c16';
-        c.beginPath(); c.ellipse(ex, eyeY, s * 0.034, s * 0.072, 0, 0, Math.PI * 2); c.fill();
-      };
-      eye(lx); eye(rx);
-      // angry brows
-      c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
-      c.beginPath(); c.moveTo(lx - s * 0.13, eyeY - s * 0.19); c.lineTo(lx + s * 0.11, eyeY - s * 0.05); c.stroke();
-      c.beginPath(); c.moveTo(rx + s * 0.13, eyeY - s * 0.19); c.lineTo(rx - s * 0.11, eyeY - s * 0.05); c.stroke();
-      // fanged grin
-      const my = top + s * 0.7; const mw = s * 0.42;
-      c.fillStyle = '#3a0d0d';
-      c.beginPath();
-      c.moveTo(cx - mw / 2, my);
-      c.quadraticCurveTo(cx, my + s * 0.17, cx + mw / 2, my);
-      c.quadraticCurveTo(cx, my + s * 0.05, cx - mw / 2, my);
-      c.closePath(); c.fill();
+      // big round eyes — mischievous but cute
+      this._roundEye(c, lx, eyeY, s * 0.13, '#fff');
+      this._roundEye(c, rx, eyeY, s * 0.13, '#fff');
+      // soft little brows (character without the menace)
+      c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = Math.max(1.5, s * 0.04); c.lineCap = 'round';
+      c.beginPath(); c.moveTo(lx - s * 0.12, eyeY - s * 0.2); c.lineTo(lx + s * 0.05, eyeY - s * 0.13); c.stroke();
+      c.beginPath(); c.moveTo(rx + s * 0.12, eyeY - s * 0.2); c.lineTo(rx - s * 0.05, eyeY - s * 0.13); c.stroke();
+      // rosy cheeks
+      c.fillStyle = 'rgba(255,120,120,.5)';
+      c.beginPath(); c.arc(lx - s * 0.06, eyeY + s * 0.17, s * 0.06, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(rx + s * 0.06, eyeY + s * 0.17, s * 0.06, 0, Math.PI * 2); c.fill();
+      // small friendly smile with two little fangs
+      const my = top + s * 0.68;
+      c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = Math.max(1.5, s * 0.045); c.lineCap = 'round';
+      c.beginPath(); c.arc(cx, my, s * 0.15, 0.12 * Math.PI, 0.88 * Math.PI); c.stroke();
       c.fillStyle = '#fff';
-      c.beginPath(); c.moveTo(cx - mw * 0.34, my + s * 0.01); c.lineTo(cx - mw * 0.2, my + s * 0.01); c.lineTo(cx - mw * 0.27, my + s * 0.09); c.closePath(); c.fill();
-      c.beginPath(); c.moveTo(cx + mw * 0.34, my + s * 0.01); c.lineTo(cx + mw * 0.2, my + s * 0.01); c.lineTo(cx + mw * 0.27, my + s * 0.09); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(cx - s * 0.09, my + s * 0.02); c.lineTo(cx - s * 0.03, my + s * 0.02); c.lineTo(cx - s * 0.06, my + s * 0.1); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(cx + s * 0.09, my + s * 0.02); c.lineTo(cx + s * 0.03, my + s * 0.02); c.lineTo(cx + s * 0.06, my + s * 0.1); c.closePath(); c.fill();
       return;
     }
     if (kind === 'zombie') {
