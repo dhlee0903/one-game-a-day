@@ -4,7 +4,7 @@
 // the renderer only reads.
 
 import {
-  COLS, ROWS, CELL, PAD, BOARD_H, SP, COLOR_GEM, POINTS_PER_GEM, STAGES,
+  COLS, ROWS, CELL, PAD, HUD_H, BOARD_H, SP, COLOR_GEM, POINTS_PER_GEM, STAGES,
 } from './config.js';
 import { Board } from './board.js';
 
@@ -17,6 +17,7 @@ export class Game {
     this.onState = onState || (() => {});
     this.board = new Board();
     this.clearing = [];
+    this.effects = [];
     this.selected = null;
     this._raf = 0;
     this.reset(0);
@@ -31,6 +32,7 @@ export class Game {
     this.target = stage.target;
     this.cascade = 0;
     this.clearing = [];
+    this.effects = [];
     this.selected = null;
     this.phase = 'idle';
     this._sync(true);
@@ -46,7 +48,7 @@ export class Game {
 
   static px(c) { return PAD + c * CELL; }
 
-  static py(r) { return PAD + r * CELL; }
+  static py(r) { return HUD_H + PAD + r * CELL; }
 
   _sync(instant) {
     for (let r = 0; r < ROWS; r += 1) {
@@ -68,7 +70,7 @@ export class Game {
 
   cellAt(px, py) {
     const c = Math.floor((px - PAD) / CELL);
-    const r = Math.floor((py - PAD) / CELL);
+    const r = Math.floor((py - HUD_H - PAD) / CELL);
     return this.board.inBounds(r, c) ? { r, c } : null;
   }
 
@@ -85,6 +87,17 @@ export class Game {
   }
 
   _adjacent(a, b) { return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1; }
+
+  // Double-tap / double-click a special block to detonate it in place.
+  activateSpecial(cell) {
+    if (this.phase !== 'idle' || !cell) return;
+    const g = this.board.at(cell.r, cell.c);
+    if (!g || g.special === SP.NONE) return;
+    this.selected = null;
+    this.movesLeft -= 1; this._emit();
+    this.cascade = 0;
+    this._beginClear(new Set([this.board.key(cell.r, cell.c)]), new Map());
+  }
 
   trySwap(a, b) {
     if (this.phase !== 'idle' || !this._adjacent(a, b)) return;
@@ -135,13 +148,14 @@ export class Game {
     const remove = new Set();
     for (const k of matched) if (!anchors.has(k)) remove.add(k);
 
-    // chain: any existing special caught in the removal detonates
+    // chain: any existing special caught in the removal detonates (+ its effect)
     const queue = [...remove];
     while (queue.length) {
       const k = queue.shift();
       const r = Math.floor(k / COLS); const c = k % COLS;
       const g = this.board.grid[r][c];
       if (g && g.special !== SP.NONE) {
+        this._detonateFx(r, c, g);
         for (const cell of this.board.effectCells(r, c, g)) {
           const kk = this.board.key(cell.r, cell.c);
           if (!anchors.has(kk) && !remove.has(kk)) { remove.add(kk); queue.push(kk); }
@@ -149,11 +163,15 @@ export class Game {
       }
     }
 
-    // remove gems → clearing animation
+    // remove gems → clearing animation + pop effect
     for (const k of remove) {
       const r = Math.floor(k / COLS); const c = k % COLS;
       const g = this.board.grid[r][c];
-      if (g) { this.clearing.push({ gem: g, t: 0 }); this.board.grid[r][c] = null; }
+      if (g) {
+        this.clearing.push({ gem: g, t: 0 });
+        this.effects.push({ type: 'pop', x: Game.px(c) + CELL / 2, y: Game.py(r) + CELL / 2, color: g.color, t: 0, life: 14 });
+        this.board.grid[r][c] = null;
+      }
     }
 
     // create the new special blocks at their anchors
@@ -167,6 +185,16 @@ export class Game {
     this.score += Math.round(remove.size * POINTS_PER_GEM * mult);
     this._emit();
     this.phase = 'clearing';
+  }
+
+  // Visual burst for a detonating special block.
+  _detonateFx(r, c, g) {
+    const cx = Game.px(c) + CELL / 2;
+    const cy = Game.py(r) + CELL / 2;
+    if (g.special === SP.ROW) this.effects.push({ type: 'beam', axis: 'row', r, c, color: g.color, t: 0, life: 18 });
+    else if (g.special === SP.COL) this.effects.push({ type: 'beam', axis: 'col', r, c, color: g.color, t: 0, life: 18 });
+    else if (g.special === SP.BOMB) this.effects.push({ type: 'ring', x: cx, y: cy, color: g.color, t: 0, life: 20 });
+    else if (g.special === SP.COLOR) this.effects.push({ type: 'flash', t: 0, life: 26 });
   }
 
   _afterClear() {
@@ -227,6 +255,8 @@ export class Game {
     }
     for (const cl of this.clearing) cl.t += 1;
     this.clearing = this.clearing.filter((cl) => cl.t < CLEAR_LIFE);
+    for (const fx of this.effects) fx.t += 1;
+    this.effects = this.effects.filter((fx) => fx.t < fx.life);
   }
 
   _loop() {

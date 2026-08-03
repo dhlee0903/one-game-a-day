@@ -40,17 +40,9 @@ h1 {
 }
 .sub { font-size: 11px; color: var(--dim); letter-spacing: .3em; margin-top: 2px; }
 
-.hud { display: flex; gap: 8px; margin-bottom: 10px; }
-.stat {
-  flex: 1; background: var(--panel); border: 1px solid var(--line);
-  border-radius: 12px; padding: 7px 8px; display: flex; flex-direction: column; gap: 2px; align-items: center;
-}
-.stat .label { font-size: 10px; letter-spacing: .1em; color: var(--dim); }
-.stat .val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
-
 .board-wrap { position: relative; }
 canvas {
-  display: block; width: 100%; height: auto; aspect-ratio: 1 / 1;
+  display: block; width: 100%; height: auto; aspect-ratio: 432 / 516;
   border-radius: 16px; box-shadow: 0 18px 44px rgba(0, 0, 0, .5);
   touch-action: none;
 }

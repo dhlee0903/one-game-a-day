@@ -9,15 +9,9 @@ const $ = (id) => document.getElementById(id);
 const renderer = new Renderer($('board'));
 const overlay = $('overlay');
 
-const game = new Game({
-  onHud: ({ stage, score, target, moves }) => {
-    $('stage').textContent = stage;
-    $('score').textContent = score;
-    $('target').textContent = target;
-    $('moves').textContent = moves;
-  },
-  onState: handleState,
-});
+// HUD is drawn inside the canvas by the renderer, so there is nothing to update
+// in the DOM here — only stage win/lose transitions need handling.
+const game = new Game({ onState: handleState });
 
 // eslint-disable-next-line no-new
 new InputController($('board'), game);
