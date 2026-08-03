@@ -22,6 +22,7 @@ export class InputController {
     };
 
     const down = (e) => {
+      if (game.paused) return;
       e.preventDefault();
       try { canvas.setPointerCapture(e.pointerId); } catch { /* ignore */ }
       const b = toBoard(e);
@@ -38,6 +39,7 @@ export class InputController {
     };
 
     const up = (e) => {
+      if (game.paused) { this.start = null; return; }
       e.preventDefault();
       if (!this.start) return;
       const b = toBoard(e);

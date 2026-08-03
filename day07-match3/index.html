@@ -11,10 +11,29 @@
   <button class="gear" id="gear" aria-label="옵션">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
-  <div class="opts" id="opts" hidden>
-    <div class="opt"><span>배경음</span><button class="tog" data-opt="bgm">켜짐</button></div>
-    <div class="opt"><span>효과음</span><button class="tog" data-opt="sfx">켜짐</button></div>
-    <div class="opt" id="optVib" hidden><span>진동</span><button class="tog" data-opt="vibrate">켜짐</button></div>
+  <div class="modal" id="opts" hidden>
+    <div class="sheet">
+      <h3>옵션</h3>
+      <div class="opt">
+        <span>배경음</span>
+        <button class="tog" data-opt="bgm" aria-label="배경음">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </button>
+      </div>
+      <div class="opt">
+        <span>효과음</span>
+        <button class="tog" data-opt="sfx" aria-label="효과음">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>
+        </button>
+      </div>
+      <div class="opt" id="optVib" hidden>
+        <span>진동</span>
+        <button class="tog" data-opt="vibrate" aria-label="진동">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 9v6M20 9v6"/></svg>
+        </button>
+      </div>
+      <button class="btn" id="optClose">닫기</button>
+    </div>
   </div>
 
   <div class="wrap">

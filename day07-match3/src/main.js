@@ -21,11 +21,14 @@ const DEFAULTS = { bgm: true, sfx: true, vibrate: true };
 let settings = { ...DEFAULTS };
 try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('day07-opts') || '{}') }; } catch { /* ignore */ }
 const saveSettings = () => { try { localStorage.setItem('day07-opts', JSON.stringify(settings)); } catch { /* ignore */ } };
-const canVibrate = typeof navigator !== 'undefined' && !!navigator.vibrate;
+// vibration is only meaningful on touch devices that support it
+const isTouch = typeof navigator !== 'undefined'
+  && (navigator.maxTouchPoints > 0 || (typeof window !== 'undefined' && 'ontouchstart' in window));
+const canVibrate = typeof navigator !== 'undefined' && !!navigator.vibrate && isTouch;
 
 function doHaptic(type) {
   if (!settings.vibrate || !canVibrate) return;
-  navigator.vibrate(type === 'boom' ? [0, 45, 25, 60] : 14);
+  try { navigator.vibrate(type === 'boom' ? [40, 30, 60] : 18); } catch { /* ignore */ }
 }
 
 const game = new Game({ onState: handleState, onItems: renderItems, sound, haptic: doHaptic });
@@ -44,12 +47,16 @@ function kickAudio() {
 $('board').addEventListener('pointerdown', kickAudio, { once: true });
 overlay.addEventListener('pointerdown', kickAudio, { once: true });
 
-// options panel (gear)
+// options modal (gear) — opening pauses the game
 const gear = $('gear');
 const opts = $('opts');
 if (canVibrate) $('optVib').hidden = false;
-gear.onclick = (e) => { e.stopPropagation(); opts.hidden = !opts.hidden; };
-document.addEventListener('pointerdown', (e) => { if (!opts.hidden && !opts.contains(e.target) && e.target !== gear && !gear.contains(e.target)) opts.hidden = true; });
+
+function openOpts() { opts.hidden = false; game.setPaused(true); }
+function closeOpts() { opts.hidden = true; game.setPaused(false); }
+gear.onclick = openOpts;
+$('optClose').onclick = closeOpts;
+opts.addEventListener('pointerdown', (e) => { if (e.target === opts) closeOpts(); }); // click backdrop
 
 function applyOpt(id) {
   if (id === 'bgm') sound.setMusic(settings.bgm);
@@ -57,13 +64,15 @@ function applyOpt(id) {
 }
 opts.querySelectorAll('.tog').forEach((btn) => {
   const id = btn.dataset.opt;
-  const paint = () => { btn.textContent = settings[id] ? '켜짐' : '꺼짐'; btn.classList.toggle('off', !settings[id]); };
+  const paint = () => btn.classList.toggle('off', !settings[id]);
   paint();
   btn.onclick = () => {
     settings[id] = !settings[id];
     saveSettings();
     applyOpt(id);
     kickAudio();
+    // immediate feedback when turning vibration on, so support is obvious
+    if (id === 'vibrate' && settings.vibrate && canVibrate) { try { navigator.vibrate(30); } catch { /* ignore */ } }
     paint();
   };
 });
