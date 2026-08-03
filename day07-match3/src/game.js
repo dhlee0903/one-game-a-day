@@ -394,7 +394,7 @@ export class Game {
     } else if (aS === SP.BOMB && bS === SP.BOMB) {
       addBox(a.r, a.c, 2); // 5x5
     } else if (line(aS) && line(bS)) {
-      addRow(a.r); addCol(a.c); addRow(b.r); addCol(b.c); // cross
+      addRow(a.r); addCol(a.c); // 십자 (한 줄 가로 + 한 줄 세로) at the swap cell
     } else { // line + bomb → 3-wide cross
       const cr = a.r; const cc = a.c;
       addRow(cr - 1); addRow(cr); addRow(cr + 1);
@@ -414,7 +414,7 @@ export class Game {
       this.effects.push({ type: 'ring', x: Game.px(a.c) + CELL / 2, y: Game.py(a.r) + CELL / 2, color: -1, t: 0, life: 62 });
       return;
     }
-    if (line(aS) && line(bS)) { beamRow(a.r); beamCol(a.c); beamRow(b.r); beamCol(b.c); return; } // 십자
+    if (line(aS) && line(bS)) { beamRow(a.r); beamCol(a.c); return; } // 십자
     // line + bomb → 3 rows + 3 cols, all at once
     beamRow(a.r - 1); beamRow(a.r); beamRow(a.r + 1);
     beamCol(a.c - 1); beamCol(a.c); beamCol(a.c + 1);
@@ -468,8 +468,12 @@ export class Game {
       this.movesLeft -= 1; this._emit();
       this.cascade = 0;
       if (this.sound) { this.sound.special(); this.sound.boom(); }
+      const cells = this._comboCells(a, ga, b, gb);
       this._comboFx(a, ga, b, gb);
-      this._beginClear(this._comboCells(a, ga, b, gb), new Map(), 'boom');
+      // the combo REPLACES the two blocks' own effects — clear them as plain gems
+      // so they don't also fire their individual row/col/bomb detonation.
+      ga.special = SP.NONE; gb.special = SP.NONE;
+      this._beginClear(cells, new Map(), 'boom');
       return;
     }
 
