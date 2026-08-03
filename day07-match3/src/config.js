@@ -1,7 +1,7 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.5';
+export const VERSION = 'v7.6';
 
 export const COLS = 8;
 export const ROWS = 8;
@@ -40,13 +40,15 @@ export const STAGES = [
   { moves: 20, target: 12000 },
 ];
 
+// Six monsters in deliberately distinct hues (green / bone-white / red / blue /
+// purple / orange) so they never blur together. `kind` drives the face+shape.
 export const GEM_COLORS = [
-  { base: '#ff5a63', light: '#ff8f95', dark: '#c9343d' }, // red
-  { base: '#ffb03a', light: '#ffcd7c', dark: '#c47c14' }, // amber
-  { base: '#3fce6a', light: '#7fe59a', dark: '#249a48' }, // green
-  { base: '#3aa0ff', light: '#7fc2ff', dark: '#1f6fc4' }, // blue
-  { base: '#a566ff', light: '#c79bff', dark: '#7239c4' }, // purple
-  { base: '#ff5fae', light: '#ff97cb', dark: '#c73583' }, // pink
+  { kind: 'zombie', base: '#4cc85a', light: '#8fe897', dark: '#2f9a3d' }, // green
+  { kind: 'skeleton', base: '#e7edf4', light: '#ffffff', dark: '#aeb9c8' }, // bone white
+  { kind: 'demon', base: '#ff4d44', light: '#ff897f', dark: '#bf2d26' }, // red
+  { kind: 'slime', base: '#38a1ff', light: '#82c5ff', dark: '#1f6dc2' }, // blue
+  { kind: 'ghost', base: '#b06bff', light: '#d0a6ff', dark: '#7d3fd0' }, // purple
+  { kind: 'pumpkin', base: '#ff9a2e', light: '#ffc06e', dark: '#d1701a' }, // orange
 ];
 
 export const UI = {

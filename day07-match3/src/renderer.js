@@ -126,13 +126,14 @@ export class Renderer {
 
   _clearing(c, game) {
     for (const cl of game.clearing) {
-      const k = 1 - cl.t / 10;
-      this.drawGem(c, cl.gem.x, cl.gem.y, cl.gem.color, cl.gem.special, 0.4 + k * 0.6, k);
+      const k = Math.max(0, 1 - cl.t / 16);
+      // dead = true → the monster shows its dying face as it shrinks away
+      this.drawGem(c, cl.gem.x, cl.gem.y, cl.gem.color, cl.gem.special, 0.5 + k * 0.5, k, true);
     }
   }
 
-  drawGem(c, x, y, color, special, scale, alpha) {
-    const s = (CELL - 10) * scale;
+  drawGem(c, x, y, color, special, scale, alpha, dead = false) {
+    const s = (CELL - 8) * scale;
     const cx = x + CELL / 2;
     const cy = y + CELL / 2;
     const left = cx - s / 2;
@@ -141,41 +142,176 @@ export class Renderer {
 
     if (color < 0) {
       this._rainbow(c, cx, cy, s / 2);
-    } else {
-      const g = GEM_COLORS[color];
-      const grad = c.createLinearGradient(left, top, left, top + s);
-      grad.addColorStop(0, g.light);
-      grad.addColorStop(0.5, g.base);
-      grad.addColorStop(1, g.dark);
-      c.fillStyle = grad;
-      this._round(c, left, top, s, s, s * 0.28); c.fill();
-      c.fillStyle = 'rgba(255,255,255,.28)';
-      this._round(c, left + s * 0.16, top + s * 0.12, s * 0.5, s * 0.28, s * 0.14); c.fill();
+      this._special(c, special, left, top, s, cx, cy);
+      c.globalAlpha = 1;
+      return;
     }
 
-    if (special === SP.ROW || special === SP.COL) {
-      c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 2.5; c.lineCap = 'round';
-      const n = 3;
-      for (let i = 0; i < n; i += 1) {
-        const o = (i - (n - 1) / 2) * (s * 0.22);
-        c.beginPath();
-        if (special === SP.ROW) { c.moveTo(left + s * 0.14, cy + o); c.lineTo(left + s * 0.86, cy + o); } else { c.moveTo(cx + o, top + s * 0.14); c.lineTo(cx + o, top + s * 0.86); }
-        c.stroke();
-      }
-    } else if (special === SP.BOMB) {
-      c.fillStyle = 'rgba(0,0,0,.55)';
-      c.beginPath(); c.arc(cx, cy, s * 0.24, 0, Math.PI * 2); c.fill();
-      c.fillStyle = 'rgba(255,255,255,.92)';
-      c.font = `800 ${Math.round(s * 0.34)}px system-ui, sans-serif`;
-      c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText('✦', cx, cy + 1);
-      c.textAlign = 'left'; c.textBaseline = 'alphabetic';
-    }
+    const m = GEM_COLORS[color];
+    const grad = c.createLinearGradient(left, top, left, top + s);
+    grad.addColorStop(0, m.light);
+    grad.addColorStop(0.55, m.base);
+    grad.addColorStop(1, m.dark);
+    c.fillStyle = grad;
+    this._round(c, left, top, s, s, s * 0.3); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.2)';
+    this._round(c, left + s * 0.16, top + s * 0.1, s * 0.5, s * 0.24, s * 0.12); c.fill();
+
+    this._features(c, m, left, top, s);
+    this._face(c, m.kind, left, top, s, dead);
+    this._special(c, special, left, top, s, cx, cy);
     c.globalAlpha = 1;
   }
 
+  // special-block overlay (row/col stripes, bomb, drawn over the monster)
+  _special(c, special, left, top, s, cx, cy) {
+    if (special === SP.ROW || special === SP.COL) {
+      c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 2.5; c.lineCap = 'round';
+      for (let i = 0; i < 3; i += 1) {
+        const o = (i - 1) * (s * 0.34);
+        c.beginPath();
+        if (special === SP.ROW) { c.moveTo(left + s * 0.1, cy + o); c.lineTo(left + s * 0.9, cy + o); } else { c.moveTo(cx + o, top + s * 0.1); c.lineTo(cx + o, top + s * 0.9); }
+        c.stroke();
+      }
+    } else if (special === SP.BOMB) {
+      c.strokeStyle = '#ffffff'; c.lineWidth = 2.5;
+      this._round(c, left + s * 0.06, top + s * 0.06, s * 0.88, s * 0.88, s * 0.28); c.stroke();
+      c.fillStyle = '#fff';
+      c.font = `800 ${Math.round(s * 0.24)}px system-ui, sans-serif`;
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('✦', left + s * 0.82, top + s * 0.18);
+      c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    }
+  }
+
+  // per-monster silhouette accents (horns, stem, drips, stitches)
+  _features(c, m, left, top, s) {
+    const cx = left + s / 2;
+    const k = m.kind;
+    if (k === 'demon') {
+      c.fillStyle = m.dark;
+      c.beginPath(); c.moveTo(left + s * 0.1, top + s * 0.18); c.lineTo(left + s * 0.3, top - s * 0.02); c.lineTo(left + s * 0.36, top + s * 0.2); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(left + s * 0.9, top + s * 0.18); c.lineTo(left + s * 0.7, top - s * 0.02); c.lineTo(left + s * 0.64, top + s * 0.2); c.closePath(); c.fill();
+    } else if (k === 'pumpkin') {
+      c.fillStyle = '#5f7d2e';
+      this._round(c, cx - s * 0.06, top - s * 0.08, s * 0.12, s * 0.16, s * 0.04); c.fill();
+      c.strokeStyle = 'rgba(0,0,0,.1)'; c.lineWidth = Math.max(1, s * 0.045);
+      c.beginPath(); c.arc(cx, top + s * 0.5, s * 0.3, -1.1, 1.1); c.stroke();
+      c.beginPath(); c.arc(cx, top + s * 0.5, s * 0.13, -1.2, 1.2); c.stroke();
+    } else if (k === 'slime') {
+      c.fillStyle = m.base;
+      c.beginPath(); c.arc(left + s * 0.32, top + s * 0.98, s * 0.09, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(left + s * 0.7, top + s * 1.0, s * 0.07, 0, Math.PI * 2); c.fill();
+    } else if (k === 'zombie') {
+      c.fillStyle = 'rgba(0,0,0,.1)';
+      c.beginPath(); c.arc(left + s * 0.26, top + s * 0.28, s * 0.12, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = m.dark; c.lineWidth = Math.max(1, s * 0.03);
+      const sx = left + s * 0.76; const y0 = top + s * 0.48; const y1 = top + s * 0.66;
+      c.beginPath(); c.moveTo(sx, y0); c.lineTo(sx, y1); c.stroke();
+      for (const yy of [y0 + (y1 - y0) * 0.3, y0 + (y1 - y0) * 0.7]) { c.beginPath(); c.moveTo(sx - s * 0.05, yy); c.lineTo(sx + s * 0.05, yy); c.stroke(); }
+    }
+  }
+
+  // monster face — alive (per kind) or dying (X eyes + tongue) when dead
+  _face(c, kind, left, top, s, dead) {
+    const cx = left + s / 2;
+    const eyeY = top + s * 0.44;
+    const gap = s * 0.2;
+    const lx = cx - gap; const rx = cx + gap;
+
+    if (dead) {
+      this._xEye(c, lx, eyeY, s * 0.12);
+      this._xEye(c, rx, eyeY, s * 0.12);
+      c.fillStyle = '#3a1020';
+      c.beginPath(); c.ellipse(cx, top + s * 0.74, s * 0.13, s * 0.15, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ff6b8a';
+      c.beginPath(); c.ellipse(cx, top + s * 0.82, s * 0.08, s * 0.06, 0, 0, Math.PI * 2); c.fill();
+      return;
+    }
+
+    if (kind === 'skeleton') {
+      c.fillStyle = '#2a2f3a';
+      c.beginPath(); c.arc(lx, eyeY, s * 0.14, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(rx, eyeY, s * 0.14, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.8)';
+      c.beginPath(); c.arc(lx + s * 0.02, eyeY, s * 0.045, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(rx + s * 0.02, eyeY, s * 0.045, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#2a2f3a';
+      c.beginPath(); c.moveTo(cx, eyeY + s * 0.12); c.lineTo(cx - s * 0.05, eyeY + s * 0.22); c.lineTo(cx + s * 0.05, eyeY + s * 0.22); c.closePath(); c.fill();
+      const mw = s * 0.36; const mx = cx - mw / 2; const my = top + s * 0.72; const mh = s * 0.12;
+      c.fillStyle = '#2a2f3a'; c.fillRect(mx, my, mw, mh);
+      c.strokeStyle = '#e7edf4'; c.lineWidth = Math.max(1, s * 0.03);
+      for (let i = 1; i < 4; i += 1) { const xx = mx + (mw * i) / 4; c.beginPath(); c.moveTo(xx, my); c.lineTo(xx, my + mh); c.stroke(); }
+      return;
+    }
+    if (kind === 'pumpkin') {
+      c.fillStyle = '#3a2410';
+      const eye = (ex) => { c.beginPath(); c.moveTo(ex - s * 0.1, eyeY + s * 0.06); c.lineTo(ex + s * 0.1, eyeY + s * 0.06); c.lineTo(ex, eyeY - s * 0.09); c.closePath(); c.fill(); };
+      eye(lx); eye(rx);
+      const mw = s * 0.5; const mx = cx - mw / 2; const my = top + s * 0.68; const steps = 6;
+      c.beginPath(); c.moveTo(mx, my);
+      for (let i = 0; i <= steps; i += 1) c.lineTo(mx + (mw * i) / steps, my + (i % 2 ? s * 0.12 : 0));
+      for (let i = steps; i >= 0; i -= 1) c.lineTo(mx + (mw * i) / steps, my + s * 0.05 + (i % 2 ? 0 : s * 0.1));
+      c.closePath(); c.fill();
+      return;
+    }
+    if (kind === 'ghost') {
+      c.fillStyle = '#2a2440';
+      c.beginPath(); c.ellipse(lx, eyeY, s * 0.09, s * 0.13, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.ellipse(rx, eyeY, s * 0.09, s * 0.13, 0, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.ellipse(cx, top + s * 0.72, s * 0.08, s * 0.1, 0, 0, Math.PI * 2); c.fill();
+      return;
+    }
+    if (kind === 'demon') {
+      this._roundEye(c, lx, eyeY, s * 0.12, '#ffe14d');
+      this._roundEye(c, rx, eyeY, s * 0.12, '#ffe14d');
+      c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
+      c.beginPath(); c.moveTo(lx - s * 0.1, eyeY - s * 0.17); c.lineTo(lx + s * 0.1, eyeY - s * 0.06); c.stroke();
+      c.beginPath(); c.moveTo(rx + s * 0.1, eyeY - s * 0.17); c.lineTo(rx - s * 0.1, eyeY - s * 0.06); c.stroke();
+      c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = Math.max(1.5, s * 0.045);
+      c.beginPath(); c.arc(cx, top + s * 0.64, s * 0.16, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+      c.fillStyle = '#fff';
+      c.beginPath(); c.moveTo(cx - s * 0.09, top + s * 0.72); c.lineTo(cx - s * 0.03, top + s * 0.72); c.lineTo(cx - s * 0.06, top + s * 0.82); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(cx + s * 0.09, top + s * 0.72); c.lineTo(cx + s * 0.03, top + s * 0.72); c.lineTo(cx + s * 0.06, top + s * 0.82); c.closePath(); c.fill();
+      return;
+    }
+    if (kind === 'zombie') {
+      this._roundEye(c, lx, eyeY + s * 0.02, s * 0.14, '#fff');
+      this._roundEye(c, rx, eyeY, s * 0.1, '#fff');
+      c.strokeStyle = 'rgba(0,0,0,.5)'; c.lineWidth = Math.max(1.5, s * 0.045); c.lineCap = 'round';
+      const my = top + s * 0.72; const mw = s * 0.34;
+      c.beginPath();
+      c.moveTo(cx - mw / 2, my);
+      c.lineTo(cx - mw / 6, my + s * 0.06); c.lineTo(cx + mw / 6, my - s * 0.02); c.lineTo(cx + mw / 2, my + s * 0.05);
+      c.stroke();
+      return;
+    }
+    // slime (default): big shiny eyes + tiny smile
+    this._roundEye(c, lx, eyeY, s * 0.15, '#fff');
+    this._roundEye(c, rx, eyeY, s * 0.15, '#fff');
+    c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = Math.max(1.5, s * 0.04); c.lineCap = 'round';
+    c.beginPath(); c.arc(cx, top + s * 0.7, s * 0.08, 0.1 * Math.PI, 0.9 * Math.PI); c.stroke();
+  }
+
+  _roundEye(c, ex, ey, r, sclera) {
+    c.fillStyle = sclera || '#fff';
+    c.beginPath(); c.arc(ex, ey, r, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#1a2230';
+    c.beginPath(); c.arc(ex + r * 0.12, ey + r * 0.1, r * 0.5, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.85)';
+    c.beginPath(); c.arc(ex - r * 0.22, ey - r * 0.25, r * 0.22, 0, Math.PI * 2); c.fill();
+  }
+
+  _xEye(c, ex, ey, r) {
+    c.strokeStyle = '#1a2230'; c.lineWidth = Math.max(1.5, r * 0.55); c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(ex - r, ey - r); c.lineTo(ex + r, ey + r);
+    c.moveTo(ex + r, ey - r); c.lineTo(ex - r, ey + r);
+    c.stroke();
+  }
+
   _rainbow(c, cx, cy, r) {
-    const cols = ['#ff5a63', '#ffb03a', '#3fce6a', '#3aa0ff', '#a566ff', '#ff5fae'];
+    const cols = ['#4cc85a', '#e7edf4', '#ff4d44', '#38a1ff', '#b06bff', '#ff9a2e'];
     for (let i = 0; i < cols.length; i += 1) {
       c.fillStyle = cols[i];
       c.beginPath();
