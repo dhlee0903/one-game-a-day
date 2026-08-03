@@ -1,7 +1,7 @@
 // Pointer input on the board canvas: tap a gem then a neighbour to swap, or
 // drag a gem toward a neighbour. Touch never scrolls the page.
 
-import { BOARD_W, BOARD_H } from './config.js';
+import { CANVAS_W, CANVAS_H } from './config.js';
 
 export class InputController {
   constructor(canvas, game) {
@@ -12,10 +12,14 @@ export class InputController {
 
     const toBoard = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const p = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+      // touchend carries the point in changedTouches (e.touches is empty there),
+      // so prefer changedTouches. Map screen → canvas pixels (canvas is the full
+      // HUD + board size, not just the board).
+      const p = (e.changedTouches && e.changedTouches.length) ? e.changedTouches[0]
+        : (e.touches && e.touches.length) ? e.touches[0] : e;
       return {
-        x: (p.clientX - rect.left) * (BOARD_W / rect.width),
-        y: (p.clientY - rect.top) * (BOARD_H / rect.height),
+        x: (p.clientX - rect.left) * (CANVAS_W / rect.width),
+        y: (p.clientY - rect.top) * (CANVAS_H / rect.height),
       };
     };
 
