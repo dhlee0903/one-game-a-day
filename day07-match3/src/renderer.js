@@ -5,7 +5,7 @@
 
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_W, BOARD_H, CANVAS_W, CANVAS_H,
-  SP, GEM_COLORS, UI, VERSION, ITEMS,
+  SP, GEM_COLORS, UI, VERSION,
 } from './config.js';
 
 export class Renderer {
@@ -126,38 +126,18 @@ export class Renderer {
     }
   }
 
-  // Armed active-item mode: tint the board, preview the affected range under the
-  // pointer, and show a clear instruction banner (with the effect description).
+  // Armed active-item mode: only the range preview under the pointer (no tint,
+  // no banner). The item button itself shows the armed state.
   _armed(c, game) {
-    if (!game.armed) return;
-    const def = ITEMS.find((i) => i.id === game.armed);
-    const name = def ? def.name : '';
-    const desc = def ? def.desc : '';
-    const pulse = 0.05 + 0.05 * (0.5 + 0.5 * Math.sin(game.tick * 0.2));
-    c.fillStyle = `rgba(255,210,63,${pulse})`;
-    c.fillRect(0, HUD_H, BOARD_W, BOARD_H);
-
-    // range preview: highlight every cell the item would clear
-    if (game.preview) {
-      const a = 0.28 + 0.18 * (0.5 + 0.5 * Math.sin(game.tick * 0.25));
-      c.fillStyle = `rgba(255,210,63,${a})`;
-      c.strokeStyle = 'rgba(255,235,150,.9)'; c.lineWidth = 2;
-      for (const p of game.itemCells(game.armed, game.preview)) {
-        const x = PAD + p.c * CELL; const y = HUD_H + PAD + p.r * CELL;
-        this._round(c, x + 2, y + 2, CELL - 4, CELL - 4, 9); c.fill();
-        this._round(c, x + 2, y + 2, CELL - 4, CELL - 4, 9); c.stroke();
-      }
+    if (!game.armed || !game.preview) return;
+    const a = 0.28 + 0.16 * (0.5 + 0.5 * Math.sin(game.tick * 0.25));
+    c.fillStyle = `rgba(255,210,63,${a})`;
+    c.strokeStyle = 'rgba(255,235,150,.9)'; c.lineWidth = 2;
+    for (const p of game.itemCells(game.armed, game.preview)) {
+      const x = PAD + p.c * CELL; const y = HUD_H + PAD + p.r * CELL;
+      this._round(c, x + 2, y + 2, CELL - 4, CELL - 4, 9); c.fill();
+      this._round(c, x + 2, y + 2, CELL - 4, CELL - 4, 9); c.stroke();
     }
-
-    c.fillStyle = 'rgba(16,22,34,.92)';
-    this._round(c, 8, HUD_H + 8, BOARD_W - 16, 30, 9); c.fill();
-    c.strokeStyle = 'rgba(255,210,63,.7)'; c.lineWidth = 1.5;
-    this._round(c, 8, HUD_H + 8, BOARD_W - 16, 30, 9); c.stroke();
-    c.fillStyle = '#ffd23f';
-    c.font = '800 13px "Segoe UI", system-ui, sans-serif';
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(`${name} · ${desc} · 대상을 탭`, BOARD_W / 2, HUD_H + 23);
-    c.textAlign = 'left'; c.textBaseline = 'alphabetic';
   }
 
   _hint(c, game) {
@@ -210,24 +190,63 @@ export class Renderer {
     c.globalAlpha = 1;
   }
 
-  // special-block overlay (row/col stripes, bomb, drawn over the monster)
+  // Special blocks drawn as distinct graphics over the monster: a glowing
+  // directional rocket band (row/col), a bomb casing, etc.
   _special(c, special, left, top, s, cx, cy) {
     if (special === SP.ROW || special === SP.COL) {
-      c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 2.5; c.lineCap = 'round';
-      for (let i = 0; i < 3; i += 1) {
-        const o = (i - 1) * (s * 0.34);
+      const horiz = special === SP.ROW;
+      c.save();
+      // energy band with a soft glow
+      const bandW = s * 0.34;
+      c.fillStyle = 'rgba(255,255,255,.22)';
+      if (horiz) c.fillRect(left, cy - bandW * 0.9, s, bandW * 1.8);
+      else c.fillRect(cx - bandW * 0.9, top, bandW * 1.8, s);
+      const g = horiz
+        ? c.createLinearGradient(left, cy - bandW / 2, left, cy + bandW / 2)
+        : c.createLinearGradient(cx - bandW / 2, top, cx + bandW / 2, top);
+      g.addColorStop(0, 'rgba(255,255,255,.5)');
+      g.addColorStop(0.5, '#ffffff');
+      g.addColorStop(1, 'rgba(255,255,255,.5)');
+      c.fillStyle = g;
+      if (horiz) c.fillRect(left, cy - bandW / 2, s, bandW); else c.fillRect(cx - bandW / 2, top, bandW, s);
+      // chevrons along the band pointing outward from center
+      c.strokeStyle = 'rgba(60,90,150,.9)'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
+      const ch = (t, dir) => {
         c.beginPath();
-        if (special === SP.ROW) { c.moveTo(left + s * 0.1, cy + o); c.lineTo(left + s * 0.9, cy + o); } else { c.moveTo(cx + o, top + s * 0.1); c.lineTo(cx + o, top + s * 0.9); }
+        if (horiz) {
+          const x = cx + dir * s * (0.16 + t * 0.18);
+          c.moveTo(x - dir * s * 0.06, cy - s * 0.08); c.lineTo(x, cy); c.lineTo(x - dir * s * 0.06, cy + s * 0.08);
+        } else {
+          const y = cy + dir * s * (0.16 + t * 0.18);
+          c.moveTo(cx - s * 0.08, y - dir * s * 0.06); c.lineTo(cx, y); c.lineTo(cx + s * 0.08, y - dir * s * 0.06);
+        }
         c.stroke();
-      }
+      };
+      ch(0, 1); ch(1, 1); ch(0, -1); ch(1, -1);
+      c.restore();
     } else if (special === SP.BOMB) {
-      c.strokeStyle = '#ffffff'; c.lineWidth = 2.5;
-      this._round(c, left + s * 0.06, top + s * 0.06, s * 0.88, s * 0.88, s * 0.28); c.stroke();
-      c.fillStyle = '#fff';
-      c.font = `800 ${Math.round(s * 0.24)}px system-ui, sans-serif`;
-      c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText('✦', left + s * 0.82, top + s * 0.18);
-      c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      // a bomb casing sitting on the monster
+      const r = s * 0.36;
+      const bx = cx; const by = cy + s * 0.06;
+      const bg = c.createRadialGradient(bx - r * 0.35, by - r * 0.35, r * 0.2, bx, by, r);
+      bg.addColorStop(0, '#3b4456');
+      bg.addColorStop(1, '#141824');
+      c.fillStyle = bg;
+      c.beginPath(); c.arc(bx, by, r, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.35)';
+      c.beginPath(); c.arc(bx - r * 0.35, by - r * 0.35, r * 0.28, 0, Math.PI * 2); c.fill();
+      // cap + fuse + spark
+      c.fillStyle = '#2a2f3a';
+      c.fillRect(bx - r * 0.3, by - r - s * 0.06, r * 0.6, s * 0.1);
+      c.strokeStyle = '#c98f00'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
+      c.beginPath();
+      c.moveTo(bx + r * 0.1, by - r - s * 0.04);
+      c.quadraticCurveTo(bx + r * 0.7, by - r - s * 0.28, bx + r * 0.4, by - r - s * 0.42);
+      c.stroke();
+      c.fillStyle = '#ffd23f';
+      c.beginPath(); c.arc(bx + r * 0.4, by - r - s * 0.44, s * 0.07, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,160,60,.5)';
+      c.beginPath(); c.arc(bx + r * 0.4, by - r - s * 0.44, s * 0.13, 0, Math.PI * 2); c.fill();
     }
   }
 
@@ -423,6 +442,22 @@ export class Renderer {
         const rr = BOARD_H * 0.42 * (0.3 + p * 0.7);
         c.beginPath(); c.arc(0, 0, rr, 0, Math.PI * 1.5); c.stroke();
         c.restore();
+      } else if (fx.type === 'warn') {
+        const blink = Math.sin(p * Math.PI * 6) > 0 ? 1 : 0.35;
+        const alpha = p < 0.85 ? blink : (1 - p) / 0.15 * blink;
+        c.save();
+        c.globalAlpha = Math.max(0, alpha);
+        c.fillStyle = 'rgba(255,60,70,.12)';
+        c.fillRect(0, HUD_H, BOARD_W, BOARD_H);
+        c.translate(BOARD_W / 2, HUD_H + BOARD_H * 0.34);
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.font = '800 34px "Segoe UI", system-ui, sans-serif';
+        c.lineWidth = 6; c.strokeStyle = 'rgba(0,0,0,.5)';
+        c.strokeText(fx.text, 0, 0);
+        c.fillStyle = '#ff5a6a';
+        c.fillText(fx.text, 0, 0);
+        c.restore();
+        c.textAlign = 'left'; c.textBaseline = 'alphabetic';
       } else if (fx.type === 'combo') {
         const pop = p < 0.28 ? p / 0.28 : 1;
         const alpha = p < 0.6 ? 1 : Math.max(0, 1 - (p - 0.6) / 0.4);
