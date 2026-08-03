@@ -1,16 +1,26 @@
-// Procedural sound via the Web Audio API — no audio files, zero dependencies.
-// Tones and a noise burst are synthesised on the fly. The context is created
-// lazily and resumed on the first user gesture (browser autoplay policy).
+// Procedural audio via the Web Audio API — no files, zero dependencies. SFX and
+// background music are toggled independently. The music loop varies its key per
+// stage-group and speeds up when moves run low.
 
 export class Sound {
   constructor() {
     this.ctx = null;
-    this.muted = false;
+    this.sfxEnabled = true;
+    this.musicEnabled = true;
     this.musicGain = null;
     this.musicOn = false;
-    this._musicTimer = 0;
+    this._timer = 0;
     this._nextNote = 0;
     this._step = 0;
+
+    // music theory: natural-minor scale, an arpeggio + bass pattern, and a set
+    // of roots so each stage-group gets a distinct-sounding loop.
+    this.scale = [0, 2, 3, 5, 7, 8, 10];
+    this.arp = [0, 2, 4, 7, 9, 7, 4, 2, 3, 5, 7, 4, 2, 4, 2, 0];
+    this.bass = [0, 0, 3, 4];
+    this.roots = [220.0, 174.61, 196.0, 246.94]; // A3, F3, G3, B3
+    this.group = 0;
+    this.stepDur = 0.24;
   }
 
   _ac() {
@@ -25,72 +35,22 @@ export class Sound {
 
   resume() { this._ac(); }
 
-  setMuted(m) {
-    this.muted = m;
-    if (this.musicGain) this.musicGain.gain.value = m ? 0 : 0.5;
+  setSfx(on) { this.sfxEnabled = on; }
+
+  setMusic(on) {
+    this.musicEnabled = on;
+    if (this.musicGain) this.musicGain.gain.value = on ? 0.5 : 0;
   }
 
-  // ---- background music: a looping minor arpeggio (spooky, low volume) ----
+  setStageGroup(g) { this.group = g; }
 
-  startMusic() {
-    const ac = this._ac();
-    if (!ac || this.musicOn) return;
-    this.musicOn = true;
-    if (!this.musicGain) {
-      this.musicGain = ac.createGain();
-      this.musicGain.gain.value = this.muted ? 0 : 0.5;
-      this.musicGain.connect(ac.destination);
-    }
-    this._nextNote = ac.currentTime + 0.1;
-    this._step = 0;
-    this._musicTimer = setInterval(() => this._musicTick(), 40);
-  }
+  setTempo(fast) { this.stepDur = fast ? 0.16 : 0.24; }
 
-  stopMusic() {
-    this.musicOn = false;
-    if (this._musicTimer) { clearInterval(this._musicTimer); this._musicTimer = 0; }
-  }
-
-  _musicTick() {
-    const ac = this.ctx;
-    if (!ac || !this.musicOn) return;
-    const stepDur = 0.24; // ~ eighth notes
-    // A minor-ish loop: bass root per bar + a rolling arpeggio
-    const bass = [110, 110, 146.83, 130.81]; // A2 A2 D3 C3, one per 4 steps
-    const arp = [
-      220, 261.63, 329.63, 440, 329.63, 261.63, 293.66, 220,
-      293.66, 349.23, 440, 587.33, 440, 349.23, 261.63, 220,
-    ];
-    while (this._nextNote < ac.currentTime + 0.25) {
-      const t = this._nextNote;
-      const i = this._step % arp.length;
-      // lead
-      this._m(arp[i], t, stepDur * 0.9, 'triangle', 0.12);
-      // bass on every 4th step
-      if (i % 4 === 0) this._m(bass[(i / 4) % bass.length], t, stepDur * 3.4, 'sine', 0.18);
-      this._nextNote += stepDur;
-      this._step += 1;
-    }
-  }
-
-  _m(freq, t, dur, type, gain) {
-    const ac = this.ctx;
-    if (!ac || !this.musicGain) return;
-    const o = ac.createOscillator();
-    const g = ac.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.03);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.musicGain);
-    o.start(t);
-    o.stop(t + dur + 0.05);
-  }
+  // ---- SFX ----
 
   _tone(freq, dur, { type = 'sine', gain = 0.2, slideTo = null, delay = 0 } = {}) {
     const ac = this._ac();
-    if (!ac || this.muted) return;
+    if (!ac || !this.sfxEnabled) return;
     const t = ac.currentTime + delay;
     const o = ac.createOscillator();
     const g = ac.createGain();
@@ -107,7 +67,7 @@ export class Sound {
 
   _noise(dur, { gain = 0.2, lp = 1200, delay = 0 } = {}) {
     const ac = this._ac();
-    if (!ac || this.muted) return;
+    if (!ac || !this.sfxEnabled) return;
     const t = ac.currentTime + delay;
     const n = Math.floor(ac.sampleRate * dur);
     const buf = ac.createBuffer(1, n, ac.sampleRate);
@@ -126,8 +86,6 @@ export class Sound {
     src.start(t);
     src.stop(t + dur + 0.03);
   }
-
-  // ---- game sounds ----
 
   swap() { this._tone(420, 0.06, { type: 'triangle', gain: 0.1, slideTo: 520 }); }
 
@@ -157,4 +115,61 @@ export class Sound {
   win() { [523, 659, 784, 1047].forEach((f, i) => this._tone(f, 0.2, { type: 'triangle', gain: 0.16, delay: i * 0.11 })); }
 
   lose() { [392, 330, 262].forEach((f, i) => this._tone(f, 0.26, { type: 'sawtooth', gain: 0.12, delay: i * 0.14 })); }
+
+  // ---- background music ----
+
+  startMusic() {
+    const ac = this._ac();
+    if (!ac || this.musicOn) return;
+    this.musicOn = true;
+    if (!this.musicGain) {
+      this.musicGain = ac.createGain();
+      this.musicGain.gain.value = this.musicEnabled ? 0.5 : 0;
+      this.musicGain.connect(ac.destination);
+    }
+    this._nextNote = ac.currentTime + 0.1;
+    this._step = 0;
+    this._timer = setInterval(() => this._tick(), 40);
+  }
+
+  stopMusic() {
+    this.musicOn = false;
+    if (this._timer) { clearInterval(this._timer); this._timer = 0; }
+  }
+
+  _tick() {
+    const ac = this.ctx;
+    if (!ac || !this.musicOn) return;
+    const root = this.roots[((this.group % this.roots.length) + this.roots.length) % this.roots.length];
+    const step = this.stepDur;
+    while (this._nextNote < ac.currentTime + 0.25) {
+      const t = this._nextNote;
+      const i = this._step % this.arp.length;
+      const deg = this.arp[i];
+      const lead = root * 2 ** ((this.scale[((deg % 7) + 7) % 7] + 12 * Math.floor(deg / 7)) / 12);
+      this._m(lead, t, step * 0.9, 'triangle', 0.1);
+      if (i % 4 === 0) {
+        const bd = this.bass[(i / 4) % this.bass.length];
+        const bf = (root / 2) * 2 ** (this.scale[bd] / 12);
+        this._m(bf, t, step * 3.2, 'sine', 0.16);
+      }
+      this._nextNote += step;
+      this._step += 1;
+    }
+  }
+
+  _m(freq, t, dur, type, gain) {
+    const ac = this.ctx;
+    if (!ac || !this.musicGain) return;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(this.musicGain);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
 }

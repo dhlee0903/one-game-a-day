@@ -1,7 +1,7 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.11';
+export const VERSION = 'v7.12';
 
 // Continue after running out of moves: pay gold for +N moves, cost doubles each
 // time within the same stage attempt.

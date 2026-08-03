@@ -16,7 +16,22 @@ const overlay = $('overlay');
 const sound = new Sound();
 const itemsEl = $('items'); // referenced by renderItems during game construction
 
-const game = new Game({ onState: handleState, onItems: renderItems, sound });
+// ---- settings (persisted) ----
+const DEFAULTS = { bgm: true, sfx: true, vibrate: true };
+let settings = { ...DEFAULTS };
+try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem('day07-opts') || '{}') }; } catch { /* ignore */ }
+const saveSettings = () => { try { localStorage.setItem('day07-opts', JSON.stringify(settings)); } catch { /* ignore */ } };
+const canVibrate = typeof navigator !== 'undefined' && !!navigator.vibrate;
+
+function doHaptic(type) {
+  if (!settings.vibrate || !canVibrate) return;
+  navigator.vibrate(type === 'boom' ? [0, 45, 25, 60] : 14);
+}
+
+const game = new Game({ onState: handleState, onItems: renderItems, sound, haptic: doHaptic });
+
+sound.setSfx(settings.sfx);
+sound.setMusic(settings.bgm);
 
 // browsers only allow audio after a user gesture — resume + start music then
 let audioStarted = false;
@@ -24,22 +39,34 @@ function kickAudio() {
   if (audioStarted) return;
   audioStarted = true;
   sound.resume();
-  if (!muted) sound.startMusic();
+  sound.startMusic(); // gated internally by the bgm setting
 }
 $('board').addEventListener('pointerdown', kickAudio, { once: true });
 overlay.addEventListener('pointerdown', kickAudio, { once: true });
 
-// mute toggle (SFX + music)
-let muted = false;
-const muteBtn = $('mute');
-muteBtn.onclick = () => {
-  muted = !muted;
-  sound.setMuted(muted);
-  sound.resume();
-  if (!muted) sound.startMusic();
-  muteBtn.textContent = muted ? '소리 꺼짐' : '소리 켜짐';
-  muteBtn.classList.toggle('off', muted);
-};
+// options panel (gear)
+const gear = $('gear');
+const opts = $('opts');
+if (canVibrate) $('optVib').hidden = false;
+gear.onclick = (e) => { e.stopPropagation(); opts.hidden = !opts.hidden; };
+document.addEventListener('pointerdown', (e) => { if (!opts.hidden && !opts.contains(e.target) && e.target !== gear && !gear.contains(e.target)) opts.hidden = true; });
+
+function applyOpt(id) {
+  if (id === 'bgm') sound.setMusic(settings.bgm);
+  if (id === 'sfx') sound.setSfx(settings.sfx);
+}
+opts.querySelectorAll('.tog').forEach((btn) => {
+  const id = btn.dataset.opt;
+  const paint = () => { btn.textContent = settings[id] ? '켜짐' : '꺼짐'; btn.classList.toggle('off', !settings[id]); };
+  paint();
+  btn.onclick = () => {
+    settings[id] = !settings[id];
+    saveSettings();
+    applyOpt(id);
+    kickAudio();
+    paint();
+  };
+});
 
 // active-item bar
 itemsEl.querySelectorAll('.item').forEach((btn) => {
