@@ -455,8 +455,15 @@ export class Game {
       const other = aM ? gb : ga;
       this.movesLeft -= 1; this._emit();
       this.cascade = 0;
-      if (aM && bM) this._launchMissiles([a, b], 3);        // 유도탄 + 유도탄 → 3발
-      else this._launchDeliverMissile([a, b], other.special); // 특수 + 유도탄 → 유도 위치서 발동
+      if (aM && bM) { // 유도탄 + 유도탄 → 3발
+        this._launchMissiles([a, b], 3);
+      } else if (other.special === SP.BOMB) { // 유도탄 + 폭탄 → 폭탄이 제자리서 터지며 박쥐를 휩쓸고, 그 박쥐가 발동
+        const bombCell = ga.special === SP.BOMB ? a : b;
+        if (this.sound) this.sound.boom();
+        this._beginClear(new Set([this.board.key(bombCell.r, bombCell.c)]), new Map(), 'boom');
+      } else { // 줄 + 유도탄 → 유도 위치서 그 줄 발동
+        this._launchDeliverMissile([a, b], other.special);
+      }
       return;
     }
 
