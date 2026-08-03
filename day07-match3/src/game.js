@@ -23,7 +23,8 @@ export class Game {
     this.clearing = [];
     this.effects = [];
     this.missiles = [];       // in-flight guided missiles (BOMB special)
-    this._missileKind = null; // 'single' | 'cross' | 'cross3'
+    this._missileKind = null; // 'single' | 'deliver'
+    this._missileDeliver = null; // special type carried by a deliver missile
     this._missileTargets = null;
     this.selected = null;
     this.armed = null;   // armed active item id (targeted)
@@ -54,6 +55,7 @@ export class Game {
     this.effects = [];
     this.missiles = [];
     this._missileKind = null;
+    this._missileDeliver = null;
     this._missileTargets = null;
     this.selected = null;
     this.armed = null;
@@ -218,12 +220,12 @@ export class Game {
     this._act();
     this.movesLeft -= 1; this._emit();
     this.cascade = 0;
-    if (g.special === SP.BOMB) { this._launchBombMissiles([cell], 1); return; }
+    if (g.special === SP.MISSILE) { this._launchMissiles([cell], 1); return; }
     if (this.sound) this.sound.boom();
     this._beginClear(new Set([this.board.key(cell.r, cell.c)]), new Map(), 'boom');
   }
 
-  // ---- guided missiles (BOMB special auto-aims at the best cascade) ----
+  // ---- guided missiles (MISSILE special: a bat auto-aims at the best cascade) ----
 
   // Up to n distinct target cells, ranked by the cascade they would trigger.
   _bestTargets(n, exclude) {
@@ -263,34 +265,38 @@ export class Game {
     return best;
   }
 
-  // Consume `sources` (the bomb blocks) and fire `count` missiles at the best
-  // targets; each removes one block on arrival. (bomb+bomb → count 3.)
-  _launchBombMissiles(sources, count) {
+  // Consume `sources` (the missile blocks) and fire `count` bats at the best
+  // targets; each removes one block on arrival. (missile+missile → count 3.)
+  _launchMissiles(sources, count) {
     const ex = new Set(sources.map((s) => this.board.key(s.r, s.c)));
     const targets = this._bestTargets(count, ex);
     if (!targets.length) { if (this.sound) this.sound.boom(); this._beginClear(new Set(sources.map((s) => this.board.key(s.r, s.c))), new Map(), 'boom'); return; }
+    const cols = sources.map((s) => { const g = this.board.at(s.r, s.c); return g ? g.color : 0; });
     this._consumeCells(sources);
     for (let i = 0; i < count; i += 1) {
       const src = sources[i % sources.length];
-      this._spawnMissile(src, targets[i % targets.length], i * 12); // staggered launch
+      this._spawnMissile(src, targets[i % targets.length], i * 12, cols[i % cols.length]); // staggered launch
     }
     this._missileKind = 'single';
+    this._missileDeliver = null;
     this._missileTargets = targets;
     this.phase = 'missile';
   }
 
-  // Positional special combo (line+line, line+bomb): the combined effect flies
-  // to the best cell, then detonates there. kind: 'cross' | 'cross3'.
-  _launchComboMissile(sources, kind) {
+  // missile + another special: the bat carries that special to the best cell,
+  // then it detonates there (deliver = the other special's type).
+  _launchDeliverMissile(sources, deliver) {
     const ex = new Set(sources.map((s) => this.board.key(s.r, s.c)));
     const targets = this._bestTargets(1, ex);
     if (!targets.length) { if (this.sound) this.sound.boom(); this._beginClear(new Set([...ex]), new Map(), 'boom'); return; }
+    const mgem = sources.map((s) => this.board.at(s.r, s.c)).find((g) => g && g.special === SP.MISSILE);
+    const color = mgem ? mgem.color : 0;
     this._consumeCells(sources);
     const mid = { r: (sources[0].r + sources[sources.length - 1].r) / 2, c: (sources[0].c + sources[sources.length - 1].c) / 2 };
-    this._spawnMissile(mid, targets[0]);
-    this._missileKind = kind;
+    this._spawnMissile(mid, targets[0], 0, color);
+    this._missileKind = 'deliver';
+    this._missileDeliver = deliver;
     this._missileTargets = targets;
-    if (this.sound) { this.sound.special(); this.sound.boom(); }
     this.phase = 'missile';
   }
 
@@ -304,12 +310,12 @@ export class Game {
     }
   }
 
-  _spawnMissile(src, tgt, delay = 0) {
+  _spawnMissile(src, tgt, delay = 0, color = 0) {
     this.missiles.push({
       sx: Game.px(src.c) + CELL / 2, sy: Game.py(src.r) + CELL / 2,
       tx: Game.px(tgt.c) + CELL / 2, ty: Game.py(tgt.r) + CELL / 2,
       x: Game.px(src.c) + CELL / 2, y: Game.py(src.r) + CELL / 2,
-      t: 0, dur: 26, delay, fired: false, trail: [],
+      t: 0, dur: 26, delay, fired: false, color, trail: [],
     });
   }
 
@@ -320,18 +326,21 @@ export class Game {
     const add = (r, c) => { if (this.board.inBounds(r, c)) S.add(this.board.key(r, c)); };
     const addRow = (r) => { for (let c = 0; c < COLS; c += 1) add(r, c); };
     const addCol = (c) => { for (let r = 0; r < ROWS; r += 1) add(r, c); };
+    const addBox = (r, c, rad) => { for (let dr = -rad; dr <= rad; dr += 1) for (let dc = -rad; dc <= rad; dc += 1) add(r + dr, c + dc); };
     const targets = this._missileTargets || [];
     if (this._missileKind === 'single') {
       for (const t of targets) { add(t.r, t.c); this.effects.push({ type: 'ring', x: Game.px(t.c) + CELL / 2, y: Game.py(t.r) + CELL / 2, color: -1, t: 0, life: 40 }); }
-    } else if (this._missileKind === 'cross' && targets[0]) {
-      addRow(targets[0].r); addCol(targets[0].c);
-    } else if (this._missileKind === 'cross3' && targets[0]) {
-      const t = targets[0];
-      addRow(t.r - 1); addRow(t.r); addRow(t.r + 1);
-      addCol(t.c - 1); addCol(t.c); addCol(t.c + 1);
+    } else if (this._missileKind === 'deliver' && targets[0]) {
+      // the carried special detonates at the guided position
+      const t = targets[0]; const sp = this._missileDeliver;
+      if (sp === SP.ROW) addRow(t.r);
+      else if (sp === SP.COL) addCol(t.c);
+      else if (sp === SP.BOMB) addBox(t.r, t.c, 1);
+      else add(t.r, t.c);
+      this._detonateFxAt(t.r, t.c, sp);
     }
     this.missiles = [];
-    this._missileKind = null; this._missileTargets = null;
+    this._missileKind = null; this._missileTargets = null; this._missileDeliver = null;
     if (this.sound) this.sound.boom();
     this.haptic('boom');
     this._beginClear(S, new Map(), 'boom');
@@ -374,44 +383,36 @@ export class Game {
     if (!ga || !gb) return;
     this._act();
 
-    // Rainbow + line/bomb → turn every gem of that colour into the special and
-    // detonate them one by one (fall between each) rather than all at once.
+    // 1) Rainbow + special → convert every gem of that colour into the combined
+    //    special, then detonate them one by one (fall between each).
     const aC = ga.special === SP.COLOR; const bC = gb.special === SP.COLOR;
     if (aC || bC) {
       const other = aC ? gb : ga;
-      if (other.special === SP.ROW || other.special === SP.COL || other.special === SP.BOMB) {
-        this._act();
+      const os = other.special;
+      if (os === SP.ROW || os === SP.COL || os === SP.BOMB || os === SP.MISSILE) {
         this.movesLeft -= 1; this._emit();
         this.cascade = 0;
         this._startColorConvert(aC ? a : b, other);
         return;
       }
+      // rainbow+rainbow / rainbow+normal fall through to the combo swap below
     }
 
-    // Positional special combos fly to the best cell as guided missile(s):
-    //  bomb + bomb → 3 missiles; line+bomb / line+line → combined effect flies.
-    const line = (s) => s === SP.ROW || s === SP.COL;
-    const aSp = ga.special; const bSp = gb.special;
-    const bothPositional = aSp !== SP.NONE && bSp !== SP.NONE && aSp !== SP.COLOR && bSp !== SP.COLOR;
-    if (bothPositional) {
+    // 2) Missile (bat) combos — no rainbow involved.
+    const aM = ga.special === SP.MISSILE; const bM = gb.special === SP.MISSILE;
+    if (aM || bM) {
+      const other = aM ? gb : ga;
+      const missileCell = aM ? a : b;
       this.movesLeft -= 1; this._emit();
       this.cascade = 0;
-      if (aSp === SP.BOMB && bSp === SP.BOMB) this._launchBombMissiles([a, b], 3);
-      else this._launchComboMissile([a, b], (line(aSp) && line(bSp)) ? 'cross' : 'cross3');
+      if (aM && bM) this._launchMissiles([a, b], 3);                             // 유도탄 + 유도탄 → 3발
+      else if (other.special === SP.NONE) this._launchMissiles([missileCell], 1); // 유도탄 + 일반
+      else this._launchDeliverMissile([a, b], other.special);                    // 특수 + 유도탄 → 유도 위치서 발동
       return;
     }
 
-    // Lone bomb swapped with a normal gem → fire the guided missile.
-    if ((aSp === SP.BOMB && bSp === SP.NONE) || (bSp === SP.BOMB && aSp === SP.NONE)) {
-      this.movesLeft -= 1; this._emit();
-      this.cascade = 0;
-      this._launchBombMissiles([aSp === SP.BOMB ? a : b], 1);
-      return;
-    }
-
-    // Special activation swap: a rainbow can swap with anything, and any two
-    // specials combine. A single line + a normal gem is a plain swap (it
-    // activates only when the swap forms a match).
+    // 3) Two non-colour specials (line/bomb) combine in place: line+line=십자,
+    //    line+bomb=3열 십자, bomb+bomb=5x5. (rainbow+rainbow / rainbow+normal too)
     const comboSwap = ga.special === SP.COLOR || gb.special === SP.COLOR
       || (ga.special !== SP.NONE && gb.special !== SP.NONE);
     if (comboSwap) {
@@ -553,6 +554,9 @@ export class Game {
     else if (g.special === SP.BOMB) this.effects.push({ type: 'ring', x: cx, y: cy, color: g.color, t: 0, life: 62 });
     else if (g.special === SP.COLOR) this.effects.push({ type: 'flash', t: 0, life: 70 });
   }
+
+  // Same burst, but for a special the missile just delivered to (r,c).
+  _detonateFxAt(r, c, sp) { this._detonateFx(r, c, { special: sp, color: -1 }); }
 
   _afterClear() {
     this.board.applyGravity();
