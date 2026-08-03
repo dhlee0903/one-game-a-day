@@ -5,7 +5,7 @@
 
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_H, SP, COLOR_GEM, POINTS_PER_GEM, STAGES,
-  ITEMS, ITEM_START, ITEM_PRICE, START_GOLD, STAGE_GOLD, HINT_DELAY, stageColors,
+  ITEMS, ITEM_START, START_GOLD, STAGE_GOLD, HINT_DELAY, stageColors,
 } from './config.js';
 import { Board } from './board.js';
 
@@ -120,9 +120,9 @@ export class Game {
     if (!def) return;
     this._act();
     if ((this.items[id] || 0) <= 0) {
-      // out of stock → buy one with gold
-      if (this.gold >= ITEM_PRICE) {
-        this.gold -= ITEM_PRICE; this.items[id] += 1;
+      // out of stock → buy one with gold (per-item price)
+      if (this.gold >= def.price) {
+        this.gold -= def.price; this.items[id] += 1;
         if (this.sound) this.sound.special();
       } else {
         if (this.sound) this.sound.invalid();
@@ -135,6 +135,7 @@ export class Game {
     // instant: shuffle
     this.items[id] -= 1; this.armed = null;
     this.board.reshuffle(); this._sync(true);
+    this.effects.push({ type: 'swirl', t: 0, life: 26 });
     if (this.sound) this.sound.special();
     this._emitItems();
   }
@@ -160,6 +161,16 @@ export class Game {
       const color = g.color < 0 ? this.board._commonColor() : g.color;
       for (const p of this.board.cellsOfColor(color)) add(p.r, p.c);
     }
+    // item-signature effect at the target
+    const cx = Game.px(cell.c) + CELL / 2;
+    const cy = Game.py(cell.r) + CELL / 2;
+    if (id === 'hammer') this.effects.push({ type: 'smash', x: cx, y: cy, t: 0, life: 18 });
+    else if (id === 'bomb') this.effects.push({ type: 'ring', x: cx, y: cy, color: -1, t: 0, life: 22 });
+    else if (id === 'cross') {
+      this.effects.push({ type: 'beam', axis: 'row', r: cell.r, c: cell.c, color: -1, t: 0, life: 20 });
+      this.effects.push({ type: 'beam', axis: 'col', r: cell.r, c: cell.c, color: -1, t: 0, life: 20 });
+    } else if (id === 'color') this.effects.push({ type: 'flash', t: 0, life: 26 });
+
     this.items[id] -= 1;
     this.armed = null;
     this.cascade = 0;
@@ -342,10 +353,14 @@ export class Game {
       this.phase = 'won';
       const reward = STAGE_GOLD + Math.max(0, this.movesLeft) * 10;
       this.gold += reward;
+      // bonus: a random active item
+      const bonus = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+      this.items[bonus.id] += 1;
       this._emitItems();
       if (this.sound) this.sound.win();
       this.onState('won', {
         stage: this.stageIndex + 1, score: this.score, reward, gold: this.gold,
+        bonusItem: bonus.name,
         last: this.stageIndex === STAGES.length - 1,
       });
     } else if (this.movesLeft <= 0) {

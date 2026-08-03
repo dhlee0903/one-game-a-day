@@ -5,7 +5,9 @@ import { Renderer } from './renderer.js';
 import { Game } from './game.js';
 import { InputController } from './input.js';
 import { Sound } from './audio.js';
-import { ITEM_PRICE } from './config.js';
+import { ITEMS } from './config.js';
+
+const PRICE = Object.fromEntries(ITEMS.map((i) => [i.id, i.price]));
 
 const $ = (id) => document.getElementById(id);
 
@@ -53,10 +55,11 @@ function renderItems(state) {
   itemsEl.querySelectorAll('.item').forEach((btn) => {
     const id = btn.dataset.item;
     const n = state.items[id] || 0;
+    const price = PRICE[id];
     const cnt = btn.querySelector('.cnt');
-    if (n > 0) { cnt.textContent = n; cnt.classList.remove('buy'); } else { cnt.textContent = `${ITEM_PRICE}G`; cnt.classList.add('buy'); }
+    if (n > 0) { cnt.textContent = n; cnt.classList.remove('buy'); } else { cnt.textContent = `${price}G`; cnt.classList.add('buy'); }
     btn.classList.toggle('armed', state.armed === id);
-    btn.classList.toggle('poor', n <= 0 && state.gold < ITEM_PRICE);
+    btn.classList.toggle('poor', n <= 0 && state.gold < price);
   });
 }
 
@@ -70,7 +73,7 @@ game.start();
 
 function handleState(state, p) {
   if (state === 'won') {
-    const gline = `골드 +${p.reward} (보유 ${p.gold})`;
+    const gline = `골드 +${p.reward} (보유 ${p.gold}) · 보너스 아이템 ${p.bonusItem} +1`;
     if (p.last) showOverlay('올 클리어!', `10 스테이지 완주 · 점수 ${p.score}<br>${gline}`, '처음부터', () => game.nextStage());
     else showOverlay(`스테이지 ${p.stage} 클리어`, `점수 ${p.score}<br>${gline}`, '다음 스테이지', () => game.nextStage());
   } else if (state === 'lost') {
