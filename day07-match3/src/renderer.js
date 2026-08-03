@@ -398,16 +398,15 @@ export class Renderer {
       return;
     }
     if (kind === 'pumpkin') {
-      // big round eyes → friendlier than the classic triangle jack-o cut-outs
-      this._roundEye(c, lx, eyeY, s * 0.12, '#fff');
-      this._roundEye(c, rx, eyeY, s * 0.12, '#fff');
-      // cute curved grin with two little teeth
-      const my = top + s * 0.66;
-      c.strokeStyle = '#3a2410'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
-      c.beginPath(); c.arc(cx, my, s * 0.18, 0.1 * Math.PI, 0.9 * Math.PI); c.stroke();
+      // classic jack-o-lantern: triangle eyes + zig-zag grin
       c.fillStyle = '#3a2410';
-      c.beginPath(); c.moveTo(cx - s * 0.09, my + s * 0.07); c.lineTo(cx - s * 0.02, my + s * 0.07); c.lineTo(cx - s * 0.055, my + s * 0.15); c.closePath(); c.fill();
-      c.beginPath(); c.moveTo(cx + s * 0.09, my + s * 0.07); c.lineTo(cx + s * 0.02, my + s * 0.07); c.lineTo(cx + s * 0.055, my + s * 0.15); c.closePath(); c.fill();
+      const eye = (ex) => { c.beginPath(); c.moveTo(ex - s * 0.1, eyeY + s * 0.06); c.lineTo(ex + s * 0.1, eyeY + s * 0.06); c.lineTo(ex, eyeY - s * 0.09); c.closePath(); c.fill(); };
+      eye(lx); eye(rx);
+      const mw = s * 0.5; const mx = cx - mw / 2; const my = top + s * 0.68; const steps = 6;
+      c.beginPath(); c.moveTo(mx, my);
+      for (let i = 0; i <= steps; i += 1) c.lineTo(mx + (mw * i) / steps, my + (i % 2 ? s * 0.12 : 0));
+      for (let i = steps; i >= 0; i -= 1) c.lineTo(mx + (mw * i) / steps, my + s * 0.05 + (i % 2 ? 0 : s * 0.1));
+      c.closePath(); c.fill();
       return;
     }
     if (kind === 'ghost') {
