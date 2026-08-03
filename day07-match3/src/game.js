@@ -26,6 +26,7 @@ export class Game {
     this._missileKind = null; // 'single' | 'deliver'
     this._missileDeliver = null; // special type carried by a deliver missile
     this._missileTargets = null;
+    this._pendingMissiles = [];
     this.selected = null;
     this.armed = null;   // armed active item id (targeted)
     this.preview = null; // cell under the pointer while an item is armed
@@ -57,6 +58,7 @@ export class Game {
     this._missileKind = null;
     this._missileDeliver = null;
     this._missileTargets = null;
+    this._pendingMissiles = [];
     this.selected = null;
     this.armed = null;
     this.preview = null;
@@ -546,6 +548,8 @@ export class Game {
       if (g && g.special !== SP.NONE) {
         detonated = true;
         this._detonateFx(r, c, g);
+        // a bat cleared any which way (3-match, item, another blast) still fires
+        if (g.special === SP.MISSILE) this._pendingMissiles.push({ r, c, color: g.color });
         for (const cell of this.board.effectCells(r, c, g)) {
           const kk = this.board.key(cell.r, cell.c);
           if (!anchors.has(kk) && !remove.has(kk)) { remove.add(kk); queue.push(kk); }
@@ -628,9 +632,28 @@ export class Game {
     } else {
       // chain ended — the last combo banner keeps fading on its own (see above)
       this.cascade = 0;
+      // any bats cleared during this cascade now fly out (fire however cleared)
+      if (this._pendingMissiles.length && this._launchPendingMissiles()) return;
       if (!this.board.hasMoves()) { this.board.reshuffle(); this._sync(false); return; }
       this._settle();
     }
+  }
+
+  // Fire bats that were cleared incidentally (recorded in _beginClear), from
+  // where they were toward the best cells. They are already gone from the board.
+  _launchPendingMissiles() {
+    const pend = this._pendingMissiles; this._pendingMissiles = [];
+    const targets = this._bestTargets(pend.length, new Set());
+    if (!targets.length) return false;
+    for (let i = 0; i < pend.length; i += 1) {
+      this._spawnMissile(pend[i], targets[i % targets.length], i * 8, pend[i].color);
+    }
+    this._missileKind = 'single';
+    this._missileDeliver = null;
+    this._missileTargets = targets;
+    if (this.sound) this.sound.special();
+    this.phase = 'missile';
+    return true;
   }
 
   _settle() {
