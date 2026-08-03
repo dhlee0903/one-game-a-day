@@ -83,5 +83,43 @@ canvas {
 .btn:hover { filter: brightness(1.06); }
 .btn:active { transform: scale(.96); }
 
+.itembar { margin-top: 12px; }
+.gold {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-weight: 800; font-size: 15px; color: var(--accent); margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.gold .coin {
+  width: 15px; height: 15px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe89a, #ffd23f 55%, #d19a12);
+  border: 1px solid #b98700; box-shadow: 0 0 6px rgba(255, 210, 63, .4);
+}
+
+.items { display: flex; gap: 7px; }
+.item {
+  position: relative; flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 9px 2px 7px; border-radius: 12px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--line); color: var(--text);
+  font-family: inherit; transition: transform .1s, border-color .1s, background .1s;
+}
+.item .ic { display: flex; }
+.item .ic svg { width: 24px; height: 24px; }
+.item .nm { font-size: 11px; font-weight: 600; color: var(--dim); }
+.item[data-item="shuffle"] .ic { color: #3aa0ff; }
+.item[data-item="hammer"] .ic { color: #ffb03a; }
+.item[data-item="bomb"] .ic { color: #ff5a63; }
+.item[data-item="color"] .ic { color: #b06bff; }
+.item[data-item="cross"] .ic { color: #3fce6a; }
+.item .cnt {
+  position: absolute; top: -6px; right: -4px; min-width: 18px; height: 18px;
+  padding: 0 5px; border-radius: 9px; font-size: 11px; font-weight: 800; line-height: 18px;
+  text-align: center; background: #2f3b52; color: var(--text); border: 1px solid #1a2333;
+}
+.item .cnt.buy { background: #4a3a12; color: var(--accent); border-color: #6a5316; }
+.item:active { transform: scale(.95); }
+.item.armed { border-color: var(--accent); background: #23303f; box-shadow: 0 0 0 2px rgba(255, 210, 63, .35); }
+.item.poor { opacity: .5; }
+
 .keys { text-align: center; color: var(--dim); font-size: 12px; margin-top: 12px; line-height: 1.6; }
 .keys b { color: var(--text); }

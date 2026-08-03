@@ -21,6 +21,32 @@
       <div class="overlay show" id="overlay"></div>
     </div>
 
+    <div class="itembar">
+      <div class="gold"><span class="coin"></span><span id="gold">0</span></div>
+      <div class="items" id="items">
+        <button class="item" data-item="shuffle">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></span>
+          <span class="nm">섞기</span><span class="cnt">0</span>
+        </button>
+        <button class="item" data-item="hammer">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12l-8.4 8.4a2 2 0 0 1-2.8-2.8L12 9"/><path d="M17.6 15 22 10.6"/><path d="M20.9 11.7 15.3 6.1a4 4 0 0 0-2.8-1.1H9l1 .9A6 6 0 0 1 12 8.4V10l2 2h1.5"/></svg></span>
+          <span class="nm">망치</span><span class="cnt">0</span>
+        </button>
+        <button class="item" data-item="bomb">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="13.5" r="7.5"/><path d="M15.5 8.5 18 6"/><path d="M18.5 3.5 19 2l1.5.5-.5 1.5L21.5 5 20 5.5 19.5 7 19 5.5 17.5 5z"/></svg></span>
+          <span class="nm">폭탄</span><span class="cnt">0</span>
+        </button>
+        <button class="item" data-item="color">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 1 1-12 0C6 9.5 12 3 12 3z"/><path d="m12 11 .9 1.8 1.8.7-1.8.7-.9 1.8-.9-1.8-1.8-.7 1.8-.7z"/></svg></span>
+          <span class="nm">색폭탄</span><span class="cnt">0</span>
+        </button>
+        <button class="item" data-item="cross">
+          <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><path d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg></span>
+          <span class="nm">십자</span><span class="cnt">0</span>
+        </button>
+      </div>
+    </div>
+
     <p class="keys">
       가로4·세로4 &rarr; <b>줄 삭제</b> · 2×2 &rarr; <b>폭탄</b> · 5매치 &rarr; <b>레인보우</b><br>
       특수 블록은 <b>더블탭</b>으로 바로 발동

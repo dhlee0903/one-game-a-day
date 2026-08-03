@@ -1,7 +1,28 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.7';
+export const VERSION = 'v7.8';
+
+// Active items (bottom bar). `target: true` → arm, then tap a board cell.
+export const ITEMS = [
+  { id: 'shuffle', name: '섞기', target: false },
+  { id: 'hammer', name: '망치', target: true },
+  { id: 'bomb', name: '폭탄', target: true },
+  { id: 'color', name: '색폭탄', target: true },
+  { id: 'cross', name: '십자', target: true },
+];
+export const ITEM_START = 2;   // uses of each item at a fresh game start
+export const ITEM_PRICE = 120; // gold to buy one more when out
+export const START_GOLD = 150;
+export const STAGE_GOLD = 60;  // base reward per stage clear (+ leftover moves)
+
+// Idle time (frames) before a possible-match hint is shown.
+export const HINT_DELAY = 300; // ~5s at 60fps
+
+// Difficulty: monster types in play rises with the stage (harder to match).
+export function stageColors(stageIndex) {
+  return Math.min(NUM_COLORS, 4 + Math.floor(stageIndex / 3)); // 4 → 5 → 6
+}
 
 export const COLS = 8;
 export const ROWS = 8;
