@@ -13,6 +13,7 @@
 | 04 | [카드](./day04-cards) | Vanilla JS | ES Modules · 관심사 분리(OOP) |
 | 05 | [플랫포머](./day05-platformer) | Vanilla JS + Canvas | ES Modules · 관심사 분리(OOP) |
 | 06 | [러너 (3라인)](./day06-runner) | Vanilla JS + Canvas | ES Modules · 의사 3D 원근 |
+| 07 | [3매치 퍼즐](./day07-match3) | Vanilla JS + Canvas | ES Modules · 관심사 분리(OOP) |
 
 ## 공통 규칙
 
