@@ -6,6 +6,11 @@ export class Sound {
   constructor() {
     this.ctx = null;
     this.muted = false;
+    this.musicGain = null;
+    this.musicOn = false;
+    this._musicTimer = 0;
+    this._nextNote = 0;
+    this._step = 0;
   }
 
   _ac() {
@@ -20,7 +25,68 @@ export class Sound {
 
   resume() { this._ac(); }
 
-  setMuted(m) { this.muted = m; }
+  setMuted(m) {
+    this.muted = m;
+    if (this.musicGain) this.musicGain.gain.value = m ? 0 : 0.5;
+  }
+
+  // ---- background music: a looping minor arpeggio (spooky, low volume) ----
+
+  startMusic() {
+    const ac = this._ac();
+    if (!ac || this.musicOn) return;
+    this.musicOn = true;
+    if (!this.musicGain) {
+      this.musicGain = ac.createGain();
+      this.musicGain.gain.value = this.muted ? 0 : 0.5;
+      this.musicGain.connect(ac.destination);
+    }
+    this._nextNote = ac.currentTime + 0.1;
+    this._step = 0;
+    this._musicTimer = setInterval(() => this._musicTick(), 40);
+  }
+
+  stopMusic() {
+    this.musicOn = false;
+    if (this._musicTimer) { clearInterval(this._musicTimer); this._musicTimer = 0; }
+  }
+
+  _musicTick() {
+    const ac = this.ctx;
+    if (!ac || !this.musicOn) return;
+    const stepDur = 0.24; // ~ eighth notes
+    // A minor-ish loop: bass root per bar + a rolling arpeggio
+    const bass = [110, 110, 146.83, 130.81]; // A2 A2 D3 C3, one per 4 steps
+    const arp = [
+      220, 261.63, 329.63, 440, 329.63, 261.63, 293.66, 220,
+      293.66, 349.23, 440, 587.33, 440, 349.23, 261.63, 220,
+    ];
+    while (this._nextNote < ac.currentTime + 0.25) {
+      const t = this._nextNote;
+      const i = this._step % arp.length;
+      // lead
+      this._m(arp[i], t, stepDur * 0.9, 'triangle', 0.12);
+      // bass on every 4th step
+      if (i % 4 === 0) this._m(bass[(i / 4) % bass.length], t, stepDur * 3.4, 'sine', 0.18);
+      this._nextNote += stepDur;
+      this._step += 1;
+    }
+  }
+
+  _m(freq, t, dur, type, gain) {
+    const ac = this.ctx;
+    if (!ac || !this.musicGain) return;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(this.musicGain);
+    o.start(t);
+    o.stop(t + dur + 0.05);
+  }
 
   _tone(freq, dur, { type = 'sine', gain = 0.2, slideTo = null, delay = 0 } = {}) {
     const ac = this._ac();

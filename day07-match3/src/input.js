@@ -37,6 +37,13 @@ export class InputController {
       const cell = this.start.cell;
       this.start = null;
 
+      // an armed active item consumes the next board tap as its target
+      if (game.armed) {
+        if (Math.abs(dx) < 12 && Math.abs(dy) < 12) game.applyItemAt(cell);
+        else game.cancelArm();
+        return;
+      }
+
       if (Math.abs(dx) < 12 && Math.abs(dy) < 12) {
         const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 0;
         const lt = this.lastTap;

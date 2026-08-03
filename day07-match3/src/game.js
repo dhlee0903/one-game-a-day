@@ -5,6 +5,7 @@
 
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_H, SP, COLOR_GEM, POINTS_PER_GEM, STAGES,
+  ITEMS, ITEM_START, ITEM_PRICE, START_GOLD, STAGE_GOLD, HINT_DELAY, stageColors,
 } from './config.js';
 import { Board } from './board.js';
 
@@ -12,21 +13,29 @@ const EASE = 0.3;
 const CLEAR_LIFE = 16; // long enough to read the monster's dying face
 
 export class Game {
-  constructor({ onHud, onState, sound } = {}) {
+  constructor({ onHud, onState, onItems, sound } = {}) {
     this.onHud = onHud || (() => {});
     this.onState = onState || (() => {});
+    this.onItems = onItems || (() => {});
     this.sound = sound || null;
     this.board = new Board();
     this.clearing = [];
     this.effects = [];
     this.selected = null;
+    this.armed = null;   // armed active item id (targeted)
+    this.hint = null;    // idle match hint [a, b]
+    this.idle = 0;
+    this.tick = 0;
+    this.gold = START_GOLD;
+    this.items = {};
     this._raf = 0;
-    this.reset(0);
+    this.reset(0, true);
   }
 
-  reset(stageIndex) {
+  reset(stageIndex, fresh) {
     this.stageIndex = stageIndex;
     const stage = STAGES[stageIndex];
+    this.board.colorCount = stageColors(stageIndex); // difficulty rises per stage
     this.board.reset();
     this.score = 0;
     this.movesLeft = stage.moves;
@@ -35,10 +44,23 @@ export class Game {
     this.clearing = [];
     this.effects = [];
     this.selected = null;
+    this.armed = null;
+    this.hint = null;
+    this.idle = 0;
+    if (fresh) {
+      this.gold = START_GOLD;
+      this.items = {};
+      for (const it of ITEMS) this.items[it.id] = ITEM_START;
+    }
     this.phase = 'idle';
     this._sync(true);
     this._emit();
+    this._emitItems();
   }
+
+  _act() { this.idle = 0; this.hint = null; }
+
+  _emitItems() { this.onItems({ items: { ...this.items }, armed: this.armed, gold: this.gold }); }
 
   start() {
     cancelAnimationFrame(this._raf);
@@ -77,6 +99,7 @@ export class Game {
 
   click(cell) {
     if (this.phase !== 'idle' || !cell) return;
+    this._act();
     if (!this.selected) { this.selected = cell; return; }
     if (this.selected.r === cell.r && this.selected.c === cell.c) { this.selected = null; return; }
     if (this._adjacent(this.selected, cell)) {
@@ -89,12 +112,69 @@ export class Game {
 
   _adjacent(a, b) { return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1; }
 
+  // ---- active items ----
+
+  useItem(id) {
+    if (this.phase !== 'idle') return;
+    const def = ITEMS.find((i) => i.id === id);
+    if (!def) return;
+    this._act();
+    if ((this.items[id] || 0) <= 0) {
+      // out of stock → buy one with gold
+      if (this.gold >= ITEM_PRICE) {
+        this.gold -= ITEM_PRICE; this.items[id] += 1;
+        if (this.sound) this.sound.special();
+      } else {
+        if (this.sound) this.sound.invalid();
+        this._emitItems();
+        return;
+      }
+    }
+    if (this.armed === id) { this.armed = null; this._emitItems(); return; } // toggle off
+    if (def.target) { this.armed = id; this._emitItems(); return; }
+    // instant: shuffle
+    this.items[id] -= 1; this.armed = null;
+    this.board.reshuffle(); this._sync(true);
+    if (this.sound) this.sound.special();
+    this._emitItems();
+  }
+
+  cancelArm() { if (this.armed) { this.armed = null; this._emitItems(); } }
+
+  applyItemAt(cell) {
+    if (this.phase !== 'idle' || !this.armed || !cell) return;
+    const g = this.board.at(cell.r, cell.c);
+    if (!g) return;
+    const id = this.armed;
+    this._act();
+    const matched = new Set();
+    const add = (r, c) => { if (this.board.inBounds(r, c)) matched.add(this.board.key(r, c)); };
+    if (id === 'hammer') {
+      add(cell.r, cell.c);
+    } else if (id === 'bomb') {
+      for (let dr = -1; dr <= 1; dr += 1) for (let dc = -1; dc <= 1; dc += 1) add(cell.r + dr, cell.c + dc);
+    } else if (id === 'cross') {
+      for (let c = 0; c < COLS; c += 1) add(cell.r, c);
+      for (let r = 0; r < ROWS; r += 1) add(r, cell.c);
+    } else if (id === 'color') {
+      const color = g.color < 0 ? this.board._commonColor() : g.color;
+      for (const p of this.board.cellsOfColor(color)) add(p.r, p.c);
+    }
+    this.items[id] -= 1;
+    this.armed = null;
+    this.cascade = 0;
+    if (this.sound) this.sound.boom();
+    this._emitItems();
+    this._beginClear(matched, new Map());
+  }
+
   // Double-tap / double-click a special block to detonate it in place.
   activateSpecial(cell) {
     if (this.phase !== 'idle' || !cell) return;
     const g = this.board.at(cell.r, cell.c);
     if (!g || g.special === SP.NONE) return;
     this.selected = null;
+    this._act();
     this.movesLeft -= 1; this._emit();
     this.cascade = 0;
     if (this.sound) this.sound.boom();
@@ -136,6 +216,7 @@ export class Game {
     if (this.phase !== 'idle' || !this._adjacent(a, b)) return;
     const ga = this.board.at(a.r, a.c); const gb = this.board.at(b.r, b.c);
     if (!ga || !gb) return;
+    this._act();
 
     // Special activation swap: a rainbow can swap with anything, and any two
     // specials combine. A single line/bomb + a normal gem is a plain swap
@@ -259,8 +340,14 @@ export class Game {
     this.phase = 'idle';
     if (this.score >= this.target) {
       this.phase = 'won';
+      const reward = STAGE_GOLD + Math.max(0, this.movesLeft) * 10;
+      this.gold += reward;
+      this._emitItems();
       if (this.sound) this.sound.win();
-      this.onState('won', { stage: this.stageIndex + 1, score: this.score, last: this.stageIndex === STAGES.length - 1 });
+      this.onState('won', {
+        stage: this.stageIndex + 1, score: this.score, reward, gold: this.gold,
+        last: this.stageIndex === STAGES.length - 1,
+      });
     } else if (this.movesLeft <= 0) {
       this.phase = 'lost';
       if (this.sound) this.sound.lose();
@@ -269,11 +356,11 @@ export class Game {
   }
 
   nextStage() {
-    if (this.stageIndex < STAGES.length - 1) this.reset(this.stageIndex + 1);
-    else this.reset(0);
+    if (this.stageIndex < STAGES.length - 1) this.reset(this.stageIndex + 1, false); // keep gold + items
+    else this.reset(0, true); // full restart
   }
 
-  retryStage() { this.reset(this.stageIndex); }
+  retryStage() { this.reset(this.stageIndex, false); }
 
   // ---- loop ----
 
@@ -302,12 +389,21 @@ export class Game {
   }
 
   _loop() {
+    this.tick += 1;
     this._tween();
     if (this.phase === 'swap' && this._allArrived()) this._onSwapArrived();
     else if (this.phase === 'swapback' && this._allArrived()) this.phase = 'idle';
     else if (this.phase === 'clearing' && this.clearing.length === 0) this._afterClear();
     else if (this.phase === 'falling' && this._allArrived()) this._afterFall();
+    else if (this.phase === 'idle') this._maybeHint();
     this._raf = requestAnimationFrame(() => this._loop());
+  }
+
+  // After a stretch of inactivity, surface a possible match to nudge the player.
+  _maybeHint() {
+    if (this.armed || this.hint) return;
+    this.idle += 1;
+    if (this.idle >= HINT_DELAY) this.hint = this.board.findMove();
   }
 
   _emit() {

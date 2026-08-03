@@ -28,6 +28,7 @@ export class Renderer {
     this._round(c, 0, HUD_H, BOARD_W, BOARD_H, 16); c.clip();
     this._board(c, game);
     this._gems(c, game);
+    this._hint(c, game);
     this._clearing(c, game);
     this._effects(c, game);
     c.restore();
@@ -121,6 +122,17 @@ export class Renderer {
         const g = game.board.grid[r][col];
         if (g) this.drawGem(c, g.x, g.y, g.color, g.special, 1, 1);
       }
+    }
+  }
+
+  _hint(c, game) {
+    if (!game.hint) return;
+    const a = 0.35 + 0.4 * (0.5 + 0.5 * Math.sin(game.tick * 0.16));
+    c.strokeStyle = `rgba(255,210,63,${a})`;
+    c.lineWidth = 3;
+    for (const p of [game.hint.a, game.hint.b]) {
+      this._round(c, PAD + p.c * CELL + 3, HUD_H + PAD + p.r * CELL + 3, CELL - 6, CELL - 6, 10);
+      c.stroke();
     }
   }
 

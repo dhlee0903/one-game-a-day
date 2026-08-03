@@ -10,6 +10,7 @@ let GID = 0;
 export class Board {
   constructor() {
     this.grid = [];
+    this.colorCount = NUM_COLORS; // active monster types (raised per stage)
     this.reset();
   }
 
@@ -19,7 +20,25 @@ export class Board {
 
   at(r, c) { return this.inBounds(r, c) ? this.grid[r][c] : null; }
 
-  randColor() { return Math.floor(Math.random() * NUM_COLORS); }
+  randColor() { return Math.floor(Math.random() * this.colorCount); }
+
+  // Find one adjacent swap that would make a match (for the idle hint). null if
+  // none (the caller reshuffles).
+  findMove() {
+    for (let r = 0; r < ROWS; r += 1) {
+      for (let c = 0; c < COLS; c += 1) {
+        for (const [dr, dc] of [[0, 1], [1, 0]]) {
+          const nr = r + dr; const nc = c + dc;
+          if (!this.inBounds(nr, nc)) continue;
+          this.swap({ r, c }, { r: nr, c: nc });
+          const has = this.detect(null).matched.size > 0;
+          this.swap({ r, c }, { r: nr, c: nc });
+          if (has) return { a: { r, c }, b: { r: nr, c: nc } };
+        }
+      }
+    }
+    return null;
+  }
 
   makeGem(color, special = SP.NONE) {
     return {
