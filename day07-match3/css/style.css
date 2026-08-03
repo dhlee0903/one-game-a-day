@@ -28,20 +28,36 @@
 .gear:hover { color: var(--text); border-color: #3a4a63; }
 .gear svg { width: 20px; height: 20px; }
 
-.opts {
-  position: fixed; top: 56px; right: 14px; z-index: 51;
-  width: 180px; padding: 8px; border-radius: 12px;
-  background: rgba(18, 25, 38, .98); border: 1px solid var(--line);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, .5);
+.modal {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 8, 14, .62); backdrop-filter: blur(3px);
 }
-.opt { display: flex; align-items: center; justify-content: space-between; padding: 7px 6px; font-size: 14px; }
-.opt + .opt { border-top: 1px solid rgba(255, 255, 255, .05); }
+.modal[hidden] { display: none; }
+.sheet {
+  width: min(300px, 84vw); padding: 18px 18px 16px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 22px 55px rgba(0, 0, 0, .6);
+}
+.sheet h3 { text-align: center; margin-bottom: 8px; font-size: 18px; font-weight: 800; }
+.opt { display: flex; align-items: center; justify-content: space-between; padding: 11px 4px; }
+.opt[hidden] { display: none; } /* attribute selector must beat .opt display */
+.opt + .opt { border-top: 1px solid rgba(255, 255, 255, .06); }
+.opt span { font-size: 15px; font-weight: 600; }
 .tog {
-  min-width: 52px; padding: 5px 12px; border-radius: 999px; cursor: pointer;
-  font-family: inherit; font-size: 12px; font-weight: 700;
+  position: relative; width: 46px; height: 46px; border-radius: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
   background: #24406a; border: 1px solid #33538a; color: #cfe0ff;
+  transition: background .12s, color .12s;
 }
-.tog.off { background: #2a2f3a; border-color: #3a4050; color: #ff8088; }
+.tog svg { width: 22px; height: 22px; }
+.tog:active { transform: scale(.94); }
+.tog.off { background: #262b36; border-color: #39404e; color: #8a94a6; }
+.tog.off::after {
+  content: ''; position: absolute; left: 8px; right: 8px; top: 50%;
+  height: 3px; border-radius: 2px; background: #ff6b74; transform: rotate(-45deg);
+}
+.sheet .btn { width: 100%; margin-top: 14px; }
 
 html, body { height: 100%; }
 

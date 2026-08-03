@@ -29,6 +29,7 @@ export class Game {
     this.hint = null;    // idle match hint [a, b]
     this.idle = 0;
     this.tick = 0;
+    this.paused = false;
     this.gold = START_GOLD;
     this.items = {};
     this._raf = 0;
@@ -445,7 +446,10 @@ export class Game {
     this.effects = this.effects.filter((fx) => fx.t < fx.life);
   }
 
+  setPaused(p) { this.paused = p; }
+
   _loop() {
+    if (this.paused) { this._raf = requestAnimationFrame(() => this._loop()); return; }
     this.tick += 1;
     this._tween();
     if (this.phase === 'swap' && this._allArrived()) this._onSwapArrived();
