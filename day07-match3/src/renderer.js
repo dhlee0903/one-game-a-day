@@ -247,30 +247,51 @@ export class Renderer {
     c.restore();
   }
 
-  // 2x2 bomb: a big dark sphere; short fuse + spark stay inside the cell.
+  // 2x2 guided missile: metallic warhead with a targeting reticle — distinct
+  // from the (coloured) line rocket and the rainbow orb.
   _bombBlock(c, cx, cy, s) {
-    const r = s * 0.40;
-    const by = cy + s * 0.05;
-    const bg = c.createRadialGradient(cx - r * 0.35, by - r * 0.4, r * 0.15, cx, by, r);
-    bg.addColorStop(0, '#525b70'); bg.addColorStop(0.6, '#242a37'); bg.addColorStop(1, '#0d1017');
+    const w = s * 0.24;
+    const noseY = cy - s * 0.4;
+    const shTop = cy - s * 0.14; // shoulder (body top / nose base)
+    const bot = cy + s * 0.26;
+    // exhaust flame
+    const fl = c.createLinearGradient(0, 0, 0, s * 0.2);
+    fl.addColorStop(0, '#ffe14d'); fl.addColorStop(0.5, 'rgba(255,150,40,.8)'); fl.addColorStop(1, 'rgba(255,90,40,0)');
+    c.save(); c.translate(cx, bot);
+    c.fillStyle = fl;
+    c.beginPath(); c.moveTo(-w * 0.34, 0); c.quadraticCurveTo(0, s * 0.22, w * 0.34, 0); c.closePath(); c.fill();
+    c.restore();
+    // fins
+    c.fillStyle = '#39424f';
+    c.beginPath(); c.moveTo(cx - w * 0.5, bot - s * 0.12); c.lineTo(cx - w * 0.95, bot + s * 0.03); c.lineTo(cx - w * 0.5, bot); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(cx + w * 0.5, bot - s * 0.12); c.lineTo(cx + w * 0.95, bot + s * 0.03); c.lineTo(cx + w * 0.5, bot); c.closePath(); c.fill();
+    // metallic body
+    const bg = c.createLinearGradient(cx - w * 0.5, 0, cx + w * 0.5, 0);
+    bg.addColorStop(0, '#5a6577'); bg.addColorStop(0.5, '#cdd6e2'); bg.addColorStop(1, '#5a6577');
     c.fillStyle = bg;
-    c.beginPath(); c.arc(cx, by, r, 0, Math.PI * 2); c.fill();
-    // sheen
-    c.fillStyle = 'rgba(255,255,255,.45)';
-    c.beginPath(); c.ellipse(cx - r * 0.34, by - r * 0.36, r * 0.26, r * 0.16, -0.6, 0, Math.PI * 2); c.fill();
-    // metal cap
-    c.fillStyle = '#2c3341';
-    this._round(c, cx - r * 0.24, by - r - s * 0.03, r * 0.48, s * 0.09, s * 0.02); c.fill();
-    // fuse — short curl kept within the cell
-    const fx = cx + r * 0.12; const fy = by - r;
-    c.strokeStyle = '#caa23a'; c.lineWidth = Math.max(1.5, s * 0.045); c.lineCap = 'round';
-    c.beginPath(); c.moveTo(fx, fy); c.quadraticCurveTo(fx + s * 0.14, fy - s * 0.05, fx + s * 0.08, fy - s * 0.11); c.stroke();
-    // spark
-    const sx = fx + s * 0.08; const sy = fy - s * 0.11;
-    c.fillStyle = 'rgba(255,170,60,.55)';
-    c.beginPath(); c.arc(sx, sy, s * 0.11, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#ffe14d';
-    c.beginPath(); c.arc(sx, sy, s * 0.055, 0, Math.PI * 2); c.fill();
+    this._round(c, cx - w * 0.5, shTop, w, bot - shTop, w * 0.28); c.fill();
+    // red warhead nose
+    c.fillStyle = '#e2483c';
+    c.beginPath();
+    c.moveTo(cx - w * 0.5, shTop + s * 0.02);
+    c.quadraticCurveTo(cx - w * 0.5, noseY, cx, noseY);
+    c.quadraticCurveTo(cx + w * 0.5, noseY, cx + w * 0.5, shTop + s * 0.02);
+    c.closePath(); c.fill();
+    // dark band between nose and body
+    c.fillStyle = '#39424f';
+    c.fillRect(cx - w * 0.5, shTop + s * 0.02, w, s * 0.045);
+    // targeting reticle (the "guided" signifier)
+    c.strokeStyle = 'rgba(255,210,63,.95)'; c.lineWidth = Math.max(1.4, s * 0.03);
+    const rr = s * 0.15; const ry = cy + s * 0.04;
+    c.beginPath(); c.arc(cx, ry, rr, 0, Math.PI * 2); c.stroke();
+    c.beginPath();
+    c.moveTo(cx - rr - s * 0.05, ry); c.lineTo(cx - rr + s * 0.03, ry);
+    c.moveTo(cx + rr - s * 0.03, ry); c.lineTo(cx + rr + s * 0.05, ry);
+    c.moveTo(cx, ry - rr - s * 0.05); c.lineTo(cx, ry - rr + s * 0.03);
+    c.moveTo(cx, ry + rr - s * 0.03); c.lineTo(cx, ry + rr + s * 0.05);
+    c.stroke();
+    c.fillStyle = 'rgba(255,210,63,.95)';
+    c.beginPath(); c.arc(cx, ry, s * 0.03, 0, Math.PI * 2); c.fill();
   }
 
   // 5-match colour bomb: dark glossy orb with fixed rainbow sprinkles.
@@ -463,11 +484,20 @@ export class Renderer {
       c.moveTo(m.tx - 13, m.ty); c.lineTo(m.tx - 5, m.ty); c.moveTo(m.tx + 5, m.ty); c.lineTo(m.tx + 13, m.ty);
       c.moveTo(m.tx, m.ty - 13); c.lineTo(m.tx, m.ty - 5); c.moveTo(m.tx, m.ty + 5); c.lineTo(m.tx, m.ty + 13);
       c.stroke();
-      // trail
-      for (let i = 0; i < m.trail.length; i += 1) {
-        const p = m.trail[i]; const a = (i + 1) / m.trail.length;
-        c.fillStyle = `rgba(255,180,60,${a * 0.5})`;
-        c.beginPath(); c.arc(p.x, p.y, 2 + a * 3, 0, Math.PI * 2); c.fill();
+      // trail — a long tapered streak (bright + wide near the head)
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      for (let i = 1; i < m.trail.length; i += 1) {
+        const a = i / m.trail.length; const p0 = m.trail[i - 1]; const p1 = m.trail[i];
+        c.strokeStyle = `rgba(255,180,60,${a * 0.6})`;
+        c.lineWidth = 1 + a * 6;
+        c.beginPath(); c.moveTo(p0.x, p0.y); c.lineTo(p1.x, p1.y); c.stroke();
+      }
+      // inner hot core of the streak
+      for (let i = 1; i < m.trail.length; i += 1) {
+        const a = i / m.trail.length; const p0 = m.trail[i - 1]; const p1 = m.trail[i];
+        c.strokeStyle = `rgba(255,240,180,${a * 0.5})`;
+        c.lineWidth = 0.5 + a * 2.4;
+        c.beginPath(); c.moveTo(p0.x, p0.y); c.lineTo(p1.x, p1.y); c.stroke();
       }
       // head: small glowing dart pointing along its velocity
       const ang = Math.atan2(m.ty - m.sy, m.tx - m.sx);

@@ -310,7 +310,7 @@ export class Game {
       sx: Game.px(src.c) + CELL / 2, sy: Game.py(src.r) + CELL / 2,
       tx: Game.px(tgt.c) + CELL / 2, ty: Game.py(tgt.r) + CELL / 2,
       x: Game.px(src.c) + CELL / 2, y: Game.py(src.r) + CELL / 2,
-      t: 0, dur: 16, trail: [],
+      t: 0, dur: 26, trail: [],
     });
   }
 
@@ -664,7 +664,7 @@ export class Game {
       m.x = m.sx + (m.tx - m.sx) * e;
       m.y = m.sy + (m.ty - m.sy) * e;
       m.trail.push({ x: m.x, y: m.y });
-      if (m.trail.length > 8) m.trail.shift();
+      if (m.trail.length > 24) m.trail.shift();
     }
   }
 
