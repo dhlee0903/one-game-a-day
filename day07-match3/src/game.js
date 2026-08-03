@@ -272,11 +272,10 @@ export class Game {
     this._consumeCells(sources);
     for (let i = 0; i < count; i += 1) {
       const src = sources[i % sources.length];
-      this._spawnMissile(src, targets[i % targets.length]);
+      this._spawnMissile(src, targets[i % targets.length], i * 12); // staggered launch
     }
     this._missileKind = 'single';
     this._missileTargets = targets;
-    if (this.sound) this.sound.special();
     this.phase = 'missile';
   }
 
@@ -305,16 +304,16 @@ export class Game {
     }
   }
 
-  _spawnMissile(src, tgt) {
+  _spawnMissile(src, tgt, delay = 0) {
     this.missiles.push({
       sx: Game.px(src.c) + CELL / 2, sy: Game.py(src.r) + CELL / 2,
       tx: Game.px(tgt.c) + CELL / 2, ty: Game.py(tgt.r) + CELL / 2,
       x: Game.px(src.c) + CELL / 2, y: Game.py(src.r) + CELL / 2,
-      t: 0, dur: 26, trail: [],
+      t: 0, dur: 26, delay, fired: false, trail: [],
     });
   }
 
-  _missilesLanded() { return this.missiles.length > 0 && this.missiles.every((m) => m.t >= m.dur); }
+  _missilesLanded() { return this.missiles.length > 0 && this.missiles.every((m) => m.t >= m.delay + m.dur); }
 
   _resolveMissiles() {
     const S = new Set();
@@ -659,7 +658,9 @@ export class Game {
     this.effects = this.effects.filter((fx) => fx.t < fx.life);
     for (const m of this.missiles) { // guided missiles home in on their target
       m.t += 1;
-      const p = Math.min(1, m.t / m.dur);
+      if (m.t < m.delay) continue; // staggered launch: wait its turn
+      if (!m.fired) { m.fired = true; if (this.sound) this.sound.special(); }
+      const p = Math.min(1, (m.t - m.delay) / m.dur);
       const e = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2; // easeInOut
       m.x = m.sx + (m.tx - m.sx) * e;
       m.y = m.sy + (m.ty - m.sy) * e;

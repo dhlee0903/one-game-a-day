@@ -475,7 +475,7 @@ export class Renderer {
 
   _missiles(c, game) {
     for (const m of game.missiles) {
-      // target reticle
+      // target reticle (shown even before this missile launches — target locked)
       c.strokeStyle = 'rgba(255,210,63,.7)'; c.lineWidth = 2;
       const pulse = 8 + (m.t % 12) * 0.4;
       c.beginPath(); c.arc(m.tx, m.ty, pulse, 0, Math.PI * 2); c.stroke();
@@ -483,6 +483,7 @@ export class Renderer {
       c.moveTo(m.tx - 13, m.ty); c.lineTo(m.tx - 5, m.ty); c.moveTo(m.tx + 5, m.ty); c.lineTo(m.tx + 13, m.ty);
       c.moveTo(m.tx, m.ty - 13); c.lineTo(m.tx, m.ty - 5); c.moveTo(m.tx, m.ty + 5); c.lineTo(m.tx, m.ty + 13);
       c.stroke();
+      if (m.t < (m.delay || 0)) continue; // not launched yet: reticle only, no dart
       // trail — a long tapered streak (bright + wide near the head)
       c.lineCap = 'round'; c.lineJoin = 'round';
       for (let i = 1; i < m.trail.length; i += 1) {
