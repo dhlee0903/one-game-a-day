@@ -27,6 +27,14 @@ export class InputController {
       const b = toBoard(e);
       const cell = game.cellAt(b.x, b.y);
       this.start = cell ? { cell, x: b.x, y: b.y } : null;
+      if (game.armed) game.setPreview(cell); // show the item's range at the target
+    };
+
+    // hover (mouse) or drag (touch) shows the armed item's affected range
+    const move = (e) => {
+      if (!game.armed) return;
+      const b = toBoard(e);
+      game.setPreview(game.cellAt(b.x, b.y));
     };
 
     const up = (e) => {
@@ -70,6 +78,8 @@ export class InputController {
 
     canvas.addEventListener('pointerdown', down);
     canvas.addEventListener('pointerup', up);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerleave', () => { if (game.armed) game.setPreview(null); });
     canvas.addEventListener('pointercancel', () => { this.start = null; });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   }

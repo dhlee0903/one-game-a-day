@@ -82,6 +82,11 @@ canvas {
 }
 .btn:hover { filter: brightness(1.06); }
 .btn:active { transform: scale(.96); }
+.btn:disabled { opacity: .4; cursor: not-allowed; filter: none; }
+.btn.ghost { background: transparent; color: var(--dim); border: 1px solid var(--line); }
+.btn.ghost:hover { color: var(--text); border-color: #3a4a63; }
+.ovbtns { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 260px; }
+.ovbtns .btn { width: 100%; }
 
 .itembar { margin-top: 12px; }
 .gold {
@@ -124,8 +129,8 @@ canvas {
 }
 .item.armed .nm { color: var(--accent); }
 @keyframes itemPulse {
-  0%, 100% { box-shadow: 0 0 0 2px rgba(255, 210, 63, .35); transform: translateY(0); }
-  50% { box-shadow: 0 0 0 4px rgba(255, 210, 63, .55), 0 0 16px rgba(255, 210, 63, .4); transform: translateY(-3px); }
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255, 210, 63, .35); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 210, 63, .6), 0 0 18px rgba(255, 210, 63, .45); }
 }
 .item.poor { opacity: .5; }
 

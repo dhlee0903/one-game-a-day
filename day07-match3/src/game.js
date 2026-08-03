@@ -6,6 +6,7 @@
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_H, SP, COLOR_GEM, POINTS_PER_GEM, STAGES,
   ITEMS, ITEM_START, START_GOLD, STAGE_GOLD, HINT_DELAY, stageColors,
+  CONTINUE_MOVES, CONTINUE_BASE,
 } from './config.js';
 import { Board } from './board.js';
 
@@ -23,6 +24,7 @@ export class Game {
     this.effects = [];
     this.selected = null;
     this.armed = null;   // armed active item id (targeted)
+    this.preview = null; // cell under the pointer while an item is armed
     this.hint = null;    // idle match hint [a, b]
     this.idle = 0;
     this.tick = 0;
@@ -45,8 +47,10 @@ export class Game {
     this.effects = [];
     this.selected = null;
     this.armed = null;
+    this.preview = null;
     this.hint = null;
     this.idle = 0;
+    this.continues = 0; // times continued (paid) this stage attempt
     if (fresh) {
       this.gold = START_GOLD;
       this.items = {};
@@ -130,7 +134,7 @@ export class Game {
         return;
       }
     }
-    if (this.armed === id) { this.armed = null; this._emitItems(); return; } // toggle off
+    if (this.armed === id) { this.armed = null; this.preview = null; this._emitItems(); return; } // toggle off
     if (def.target) { this.armed = id; this._emitItems(); return; }
     // instant: shuffle
     this.items[id] -= 1; this.armed = null;
@@ -140,7 +144,28 @@ export class Game {
     this._emitItems();
   }
 
-  cancelArm() { if (this.armed) { this.armed = null; this._emitItems(); } }
+  cancelArm() { if (this.armed) { this.armed = null; this.preview = null; this._emitItems(); } }
+
+  setPreview(cell) { this.preview = (this.armed && cell) ? cell : null; }
+
+  // Cells an item would affect if used on `cell` (shared by preview + apply).
+  itemCells(id, cell) {
+    const out = [];
+    const push = (r, c) => { if (this.board.inBounds(r, c)) out.push({ r, c }); };
+    if (id === 'hammer') {
+      push(cell.r, cell.c);
+    } else if (id === 'bomb') {
+      for (let dr = -1; dr <= 1; dr += 1) for (let dc = -1; dc <= 1; dc += 1) push(cell.r + dr, cell.c + dc);
+    } else if (id === 'cross') {
+      for (let c = 0; c < COLS; c += 1) push(cell.r, c);
+      for (let r = 0; r < ROWS; r += 1) push(r, cell.c);
+    } else if (id === 'color') {
+      const g = this.board.at(cell.r, cell.c);
+      const color = g ? (g.color < 0 ? this.board._commonColor() : g.color) : -1;
+      for (const p of this.board.cellsOfColor(color)) push(p.r, p.c);
+    }
+    return out;
+  }
 
   applyItemAt(cell) {
     if (this.phase !== 'idle' || !this.armed || !cell) return;
@@ -148,19 +173,9 @@ export class Game {
     if (!g) return;
     const id = this.armed;
     this._act();
+    this.preview = null;
     const matched = new Set();
-    const add = (r, c) => { if (this.board.inBounds(r, c)) matched.add(this.board.key(r, c)); };
-    if (id === 'hammer') {
-      add(cell.r, cell.c);
-    } else if (id === 'bomb') {
-      for (let dr = -1; dr <= 1; dr += 1) for (let dc = -1; dc <= 1; dc += 1) add(cell.r + dr, cell.c + dc);
-    } else if (id === 'cross') {
-      for (let c = 0; c < COLS; c += 1) add(cell.r, c);
-      for (let r = 0; r < ROWS; r += 1) add(r, cell.c);
-    } else if (id === 'color') {
-      const color = g.color < 0 ? this.board._commonColor() : g.color;
-      for (const p of this.board.cellsOfColor(color)) add(p.r, p.c);
-    }
+    for (const p of this.itemCells(id, cell)) matched.add(this.board.key(p.r, p.c));
     // item-signature effect at the target
     const cx = Game.px(cell.c) + CELL / 2;
     const cy = Game.py(cell.r) + CELL / 2;
@@ -366,8 +381,29 @@ export class Game {
     } else if (this.movesLeft <= 0) {
       this.phase = 'lost';
       if (this.sound) this.sound.lose();
-      this.onState('lost', { stage: this.stageIndex + 1, score: this.score, target: this.target });
+      this.onState('lost', {
+        stage: this.stageIndex + 1, score: this.score, target: this.target,
+        gold: this.gold, continueCost: this.continueCost(),
+      });
     }
+  }
+
+  continueCost() { return CONTINUE_BASE * (2 ** this.continues); } // 100, 200, 400 …
+
+  // Pay gold for extra moves after running out. Returns true if it succeeded.
+  continueStage() {
+    if (this.phase !== 'lost') return false;
+    const cost = this.continueCost();
+    if (this.gold < cost) return false;
+    this.gold -= cost;
+    this.movesLeft += CONTINUE_MOVES;
+    this.continues += 1;
+    this.phase = 'idle';
+    this.idle = 0; this.hint = null;
+    if (this.sound) this.sound.special();
+    this._emit();
+    this._emitItems();
+    return true;
   }
 
   nextStage() {

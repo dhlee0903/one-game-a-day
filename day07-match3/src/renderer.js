@@ -126,22 +126,37 @@ export class Renderer {
     }
   }
 
-  // Armed active-item mode: tint the board and show a clear instruction banner.
+  // Armed active-item mode: tint the board, preview the affected range under the
+  // pointer, and show a clear instruction banner (with the effect description).
   _armed(c, game) {
     if (!game.armed) return;
     const def = ITEMS.find((i) => i.id === game.armed);
     const name = def ? def.name : '';
+    const desc = def ? def.desc : '';
     const pulse = 0.05 + 0.05 * (0.5 + 0.5 * Math.sin(game.tick * 0.2));
     c.fillStyle = `rgba(255,210,63,${pulse})`;
     c.fillRect(0, HUD_H, BOARD_W, BOARD_H);
+
+    // range preview: highlight every cell the item would clear
+    if (game.preview) {
+      const a = 0.28 + 0.18 * (0.5 + 0.5 * Math.sin(game.tick * 0.25));
+      c.fillStyle = `rgba(255,210,63,${a})`;
+      c.strokeStyle = 'rgba(255,235,150,.9)'; c.lineWidth = 2;
+      for (const p of game.itemCells(game.armed, game.preview)) {
+        const x = PAD + p.c * CELL; const y = HUD_H + PAD + p.r * CELL;
+        this._round(c, x + 2, y + 2, CELL - 4, CELL - 4, 9); c.fill();
+        this._round(c, x + 2, y + 2, CELL - 4, CELL - 4, 9); c.stroke();
+      }
+    }
+
     c.fillStyle = 'rgba(16,22,34,.92)';
     this._round(c, 8, HUD_H + 8, BOARD_W - 16, 30, 9); c.fill();
     c.strokeStyle = 'rgba(255,210,63,.7)'; c.lineWidth = 1.5;
     this._round(c, 8, HUD_H + 8, BOARD_W - 16, 30, 9); c.stroke();
     c.fillStyle = '#ffd23f';
-    c.font = '800 14px "Segoe UI", system-ui, sans-serif';
+    c.font = '800 13px "Segoe UI", system-ui, sans-serif';
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(`${name} 사용 · 대상을 탭  (다시 누르면 취소)`, BOARD_W / 2, HUD_H + 23);
+    c.fillText(`${name} · ${desc} · 대상을 탭`, BOARD_W / 2, HUD_H + 23);
     c.textAlign = 'left'; c.textBaseline = 'alphabetic';
   }
 

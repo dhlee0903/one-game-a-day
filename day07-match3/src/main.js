@@ -77,8 +77,21 @@ function handleState(state, p) {
     if (p.last) showOverlay('올 클리어!', `10 스테이지 완주 · 점수 ${p.score}<br>${gline}`, '처음부터', () => game.nextStage());
     else showOverlay(`스테이지 ${p.stage} 클리어`, `점수 ${p.score}<br>${gline}`, '다음 스테이지', () => game.nextStage());
   } else if (state === 'lost') {
-    showOverlay('실패', `점수 ${p.score} / 목표 ${p.target}`, '다시 하기', () => game.retryStage());
+    showLose(p);
   }
+}
+
+function showLose(p) {
+  const canCont = p.gold >= p.continueCost;
+  overlay.innerHTML = `<h2>이동 소진</h2>
+    <p>점수 ${p.score} / 목표 ${p.target} · 보유 골드 ${p.gold}</p>
+    <div class="ovbtns">
+      <button class="btn" id="contBtn" ${canCont ? '' : 'disabled'}>골드 ${p.continueCost} 내고 +3회</button>
+      <button class="btn ghost" id="retryBtn">처음부터 다시</button>
+    </div>`;
+  overlay.classList.add('show');
+  document.getElementById('contBtn').onclick = () => { if (game.continueStage()) overlay.classList.remove('show'); };
+  document.getElementById('retryBtn').onclick = () => { overlay.classList.remove('show'); game.retryStage(); };
 }
 
 function showOverlay(title, text, btn, onBtn) {
