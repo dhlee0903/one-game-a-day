@@ -3,15 +3,32 @@
 import { Renderer } from './renderer.js';
 import { Game } from './game.js';
 import { InputController } from './input.js';
+import { Sound } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 
 const renderer = new Renderer($('board'));
 const overlay = $('overlay');
+const sound = new Sound();
 
 // HUD is drawn inside the canvas by the renderer, so there is nothing to update
 // in the DOM here — only stage win/lose transitions need handling.
-const game = new Game({ onState: handleState });
+const game = new Game({ onState: handleState, sound });
+
+// browsers only allow audio after a user gesture — resume on first interaction
+$('board').addEventListener('pointerdown', () => sound.resume(), { once: true });
+overlay.addEventListener('pointerdown', () => sound.resume(), { once: true });
+
+// mute toggle
+let muted = false;
+const muteBtn = $('mute');
+muteBtn.onclick = () => {
+  muted = !muted;
+  sound.setMuted(muted);
+  sound.resume();
+  muteBtn.textContent = muted ? '소리 꺼짐' : '소리 켜짐';
+  muteBtn.classList.toggle('off', muted);
+};
 
 // eslint-disable-next-line no-new
 new InputController($('board'), game);
