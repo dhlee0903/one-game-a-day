@@ -14,11 +14,12 @@ const EASE = 0.3;
 const CLEAR_LIFE = 16; // long enough to read the monster's dying face
 
 export class Game {
-  constructor({ onHud, onState, onItems, sound } = {}) {
+  constructor({ onHud, onState, onItems, sound, haptic } = {}) {
     this.onHud = onHud || (() => {});
     this.onState = onState || (() => {});
     this.onItems = onItems || (() => {});
     this.sound = sound || null;
+    this.haptic = haptic || (() => {}); // 'match' (weak) | 'boom' (strong)
     this.board = new Board();
     this.clearing = [];
     this.effects = [];
@@ -57,6 +58,7 @@ export class Game {
       for (const it of ITEMS) this.items[it.id] = ITEM_START;
     }
     this.phase = 'idle';
+    if (this.sound) this.sound.setStageGroup(Math.floor(stageIndex / 2)); // BGM per 2 stages
     this._sync(true);
     this._emit();
     this._emitItems();
@@ -141,6 +143,7 @@ export class Game {
     this.board.reshuffle(); this._sync(true);
     this.effects.push({ type: 'swirl', t: 0, life: 26 });
     if (this.sound) this.sound.special();
+    this.haptic('match');
     this._emitItems();
   }
 
@@ -191,7 +194,7 @@ export class Game {
     this.cascade = 0;
     if (this.sound) this.sound.boom();
     this._emitItems();
-    this._beginClear(matched, new Map());
+    this._beginClear(matched, new Map(), (id === 'bomb' || id === 'cross' || id === 'color') ? 'boom' : 'match');
   }
 
   // Double-tap / double-click a special block to detonate it in place.
@@ -204,7 +207,7 @@ export class Game {
     this.movesLeft -= 1; this._emit();
     this.cascade = 0;
     if (this.sound) this.sound.boom();
-    this._beginClear(new Set([this.board.key(cell.r, cell.c)]), new Map());
+    this._beginClear(new Set([this.board.key(cell.r, cell.c)]), new Map(), 'boom');
   }
 
   // Cell set cleared when two specials (or a rainbow) are swapped together.
@@ -253,7 +256,7 @@ export class Game {
       this.movesLeft -= 1; this._emit();
       this.cascade = 0;
       if (this.sound) { this.sound.special(); this.sound.boom(); }
-      this._beginClear(this._comboCells(a, ga, b, gb), new Map());
+      this._beginClear(this._comboCells(a, ga, b, gb), new Map(), 'boom');
       return;
     }
 
@@ -281,7 +284,7 @@ export class Game {
     }
   }
 
-  _beginClear(matched, specials) {
+  _beginClear(matched, specials, hapticHint = null) {
     const anchors = new Set(specials.keys());
     const remove = new Set();
     for (const k of matched) if (!anchors.has(k)) remove.add(k);
@@ -330,6 +333,9 @@ export class Game {
       if (detonated) this.sound.boom();
       if (this.cascade >= 1) this.sound.combo(this.cascade + 1);
     }
+    // haptics: strong for detonations/big items, weak for a plain first match
+    const h = hapticHint || (detonated ? 'boom' : (this.cascade === 0 ? 'match' : null));
+    if (h) this.haptic(h);
     this._emit();
     this.phase = 'clearing';
   }
@@ -458,6 +464,7 @@ export class Game {
   }
 
   _emit() {
+    if (this.sound) this.sound.setTempo(this.movesLeft <= 3); // urgency when low
     this.onHud({
       stage: this.stageIndex + 1,
       score: this.score,
