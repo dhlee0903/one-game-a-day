@@ -5,7 +5,7 @@
 
 import {
   COLS, ROWS, CELL, PAD, HUD_H, BOARD_W, BOARD_H, CANVAS_W, CANVAS_H,
-  SP, GEM_COLORS, UI, VERSION,
+  SP, GEM_COLORS, UI, VERSION, ITEMS,
 } from './config.js';
 
 export class Renderer {
@@ -31,6 +31,7 @@ export class Renderer {
     this._hint(c, game);
     this._clearing(c, game);
     this._effects(c, game);
+    this._armed(c, game);
     c.restore();
 
     // small build tag so the live version is identifiable at a glance
@@ -123,6 +124,25 @@ export class Renderer {
         if (g) this.drawGem(c, g.x, g.y, g.color, g.special, 1, 1);
       }
     }
+  }
+
+  // Armed active-item mode: tint the board and show a clear instruction banner.
+  _armed(c, game) {
+    if (!game.armed) return;
+    const def = ITEMS.find((i) => i.id === game.armed);
+    const name = def ? def.name : '';
+    const pulse = 0.05 + 0.05 * (0.5 + 0.5 * Math.sin(game.tick * 0.2));
+    c.fillStyle = `rgba(255,210,63,${pulse})`;
+    c.fillRect(0, HUD_H, BOARD_W, BOARD_H);
+    c.fillStyle = 'rgba(16,22,34,.92)';
+    this._round(c, 8, HUD_H + 8, BOARD_W - 16, 30, 9); c.fill();
+    c.strokeStyle = 'rgba(255,210,63,.7)'; c.lineWidth = 1.5;
+    this._round(c, 8, HUD_H + 8, BOARD_W - 16, 30, 9); c.stroke();
+    c.fillStyle = '#ffd23f';
+    c.font = '800 14px "Segoe UI", system-ui, sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(`${name} 사용 · 대상을 탭  (다시 누르면 취소)`, BOARD_W / 2, HUD_H + 23);
+    c.textAlign = 'left'; c.textBaseline = 'alphabetic';
   }
 
   _hint(c, game) {
@@ -366,6 +386,28 @@ export class Renderer {
         grad.addColorStop(0, '#ff5a63'); grad.addColorStop(0.5, '#3aa0ff'); grad.addColorStop(1, '#a566ff');
         c.fillStyle = grad;
         c.fillRect(0, HUD_H, BOARD_W, BOARD_H);
+      } else if (fx.type === 'smash') {
+        c.globalAlpha = 1 - p;
+        c.strokeStyle = '#ffffff'; c.lineWidth = 3; c.lineCap = 'round';
+        const R = 10 + p * 26;
+        for (let i = 0; i < 6; i += 1) {
+          const ang = (i / 6) * Math.PI * 2;
+          c.beginPath();
+          c.moveTo(fx.x + Math.cos(ang) * R * 0.5, fx.y + Math.sin(ang) * R * 0.5);
+          c.lineTo(fx.x + Math.cos(ang) * R, fx.y + Math.sin(ang) * R);
+          c.stroke();
+        }
+        c.fillStyle = `rgba(255,255,255,${(1 - p) * 0.5})`;
+        c.beginPath(); c.arc(fx.x, fx.y, 6 + p * 8, 0, Math.PI * 2); c.fill();
+      } else if (fx.type === 'swirl') {
+        c.save();
+        c.globalAlpha = (1 - p) * 0.55;
+        c.translate(BOARD_W / 2, HUD_H + BOARD_H / 2);
+        c.rotate(p * Math.PI * 2.2);
+        c.strokeStyle = '#8fd0ff'; c.lineWidth = 6; c.lineCap = 'round';
+        const rr = BOARD_H * 0.42 * (0.3 + p * 0.7);
+        c.beginPath(); c.arc(0, 0, rr, 0, Math.PI * 1.5); c.stroke();
+        c.restore();
       } else if (fx.type === 'combo') {
         const pop = p < 0.28 ? p / 0.28 : 1;
         const alpha = p < 0.6 ? 1 : Math.max(0, 1 - (p - 0.6) / 0.4);

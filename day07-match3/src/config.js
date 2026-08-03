@@ -1,19 +1,19 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.8';
+export const VERSION = 'v7.9';
 
 // Active items (bottom bar). `target: true` → arm, then tap a board cell.
+// `price` scales with how powerful the item is (gold to buy one when out).
 export const ITEMS = [
-  { id: 'shuffle', name: '섞기', target: false },
-  { id: 'hammer', name: '망치', target: true },
-  { id: 'bomb', name: '폭탄', target: true },
-  { id: 'color', name: '색폭탄', target: true },
-  { id: 'cross', name: '십자', target: true },
+  { id: 'hammer', name: '망치', target: true, price: 60 }, // 1 cell
+  { id: 'shuffle', name: '섞기', target: false, price: 90 }, // board reshuffle
+  { id: 'bomb', name: '폭탄', target: true, price: 140 }, // 3x3
+  { id: 'cross', name: '십자', target: true, price: 170 }, // row + column
+  { id: 'color', name: '색폭탄', target: true, price: 240 }, // whole colour
 ];
 export const ITEM_START = 2;   // uses of each item at a fresh game start
-export const ITEM_PRICE = 120; // gold to buy one more when out
-export const START_GOLD = 150;
+export const START_GOLD = 200;
 export const STAGE_GOLD = 60;  // base reward per stage clear (+ leftover moves)
 
 // Idle time (frames) before a possible-match hint is shown.
