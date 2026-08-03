@@ -18,6 +18,17 @@
 }
 .home:hover { color: var(--text); border-color: #3a4a63; }
 
+.mute {
+  position: fixed; top: 14px; right: 14px; z-index: 50;
+  padding: 7px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: inherit;
+  background: rgba(22, 31, 46, .92); border: 1px solid var(--line); color: var(--dim);
+  transition: color .12s, border-color .12s, opacity .12s;
+}
+.mute:hover { color: var(--text); border-color: #3a4a63; }
+.mute.off { opacity: .6; color: #ff6b74; }
+
 html, body { height: 100%; }
 
 body {

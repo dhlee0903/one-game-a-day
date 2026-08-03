@@ -12,9 +12,10 @@ const EASE = 0.3;
 const CLEAR_LIFE = 16; // long enough to read the monster's dying face
 
 export class Game {
-  constructor({ onHud, onState } = {}) {
+  constructor({ onHud, onState, sound } = {}) {
     this.onHud = onHud || (() => {});
     this.onState = onState || (() => {});
+    this.sound = sound || null;
     this.board = new Board();
     this.clearing = [];
     this.effects = [];
@@ -96,6 +97,7 @@ export class Game {
     this.selected = null;
     this.movesLeft -= 1; this._emit();
     this.cascade = 0;
+    if (this.sound) this.sound.boom();
     this._beginClear(new Set([this.board.key(cell.r, cell.c)]), new Map());
   }
 
@@ -143,12 +145,14 @@ export class Game {
     if (comboSwap) {
       this.movesLeft -= 1; this._emit();
       this.cascade = 0;
+      if (this.sound) { this.sound.special(); this.sound.boom(); }
       this._beginClear(this._comboCells(a, ga, b, gb), new Map());
       return;
     }
 
     this.board.swap(a, b);
     this._sync(false);
+    if (this.sound) this.sound.swap();
     this._swapPair = [a, b];
     this.phase = 'swap';
   }
@@ -165,6 +169,7 @@ export class Game {
     } else {
       this.board.swap(a, b); // revert
       this._sync(false);
+      if (this.sound) this.sound.invalid();
       this.phase = 'swapback';
     }
   }
@@ -175,12 +180,14 @@ export class Game {
     for (const k of matched) if (!anchors.has(k)) remove.add(k);
 
     // chain: any existing special caught in the removal detonates (+ its effect)
+    let detonated = false;
     const queue = [...remove];
     while (queue.length) {
       const k = queue.shift();
       const r = Math.floor(k / COLS); const c = k % COLS;
       const g = this.board.grid[r][c];
       if (g && g.special !== SP.NONE) {
+        detonated = true;
         this._detonateFx(r, c, g);
         for (const cell of this.board.effectCells(r, c, g)) {
           const kk = this.board.key(cell.r, cell.c);
@@ -210,6 +217,12 @@ export class Game {
     const mult = Math.min(3, 1 + this.cascade * 0.3);
     this.score += Math.round(remove.size * POINTS_PER_GEM * mult);
     if (this.cascade >= 1) this.effects.push({ type: 'combo', n: this.cascade + 1, t: 0, life: 36 });
+    if (this.sound) {
+      this.sound.clear(this.cascade);
+      if (specials.size > 0) this.sound.special();
+      if (detonated) this.sound.boom();
+      if (this.cascade >= 1) this.sound.combo(this.cascade + 1);
+    }
     this._emit();
     this.phase = 'clearing';
   }
@@ -246,9 +259,11 @@ export class Game {
     this.phase = 'idle';
     if (this.score >= this.target) {
       this.phase = 'won';
+      if (this.sound) this.sound.win();
       this.onState('won', { stage: this.stageIndex + 1, score: this.score, last: this.stageIndex === STAGES.length - 1 });
     } else if (this.movesLeft <= 0) {
       this.phase = 'lost';
+      if (this.sound) this.sound.lose();
       this.onState('lost', { stage: this.stageIndex + 1, score: this.score, target: this.target });
     }
   }
