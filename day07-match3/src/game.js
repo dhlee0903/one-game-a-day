@@ -32,6 +32,8 @@ export class Game {
     this.paused = false;
     this.warned = false;   // low-moves alarm fired this stage
     this.chainMax = 0;     // highest combo in the current cascade chain
+    this.seqActive = false; // rainbow+special sequential detonation in progress
+    this.convertedGems = null;
     this.gold = START_GOLD;
     this.items = {};
     this._raf = 0;
@@ -56,6 +58,8 @@ export class Game {
     this.idle = 0;
     this.warned = false;
     this.chainMax = 0;
+    this.seqActive = false;
+    this.convertedGems = null;
     this.continues = 0; // times continued (paid) this stage attempt
     if (fresh) {
       this.gold = START_GOLD;
@@ -252,6 +256,20 @@ export class Game {
     if (!ga || !gb) return;
     this._act();
 
+    // Rainbow + line/bomb → turn every gem of that colour into the special and
+    // detonate them one by one (fall between each) rather than all at once.
+    const aC = ga.special === SP.COLOR; const bC = gb.special === SP.COLOR;
+    if (aC || bC) {
+      const other = aC ? gb : ga;
+      if (other.special === SP.ROW || other.special === SP.COL || other.special === SP.BOMB) {
+        this._act();
+        this.movesLeft -= 1; this._emit();
+        this.cascade = 0;
+        this._startColorConvert(aC ? a : b, other);
+        return;
+      }
+    }
+
     // Special activation swap: a rainbow can swap with anything, and any two
     // specials combine. A single line/bomb + a normal gem is a plain swap
     // (it activates only when the swap forms a match).
@@ -270,6 +288,42 @@ export class Game {
     if (this.sound) this.sound.swap();
     this._swapPair = [a, b];
     this.phase = 'swap';
+  }
+
+  // ---- rainbow + special: convert a colour to that special, pop in sequence ----
+
+  _startColorConvert(bombCell, otherGem) {
+    const type = otherGem.special;
+    const color = otherGem.color;
+    // consume the rainbow gem
+    const bg = this.board.at(bombCell.r, bombCell.c);
+    if (bg) {
+      this.clearing.push({ gem: bg, t: 0 });
+      this.effects.push({ type: 'pop', x: Game.px(bombCell.c) + CELL / 2, y: Game.py(bombCell.r) + CELL / 2, color: -1, t: 0, life: 14 });
+      this.board.grid[bombCell.r][bombCell.c] = null;
+    }
+    // convert every gem of that colour into the special
+    this.convertedGems = new Set();
+    for (const p of this.board.cellsOfColor(color)) {
+      const g = this.board.at(p.r, p.c);
+      if (g) { g.special = type; this.convertedGems.add(g); }
+    }
+    this.seqActive = true;
+    if (this.sound) this.sound.special();
+    // settle the rainbow hole first; _afterFall drives the sequential pops
+    this.board.applyGravity();
+    this._sync(false);
+    this.phase = 'falling';
+  }
+
+  _nextConverted() {
+    for (let r = 0; r < ROWS; r += 1) {
+      for (let c = 0; c < COLS; c += 1) {
+        const g = this.board.grid[r][c];
+        if (g && this.convertedGems.has(g)) return { r, c };
+      }
+    }
+    return null;
   }
 
   // ---- resolution ----
@@ -368,6 +422,14 @@ export class Game {
   }
 
   _afterFall() {
+    // sequential rainbow+special detonations: one per settle, with falls between
+    if (this.seqActive) {
+      const next = this._nextConverted();
+      if (next) { this._beginClear(new Set([this.board.key(next.r, next.c)]), new Map(), 'boom'); return; }
+      this.seqActive = false;
+      this.convertedGems = null;
+    }
+
     const res = this.board.detect(null);
     if (res.matched.size > 0) {
       this.cascade += 1;

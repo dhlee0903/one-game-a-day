@@ -167,87 +167,118 @@ export class Renderer {
     const top = cy - s / 2;
     c.globalAlpha = alpha;
 
-    if (color < 0) {
-      this._rainbow(c, cx, cy, s / 2);
-      this._special(c, special, left, top, s, cx, cy);
+    if (special !== SP.NONE) {
+      this._specialBlock(c, special, color, left, top, s, cx, cy);
       c.globalAlpha = 1;
       return;
     }
 
-    const m = GEM_COLORS[color];
-    const grad = c.createLinearGradient(left, top, left, top + s);
-    grad.addColorStop(0, m.light);
-    grad.addColorStop(0.55, m.base);
-    grad.addColorStop(1, m.dark);
-    c.fillStyle = grad;
-    this._round(c, left, top, s, s, s * 0.3); c.fill();
-    c.fillStyle = 'rgba(255,255,255,.2)';
-    this._round(c, left + s * 0.16, top + s * 0.1, s * 0.5, s * 0.24, s * 0.12); c.fill();
-
+    const m = GEM_COLORS[color] || GEM_COLORS[0];
+    this._blockBody(c, m, left, top, s);
     this._features(c, m, left, top, s);
     this._face(c, m.kind, left, top, s, dead);
-    this._special(c, special, left, top, s, cx, cy);
     c.globalAlpha = 1;
   }
 
-  // Special blocks drawn as distinct graphics over the monster: a glowing
-  // directional rocket band (row/col), a bomb casing, etc.
-  _special(c, special, left, top, s, cx, cy) {
-    if (special === SP.ROW || special === SP.COL) {
-      const horiz = special === SP.ROW;
-      c.save();
-      // energy band with a soft glow
-      const bandW = s * 0.34;
-      c.fillStyle = 'rgba(255,255,255,.22)';
-      if (horiz) c.fillRect(left, cy - bandW * 0.9, s, bandW * 1.8);
-      else c.fillRect(cx - bandW * 0.9, top, bandW * 1.8, s);
-      const g = horiz
-        ? c.createLinearGradient(left, cy - bandW / 2, left, cy + bandW / 2)
-        : c.createLinearGradient(cx - bandW / 2, top, cx + bandW / 2, top);
-      g.addColorStop(0, 'rgba(255,255,255,.5)');
-      g.addColorStop(0.5, '#ffffff');
-      g.addColorStop(1, 'rgba(255,255,255,.5)');
-      c.fillStyle = g;
-      if (horiz) c.fillRect(left, cy - bandW / 2, s, bandW); else c.fillRect(cx - bandW / 2, top, bandW, s);
-      // chevrons along the band pointing outward from center
-      c.strokeStyle = 'rgba(60,90,150,.9)'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
-      const ch = (t, dir) => {
-        c.beginPath();
-        if (horiz) {
-          const x = cx + dir * s * (0.16 + t * 0.18);
-          c.moveTo(x - dir * s * 0.06, cy - s * 0.08); c.lineTo(x, cy); c.lineTo(x - dir * s * 0.06, cy + s * 0.08);
-        } else {
-          const y = cy + dir * s * (0.16 + t * 0.18);
-          c.moveTo(cx - s * 0.08, y - dir * s * 0.06); c.lineTo(cx, y); c.lineTo(cx + s * 0.08, y - dir * s * 0.06);
-        }
-        c.stroke();
-      };
-      ch(0, 1); ch(1, 1); ch(0, -1); ch(1, -1);
-      c.restore();
-    } else if (special === SP.BOMB) {
-      // a bomb casing sitting on the monster
-      const r = s * 0.36;
-      const bx = cx; const by = cy + s * 0.06;
-      const bg = c.createRadialGradient(bx - r * 0.35, by - r * 0.35, r * 0.2, bx, by, r);
-      bg.addColorStop(0, '#3b4456');
-      bg.addColorStop(1, '#141824');
-      c.fillStyle = bg;
-      c.beginPath(); c.arc(bx, by, r, 0, Math.PI * 2); c.fill();
-      c.fillStyle = 'rgba(255,255,255,.35)';
-      c.beginPath(); c.arc(bx - r * 0.35, by - r * 0.35, r * 0.28, 0, Math.PI * 2); c.fill();
-      // cap + fuse + spark
-      c.fillStyle = '#2a2f3a';
-      c.fillRect(bx - r * 0.3, by - r - s * 0.06, r * 0.6, s * 0.1);
-      c.strokeStyle = '#c98f00'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
-      c.beginPath();
-      c.moveTo(bx + r * 0.1, by - r - s * 0.04);
-      c.quadraticCurveTo(bx + r * 0.7, by - r - s * 0.28, bx + r * 0.4, by - r - s * 0.42);
-      c.stroke();
-      c.fillStyle = '#ffd23f';
-      c.beginPath(); c.arc(bx + r * 0.4, by - r - s * 0.44, s * 0.07, 0, Math.PI * 2); c.fill();
-      c.fillStyle = 'rgba(255,160,60,.5)';
-      c.beginPath(); c.arc(bx + r * 0.4, by - r - s * 0.44, s * 0.13, 0, Math.PI * 2); c.fill();
+  // Rounded block body with a subtle rim (definition on the dark board) and a
+  // soft top gloss. Shared by monsters and special blocks.
+  _blockBody(c, m, left, top, s) {
+    const grad = c.createLinearGradient(left, top, left, top + s);
+    grad.addColorStop(0, m.light);
+    grad.addColorStop(0.5, m.base);
+    grad.addColorStop(1, m.dark);
+    c.fillStyle = grad;
+    this._round(c, left, top, s, s, s * 0.3); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.16)'; c.lineWidth = Math.max(1, s * 0.03);
+    this._round(c, left + 0.6, top + 0.6, s - 1.2, s - 1.2, s * 0.29); c.stroke();
+    const gl = c.createLinearGradient(left, top, left, top + s * 0.5);
+    gl.addColorStop(0, 'rgba(255,255,255,.34)');
+    gl.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = gl;
+    this._round(c, left + s * 0.1, top + s * 0.08, s * 0.8, s * 0.4, s * 0.2); c.fill();
+  }
+
+  // Dedicated special-block graphics (no monster underneath).
+  _specialBlock(c, special, color, left, top, s, cx, cy) {
+    if (special === SP.COLOR) { this._colorBlock(c, left, top, s, cx, cy); return; }
+    const m = GEM_COLORS[color] || GEM_COLORS[0];
+    this._blockBody(c, m, left, top, s);
+    if (special === SP.ROW || special === SP.COL) this._lineBlock(c, special === SP.ROW, left, top, s, cx, cy);
+    else if (special === SP.BOMB) this._bombBlock(c, left, top, s, cx, cy);
+  }
+
+  _tri(c, ax, ay, bx, by, dx, dy) {
+    c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.lineTo(dx, dy); c.closePath();
+    c.fill(); c.stroke();
+  }
+
+  _lineBlock(c, horiz, left, top, s, cx, cy) {
+    c.save();
+    const bw = s * 0.36;
+    c.fillStyle = 'rgba(255,255,255,.2)';
+    if (horiz) c.fillRect(left, cy - bw * 0.9, s, bw * 1.8); else c.fillRect(cx - bw * 0.9, top, bw * 1.8, s);
+    const g = horiz ? c.createLinearGradient(left, cy - bw / 2, left, cy + bw / 2)
+      : c.createLinearGradient(cx - bw / 2, top, cx + bw / 2, top);
+    g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(0.5, '#ffffff'); g.addColorStop(1, 'rgba(255,255,255,.55)');
+    c.fillStyle = g;
+    if (horiz) c.fillRect(left, cy - bw / 2, s, bw); else c.fillRect(cx - bw / 2, top, bw, s);
+    // outward-pointing arrowheads at both ends
+    c.fillStyle = '#fff'; c.strokeStyle = 'rgba(40,60,100,.7)'; c.lineWidth = 1.5; c.lineJoin = 'round';
+    if (horiz) {
+      this._tri(c, left + s * 0.03, cy, left + s * 0.19, cy - s * 0.13, left + s * 0.19, cy + s * 0.13);
+      this._tri(c, left + s * 0.97, cy, left + s * 0.81, cy - s * 0.13, left + s * 0.81, cy + s * 0.13);
+    } else {
+      this._tri(c, cx, top + s * 0.03, cx - s * 0.13, top + s * 0.19, cx + s * 0.13, top + s * 0.19);
+      this._tri(c, cx, top + s * 0.97, cx - s * 0.13, top + s * 0.81, cx + s * 0.13, top + s * 0.81);
     }
+    c.restore();
+  }
+
+  _bombBlock(c, left, top, s, cx, cy) {
+    const r = s * 0.34;
+    const bx = cx; const by = cy + s * 0.06;
+    const bg = c.createRadialGradient(bx - r * 0.35, by - r * 0.35, r * 0.2, bx, by, r);
+    bg.addColorStop(0, '#3b4456'); bg.addColorStop(1, '#12151f');
+    c.fillStyle = bg;
+    c.beginPath(); c.arc(bx, by, r, 0, Math.PI * 2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.4)';
+    c.beginPath(); c.arc(bx - r * 0.34, by - r * 0.34, r * 0.26, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#2a2f3a';
+    c.fillRect(bx - r * 0.3, by - r - s * 0.06, r * 0.6, s * 0.1);
+    c.strokeStyle = '#c98f00'; c.lineWidth = Math.max(1.5, s * 0.05); c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(bx + r * 0.1, by - r - s * 0.04);
+    c.quadraticCurveTo(bx + r * 0.7, by - r - s * 0.28, bx + r * 0.4, by - r - s * 0.42);
+    c.stroke();
+    c.fillStyle = 'rgba(255,160,60,.5)';
+    c.beginPath(); c.arc(bx + r * 0.4, by - r - s * 0.44, s * 0.14, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ffd23f';
+    c.beginPath(); c.arc(bx + r * 0.4, by - r - s * 0.44, s * 0.07, 0, Math.PI * 2); c.fill();
+  }
+
+  _star(c, x, y, r) {
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.moveTo(x, y - r); c.lineTo(x + r * 0.28, y - r * 0.28); c.lineTo(x + r, y); c.lineTo(x + r * 0.28, y + r * 0.28);
+    c.lineTo(x, y + r); c.lineTo(x - r * 0.28, y + r * 0.28); c.lineTo(x - r, y); c.lineTo(x - r * 0.28, y - r * 0.28);
+    c.closePath(); c.fill();
+  }
+
+  _colorBlock(c, left, top, s, cx, cy) {
+    this._blockBody(c, { light: '#3a3654', base: '#241f3a', dark: '#171226' }, left, top, s);
+    const R = s * 0.33;
+    c.save();
+    c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.clip();
+    c.translate(cx, cy); c.rotate(-0.5);
+    const cols = ['#ff5a63', '#ffb03a', '#ffe14d', '#3fce6a', '#3aa0ff', '#a566ff', '#ff5fae'];
+    const bw = (R * 2.6) / cols.length;
+    for (let i = 0; i < cols.length; i += 1) { c.fillStyle = cols[i]; c.fillRect(-R * 1.3 + i * bw, -R * 1.3, bw + 1, R * 2.6); }
+    c.restore();
+    c.fillStyle = 'rgba(255,255,255,.3)';
+    c.beginPath(); c.ellipse(cx - R * 0.3, cy - R * 0.35, R * 0.42, R * 0.28, -0.5, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = Math.max(1.5, s * 0.04);
+    c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.stroke();
+    this._star(c, cx + R * 0.5, cy - R * 0.55, s * 0.13);
   }
 
   // per-monster silhouette accents (horns, stem, drips, stitches)
@@ -374,19 +405,6 @@ export class Renderer {
     c.moveTo(ex - r, ey - r); c.lineTo(ex + r, ey + r);
     c.moveTo(ex + r, ey - r); c.lineTo(ex - r, ey + r);
     c.stroke();
-  }
-
-  _rainbow(c, cx, cy, r) {
-    const cols = ['#4cc85a', '#e7edf4', '#ff4d44', '#38a1ff', '#b06bff', '#ff9a2e'];
-    for (let i = 0; i < cols.length; i += 1) {
-      c.fillStyle = cols[i];
-      c.beginPath();
-      c.moveTo(cx, cy);
-      c.arc(cx, cy, r, (i / cols.length) * Math.PI * 2 - Math.PI / 2, ((i + 1) / cols.length) * Math.PI * 2 - Math.PI / 2);
-      c.closePath(); c.fill();
-    }
-    c.fillStyle = 'rgba(255,255,255,.85)';
-    c.beginPath(); c.arc(cx, cy, r * 0.32, 0, Math.PI * 2); c.fill();
   }
 
   // ---- effects ----
