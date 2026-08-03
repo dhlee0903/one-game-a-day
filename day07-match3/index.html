@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>MATCH 3 · Day 07</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="home" href="../">&larr; 홈</a>
+
+  <div class="wrap">
+    <header>
+      <h1>MATCH 3</h1>
+      <p class="sub">DAY 07</p>
+    </header>
+
+    <div class="hud">
+      <div class="stat"><span class="label">STAGE</span><span class="val" id="stage">1</span></div>
+      <div class="stat"><span class="label">SCORE</span><span class="val" id="score">0</span></div>
+      <div class="stat"><span class="label">TARGET</span><span class="val" id="target">0</span></div>
+      <div class="stat"><span class="label">MOVES</span><span class="val" id="moves">0</span></div>
+    </div>
+
+    <div class="board-wrap">
+      <canvas id="board" width="432" height="432"></canvas>
+      <div class="overlay show" id="overlay"></div>
+    </div>
+
+    <p class="keys">
+      가로4·세로4 &rarr; <b>줄 삭제</b> · 2×2 &rarr; <b>폭탄</b>(주변 3×3) · 5매치 &rarr; <b>레인보우</b>(같은 색 전체)
+    </p>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
