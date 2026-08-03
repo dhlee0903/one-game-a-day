@@ -44,38 +44,57 @@ export class Renderer {
 
   _hud(c, game) {
     const w = CANVAS_W;
-    c.textBaseline = 'alphabetic';
-    // stage + moves on the top line
-    c.font = '700 14px "Segoe UI", system-ui, sans-serif';
-    c.textAlign = 'left';
-    c.fillStyle = UI.dim; c.fillText('STAGE', 16, 22);
-    c.fillStyle = UI.text; c.fillText(String(game.stageIndex + 1), 16 + c.measureText('STAGE').width + 8, 22);
-    c.textAlign = 'right';
-    c.fillStyle = game.movesLeft <= 5 ? '#ff6b74' : UI.text;
-    c.fillText(String(game.movesLeft), w - 16, 22);
-    c.fillStyle = UI.dim; c.fillText('MOVES', w - 16 - c.measureText(String(game.movesLeft)).width - 8, 22);
+    // HUD panel
+    c.fillStyle = '#101725';
+    this._round(c, 4, 4, w - 8, HUD_H - 8, 14); c.fill();
+
+    // stage / moves pills
+    this._pill(c, 12, 11, 'STAGE', String(game.stageIndex + 1), false, false);
+    this._pill(c, w - 12, 11, 'MOVES', String(game.movesLeft), game.movesLeft <= 5, true);
 
     // big score, centred
-    c.textAlign = 'center';
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic';
     c.fillStyle = UI.text;
     c.font = '800 30px "Segoe UI", system-ui, sans-serif';
     c.fillText(String(game.score), w / 2, 52);
 
     // progress bar toward the stage target
-    const bx = 56; const bw = w - 112; const by = 64; const bh = 8;
-    c.fillStyle = '#0e1626';
-    this._round(c, bx, by, bw, bh, 4); c.fill();
+    const bx = 56; const bw = w - 112; const by = 62; const bh = 9;
+    c.fillStyle = '#0a1120';
+    this._round(c, bx, by, bw, bh, 5); c.fill();
     const p = Math.max(0, Math.min(1, game.score / game.target));
     if (p > 0) {
       const grad = c.createLinearGradient(bx, 0, bx + bw, 0);
       grad.addColorStop(0, '#3fce6a'); grad.addColorStop(1, '#ffd23f');
       c.fillStyle = grad;
-      this._round(c, bx, by, Math.max(bh, bw * p), bh, 4); c.fill();
+      c.shadowColor = 'rgba(255,210,63,.4)'; c.shadowBlur = 6;
+      this._round(c, bx, by, Math.max(bh, bw * p), bh, 5); c.fill();
+      c.shadowBlur = 0;
     }
     c.font = '600 11px "Segoe UI", system-ui, sans-serif';
-    c.fillStyle = UI.dim;
-    c.fillText(`목표 ${game.target}`, w / 2, 82);
+    c.fillStyle = UI.dim; c.textAlign = 'center';
+    c.fillText(`목표 ${game.target}`, w / 2, 80);
     c.textAlign = 'left';
+  }
+
+  // label+value rounded pill; anchored at x (left) or right edge if rightAlign
+  _pill(c, x, y, label, val, danger, rightAlign) {
+    const h = 26;
+    c.font = '700 12px "Segoe UI", system-ui, sans-serif';
+    const lw = c.measureText(label).width;
+    c.font = '800 15px "Segoe UI", system-ui, sans-serif';
+    const vw = c.measureText(val).width;
+    const padX = 11; const gap = 6;
+    const pw = padX * 2 + lw + gap + vw;
+    const px = rightAlign ? x - pw : x;
+    c.fillStyle = '#1a2536';
+    this._round(c, px, y, pw, h, 13); c.fill();
+    c.textBaseline = 'middle'; c.textAlign = 'left';
+    c.font = '700 12px "Segoe UI", system-ui, sans-serif';
+    c.fillStyle = UI.dim; c.fillText(label, px + padX, y + h / 2 + 1);
+    c.font = '800 15px "Segoe UI", system-ui, sans-serif';
+    c.fillStyle = danger ? '#ff6b74' : UI.text; c.fillText(val, px + padX + lw + gap, y + h / 2 + 1);
+    c.textBaseline = 'alphabetic';
   }
 
   // ---- board / gems ----
@@ -199,6 +218,22 @@ export class Renderer {
         grad.addColorStop(0, '#ff5a63'); grad.addColorStop(0.5, '#3aa0ff'); grad.addColorStop(1, '#a566ff');
         c.fillStyle = grad;
         c.fillRect(0, HUD_H, BOARD_W, BOARD_H);
+      } else if (fx.type === 'combo') {
+        const pop = p < 0.28 ? p / 0.28 : 1;
+        const alpha = p < 0.6 ? 1 : Math.max(0, 1 - (p - 0.6) / 0.4);
+        const cx = BOARD_W / 2; const cy = HUD_H + BOARD_H * 0.4 - p * 24;
+        c.save();
+        c.globalAlpha = alpha;
+        c.translate(cx, cy);
+        c.scale(0.6 + pop * 0.5, 0.6 + pop * 0.5);
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.font = '800 42px "Segoe UI", system-ui, sans-serif';
+        c.lineWidth = 6; c.strokeStyle = 'rgba(0,0,0,.45)';
+        c.strokeText(`COMBO x${fx.n}`, 0, 0);
+        c.fillStyle = '#ffd23f';
+        c.fillText(`COMBO x${fx.n}`, 0, 0);
+        c.restore();
+        c.textAlign = 'left'; c.textBaseline = 'alphabetic';
       }
       c.globalAlpha = 1;
     }

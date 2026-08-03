@@ -99,25 +99,51 @@ export class Game {
     this._beginClear(new Set([this.board.key(cell.r, cell.c)]), new Map());
   }
 
+  // Cell set cleared when two specials (or a rainbow) are swapped together.
+  _comboCells(a, ga, b, gb) {
+    const S = new Set();
+    const add = (r, c) => { if (this.board.inBounds(r, c)) S.add(this.board.key(r, c)); };
+    const addRow = (r) => { for (let c = 0; c < COLS; c += 1) add(r, c); };
+    const addCol = (c) => { for (let r = 0; r < ROWS; r += 1) add(r, c); };
+    const addBox = (r, c, rad) => { for (let dr = -rad; dr <= rad; dr += 1) for (let dc = -rad; dc <= rad; dc += 1) add(r + dr, c + dc); };
+    const addColor = (color) => { for (const p of this.board.cellsOfColor(color)) add(p.r, p.c); };
+    const line = (s) => s === SP.ROW || s === SP.COL;
+    const aS = ga.special; const bS = gb.special;
+    add(a.r, a.c); add(b.r, b.c);
+
+    if (aS === SP.COLOR && bS === SP.COLOR) {
+      for (let r = 0; r < ROWS; r += 1) addRow(r); // whole board
+    } else if (aS === SP.COLOR || bS === SP.COLOR) {
+      const other = aS === SP.COLOR ? gb : ga;
+      if (other.special === SP.NONE) addColor(other.color);
+      else if (line(other.special)) for (const p of this.board.cellsOfColor(other.color)) { addRow(p.r); addCol(p.c); }
+      else if (other.special === SP.BOMB) for (const p of this.board.cellsOfColor(other.color)) addBox(p.r, p.c, 1);
+    } else if (aS === SP.BOMB && bS === SP.BOMB) {
+      addBox(a.r, a.c, 2); // 5x5
+    } else if (line(aS) && line(bS)) {
+      addRow(a.r); addCol(a.c); addRow(b.r); addCol(b.c); // cross
+    } else { // line + bomb → 3-wide cross
+      const cr = a.r; const cc = a.c;
+      addRow(cr - 1); addRow(cr); addRow(cr + 1);
+      addCol(cc - 1); addCol(cc); addCol(cc + 1);
+    }
+    return S;
+  }
+
   trySwap(a, b) {
     if (this.phase !== 'idle' || !this._adjacent(a, b)) return;
     const ga = this.board.at(a.r, a.c); const gb = this.board.at(b.r, b.c);
     if (!ga || !gb) return;
 
-    // COLOR (rainbow) block: swapping it detonates a whole colour.
-    if (ga.special === SP.COLOR || gb.special === SP.COLOR) {
+    // Special activation swap: a rainbow can swap with anything, and any two
+    // specials combine. A single line/bomb + a normal gem is a plain swap
+    // (it activates only when the swap forms a match).
+    const comboSwap = ga.special === SP.COLOR || gb.special === SP.COLOR
+      || (ga.special !== SP.NONE && gb.special !== SP.NONE);
+    if (comboSwap) {
       this.movesLeft -= 1; this._emit();
-      const bomb = ga.special === SP.COLOR ? a : b;
-      const other = ga.special === SP.COLOR ? gb : ga;
-      const matched = new Set();
-      if (other.special === SP.COLOR) {
-        for (let r = 0; r < ROWS; r += 1) for (let c = 0; c < COLS; c += 1) matched.add(this.board.key(r, c));
-      } else {
-        for (const p of this.board.cellsOfColor(other.color)) matched.add(this.board.key(p.r, p.c));
-        matched.add(this.board.key(bomb.r, bomb.c));
-      }
       this.cascade = 0;
-      this._beginClear(matched, new Map());
+      this._beginClear(this._comboCells(a, ga, b, gb), new Map());
       return;
     }
 
@@ -183,6 +209,7 @@ export class Game {
 
     const mult = Math.min(3, 1 + this.cascade * 0.3);
     this.score += Math.round(remove.size * POINTS_PER_GEM * mult);
+    if (this.cascade >= 1) this.effects.push({ type: 'combo', n: this.cascade + 1, t: 0, life: 36 });
     this._emit();
     this.phase = 'clearing';
   }
