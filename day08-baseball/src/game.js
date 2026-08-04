@@ -1,7 +1,7 @@
 // 게임 진행: 정답 보관, 입력 버퍼, 판정 누적, 승패 판정, 힌트, 후보 추적.
 // DOM을 모른다(렌더러가 이 상태를 읽어서 그린다).
 
-import { LEVELS, DEFAULT_DIGITS, HINTS_PER_GAME } from './config.js';
+import { DIGITS, MAX_TRIES, HINTS_PER_GAME } from './config.js';
 import { makeSecret, judge, isValidGuess } from './rules.js';
 import { allCandidates, narrow } from './solver.js';
 import { recordGame, getBest } from './storage.js';
@@ -11,14 +11,12 @@ export class Game {
     this.onChange = onChange || (() => {});
     this.onEnd = onEnd || (() => {});
     this.onFeedback = onFeedback || (() => {}); // 'bad' | 'strike' | 'out'
-    this.digits = DEFAULT_DIGITS;
-    this.newGame(DEFAULT_DIGITS);
+    this.newGame();
   }
 
-  newGame(digits = this.digits) {
-    const level = LEVELS[digits] || LEVELS[DEFAULT_DIGITS];
-    this.digits = level.digits;
-    this.maxTries = level.tries;
+  newGame() {
+    this.digits = DIGITS;
+    this.maxTries = MAX_TRIES;
     this.secret = makeSecret(this.digits);
     this.input = '';
     this.guesses = [];
@@ -41,8 +39,7 @@ export class Game {
   pressDigit(ch) {
     if (this.phase !== 'playing') return;
     if (this.input.length >= this.digits) return;
-    if (this.input.includes(ch)) { this._warn('같은 숫자는 한 번만'); return; }
-    this.input += ch;
+    this.input += ch; // 중복 숫자도 허용 — 0011 같은 탐색 수를 쓸 수 있다
     this.message = '';
     this.onChange(this);
   }
@@ -72,7 +69,7 @@ export class Game {
   submit() {
     if (this.phase !== 'playing') return;
     const guess = this.input;
-    if (!isValidGuess(guess, this.digits)) { this._warn(`서로 다른 숫자 ${this.digits}개를 입력`); return; }
+    if (!isValidGuess(guess, this.digits)) { this._warn(`숫자 ${this.digits}개를 입력`); return; }
     if (this.guesses.some((g) => g.guess === guess)) { this._warn('이미 시도한 숫자'); return; }
 
     const result = judge(this.secret, guess);

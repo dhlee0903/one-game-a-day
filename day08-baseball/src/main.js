@@ -1,9 +1,8 @@
-// 진입점: 게임·렌더러·입력을 연결하고, 난이도/도움 토글과 오버레이를 다룬다.
+// 진입점: 게임·렌더러·입력을 연결하고, 도움 토글과 오버레이를 다룬다.
 
 import { Game } from './game.js';
 import { Renderer } from './renderer.js';
 import { InputController } from './input.js';
-import { DIGIT_OPTIONS, DEFAULT_DIGITS } from './config.js';
 import { getStats } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
@@ -25,21 +24,6 @@ new InputController(game, {
   del: $('del'),
   clear: $('clear'),
   hint: $('hint'),
-});
-
-// ---- 난이도 ----
-const levelBox = $('levels');
-let digits = DEFAULT_DIGITS;
-levelBox.innerHTML = DIGIT_OPTIONS
-  .map((n) => `<button class="lv${n === DEFAULT_DIGITS ? ' on' : ''}" data-digits="${n}">${n}자리</button>`)
-  .join('');
-levelBox.addEventListener('pointerdown', (e) => {
-  const btn = e.target.closest('button[data-digits]');
-  if (!btn) return;
-  e.preventDefault();
-  digits = Number(btn.dataset.digits);
-  levelBox.querySelectorAll('.lv').forEach((b) => b.classList.toggle('on', b === btn));
-  startGame();
 });
 
 // ---- 도움(남은 후보 수) ----
@@ -75,7 +59,7 @@ function handleEnd(phase, p) {
 }
 
 function startGame() {
-  game.newGame(digits);
+  game.newGame();
   renderer.render(game);
 }
 
@@ -83,7 +67,7 @@ function startGame() {
 renderer.render(game);
 showOverlay(
   '<span class="title">숫자야구</span><span class="sub">DAY 08</span>',
-  '서로 다른 숫자를 맞히자.<br>자리·숫자 모두 맞으면 <b>S</b>, 숫자만 맞으면 <b>B</b>',
+  '정답은 서로 다른 숫자 4개.<br>자리·숫자 모두 맞으면 <b>S</b>, 숫자만 맞으면 <b>B</b><br><span class="dim">추측에는 같은 숫자를 여러 번 넣어도 된다</span>',
   '시작',
   startGame,
 );
