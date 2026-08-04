@@ -210,41 +210,59 @@ export class Renderer {
     else if (special === SP.MISSILE) this._batBlock(c, m, cx, cy, s);
   }
 
-  // 4-match line special: a striped rocket with a sharp triangular nose (no
-  // fuse/tail), oriented along the line it clears.
+  // 4-match line special: a double-headed energy arrow aimed along the line it
+  // clears — glowing white core inside a gem-coloured shaft, spark at each tip.
   _firework(c, horiz, m, cx, cy, s) {
     c.save();
     c.translate(cx, cy);
-    if (horiz) c.rotate(Math.PI / 2); // point up for COL, sideways for ROW
-    const hw = s * 0.18;          // body half-width
-    const noseTip = -s * 0.4;     // sharp triangular tip
-    const shoulder = -s * 0.1;    // where the triangle nose meets the body
-    const botY = s * 0.36;        // flat bottom
-    // outline: triangle nose + rectangular body
+    if (horiz) c.rotate(Math.PI / 2); // drawn vertical; rotate for a row clear
+    const hw = s * 0.185;    // shaft half-width
+    const aw = s * 0.34;     // arrowhead half-width
+    const sh = s * 0.2;      // shoulder: where the head meets the shaft
+    const tip = s * 0.46;    // arrow tip (both ends)
+    // one closed double-arrow outline, so the whole symbol reads as a single piece
     const shape = () => {
       c.beginPath();
-      c.moveTo(-hw, botY);
-      c.lineTo(-hw, shoulder);
-      c.lineTo(0, noseTip);
-      c.lineTo(hw, shoulder);
-      c.lineTo(hw, botY);
+      c.moveTo(0, -tip);
+      c.lineTo(aw, -sh); c.lineTo(hw, -sh);
+      c.lineTo(hw, sh); c.lineTo(aw, sh);
+      c.lineTo(0, tip);
+      c.lineTo(-aw, sh); c.lineTo(-hw, sh);
+      c.lineTo(-hw, -sh); c.lineTo(-aw, -sh);
       c.closePath();
     };
-    // fill body with the gem colour
-    const bg = c.createLinearGradient(-hw, 0, hw, 0);
-    bg.addColorStop(0, m.dark); bg.addColorStop(0.5, m.base); bg.addColorStop(1, m.dark);
+    // outer glow so the block pops off the dark board
+    c.save();
+    c.shadowColor = m.light; c.shadowBlur = s * 0.35;
+    shape(); c.fillStyle = m.base; c.fill();
+    c.restore();
+    // body: cylindrical shading across the width
+    const bg = c.createLinearGradient(-aw, 0, aw, 0);
+    bg.addColorStop(0, m.dark); bg.addColorStop(0.35, m.light);
+    bg.addColorStop(0.6, m.base); bg.addColorStop(1, m.dark);
     shape(); c.fillStyle = bg; c.fill();
-    // white diagonal stripes + a light band near the base, clipped to the body
+    // charged white core running the full length, brightest in the middle
     c.save(); shape(); c.clip();
-    c.fillStyle = 'rgba(255,255,255,.92)';
-    c.save(); c.rotate(-0.5);
-    for (let i = -2; i <= 3; i += 1) { c.fillRect(-s * 0.6, i * s * 0.22, s * 1.2, s * 0.08); }
+    const core = c.createLinearGradient(0, -tip, 0, tip);
+    core.addColorStop(0, 'rgba(255,255,255,.3)');
+    core.addColorStop(0.5, 'rgba(255,255,255,.9)');
+    core.addColorStop(1, 'rgba(255,255,255,.3)');
+    c.fillStyle = core;
+    this._round(c, -hw * 0.42, -tip, hw * 0.84, tip * 2, hw * 0.42); c.fill();
+    // two energy bands across the shaft
+    c.fillStyle = 'rgba(255,255,255,.55)';
+    c.fillRect(-aw, -sh * 0.5, aw * 2, s * 0.05);
+    c.fillRect(-aw, sh * 0.28, aw * 2, s * 0.05);
     c.restore();
-    c.fillStyle = '#eaf2ff';
-    c.fillRect(-hw, botY - s * 0.12, hw * 2, s * 0.12); // base band
-    c.restore();
-    // bold dark outline (cartoon look)
+    // bold dark outline (cartoon look, same weight as the other specials)
     shape(); c.lineJoin = 'round'; c.strokeStyle = '#12161f'; c.lineWidth = Math.max(2, s * 0.06); c.stroke();
+    // spark at each tip
+    c.fillStyle = '#ffffff';
+    for (const dir of [-1, 1]) {
+      c.beginPath();
+      c.arc(0, dir * tip * 0.86, s * 0.055, 0, Math.PI * 2);
+      c.fill();
+    }
     c.restore();
   }
 
