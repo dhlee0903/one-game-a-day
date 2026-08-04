@@ -107,7 +107,12 @@ const origLoop = game._loop.bind(game);
 game._loop = function loop() { renderer.render(game); origLoop(); };
 game.start();
 
+function saveHigh(key, value) {
+  try { localStorage.setItem(key, String(Math.max(Number(localStorage.getItem(key)) || 0, value || 0))); } catch { /* ignore */ }
+}
+
 function handleState(state, p) {
+  if (state === 'won' || state === 'lost') saveHigh('og-hs-day07', p.score);
   if (state === 'won') {
     const gline = `골드 +${p.reward} (보유 ${p.gold}) · 보너스 아이템 ${p.bonusItem} +1`;
     if (p.last) showOverlay('올 클리어!', `10 스테이지 완주 · 점수 ${p.score}<br>${gline}`, '처음부터', () => game.nextStage());
