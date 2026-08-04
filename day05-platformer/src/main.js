@@ -30,10 +30,17 @@ function startIfIdle() {
 function handleState(state, payload) {
   if (state === 'playing') { hideOverlay(); return; }
   if (state === 'win') {
+    saveHigh('og-hs-day05', payload.score);
     showOverlay('올 클리어!', `점수 ${payload.score}`, '다시 하기');
   } else if (state === 'dead') {
+    saveHigh('og-hs-day05', payload.score);
     showOverlay('게임 오버', `점수 ${payload.score}`, '다시 하기');
   }
+}
+
+// high score for the home page (localStorage; shared origin with the index)
+function saveHigh(key, value) {
+  try { localStorage.setItem(key, String(Math.max(Number(localStorage.getItem(key)) || 0, value || 0))); } catch { /* ignore */ }
 }
 
 function showOverlay(title, text, btn) {

@@ -64,6 +64,7 @@ function handleStateChange(state, payload) {
   } else if (state === 'paused') {
     showOverlay('일시정지', '', '계속', () => game.togglePause());
   } else if (state === 'over') {
+    saveHigh('og-hs-day01', payload.score);
     showOverlay(
       'GAME OVER',
       `최종 점수 ${payload.score} · ${payload.lines} 줄`,
@@ -71,6 +72,11 @@ function handleStateChange(state, payload) {
       () => game.start(),
     );
   }
+}
+
+// high score for the home page (localStorage; shared origin with the index)
+function saveHigh(key, value) {
+  try { localStorage.setItem(key, String(Math.max(Number(localStorage.getItem(key)) || 0, value || 0))); } catch { /* ignore */ }
 }
 
 const game = new Game(renderer, {
