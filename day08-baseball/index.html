@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>숫자야구 · Day 08</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="home" href="../">&larr; 홈</a>
+
+  <div class="wrap">
+    <header>
+      <h1>숫자야구</h1>
+      <p class="sub">DAY 08</p>
+    </header>
+
+    <div class="panel">
+      <div class="row top">
+        <div class="levels" id="levels"></div>
+        <button class="opt" id="help">후보 수</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><span class="k">남은 시도</span><span class="v" id="tries">-</span></div>
+        <div class="stat"><span class="k">최소 기록</span><span class="v" id="best">-</span></div>
+        <div class="stat" id="candRow" hidden><span class="k">남은 후보</span><span class="v" id="cands">-</span></div>
+      </div>
+
+      <div class="board">
+        <div class="slots" id="slots"></div>
+        <div class="msg" id="msg"></div>
+      </div>
+
+      <div class="keypad" id="keypad">
+        <button data-digit="1">1</button>
+        <button data-digit="2">2</button>
+        <button data-digit="3">3</button>
+        <button data-digit="4">4</button>
+        <button data-digit="5">5</button>
+        <button data-digit="6">6</button>
+        <button data-digit="7">7</button>
+        <button data-digit="8">8</button>
+        <button data-digit="9">9</button>
+        <button class="wide" id="del">지우기</button>
+        <button data-digit="0">0</button>
+        <button class="go" id="ok">확인</button>
+      </div>
+
+      <div class="row bottom">
+        <button class="opt" id="clear">전체 지우기</button>
+        <button class="opt" id="hint">힌트</button>
+      </div>
+
+      <ol class="history" id="history"></ol>
+      <div class="ver" id="ver"></div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
