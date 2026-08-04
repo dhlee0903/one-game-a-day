@@ -26,7 +26,7 @@ export class Game {
     this._missileKind = null; // 'single' | 'deliver'
     this._missileDeliver = null; // special type carried by a deliver missile
     this._missileTargets = null;
-    this._pendingMissiles = [];
+    this.autoBats = [];       // bats cleared in a match, flying concurrently
     this.selected = null;
     this.armed = null;   // armed active item id (targeted)
     this.preview = null; // cell under the pointer while an item is armed
@@ -58,7 +58,7 @@ export class Game {
     this._missileKind = null;
     this._missileDeliver = null;
     this._missileTargets = null;
-    this._pendingMissiles = [];
+    this.autoBats = [];       // bats cleared in a match, flying concurrently
     this.selected = null;
     this.armed = null;
     this.preview = null;
@@ -559,8 +559,9 @@ export class Game {
       if (g && g.special !== SP.NONE) {
         detonated = true;
         this._detonateFx(r, c, g);
-        // a bat cleared any which way (3-match, item, another blast) still fires
-        if (g.special === SP.MISSILE) this._pendingMissiles.push({ r, c, color: g.color });
+        // a bat cleared any which way (3-match, item, another blast) fires at
+        // once — it flies off WHILE the match is still clearing.
+        if (g.special === SP.MISSILE) this._spawnAutoBat(r, c, g.color, remove);
         for (const cell of this.board.effectCells(r, c, g)) {
           const kk = this.board.key(cell.r, cell.c);
           if (!anchors.has(kk) && !remove.has(kk)) { remove.add(kk); queue.push(kk); }
@@ -636,15 +637,26 @@ export class Game {
       this.convertedGems = null;
     }
 
-    // a bat swept up in the clear fires the moment its match settles — before
-    // the rest of the cascade continues, so it doesn't wait around.
-    if (this._pendingMissiles.length && this._launchPendingMissiles()) return;
+    // bats that finished flying now hit their target (clears it in place)
+    const landed = this.autoBats.filter((m) => m.landed);
+    if (landed.length) {
+      this.autoBats = this.autoBats.filter((m) => !m.landed);
+      const S = new Set();
+      for (const m of landed) {
+        S.add(this.board.key(m.tr, m.tc));
+        this.effects.push({ type: 'ring', x: m.tx, y: m.ty, color: -1, t: 0, life: 24 });
+      }
+      if (this.sound) this.sound.boom();
+      this._beginClear(S, new Map(), 'boom');
+      return;
+    }
 
     const res = this.board.detect(null);
     if (res.matched.size > 0) {
       this.cascade += 1;
       this._beginClear(res.matched, res.specials);
     } else {
+      if (this.autoBats.length) return; // bats still in flight — hold until they land
       // chain ended — the last combo banner keeps fading on its own (see above)
       this.cascade = 0;
       if (!this.board.hasMoves()) { this.board.reshuffle(); this._sync(false); return; }
@@ -652,21 +664,17 @@ export class Game {
     }
   }
 
-  // Fire bats that were cleared incidentally (recorded in _beginClear), from
-  // where they were toward the best cells. They are already gone from the board.
-  _launchPendingMissiles() {
-    const pend = this._pendingMissiles; this._pendingMissiles = [];
-    const targets = this._bestTargets(pend.length, new Set());
-    if (!targets.length) return false;
-    for (let i = 0; i < pend.length; i += 1) {
-      this._spawnMissile(pend[i], targets[i % targets.length], i * 8, pend[i].color);
-    }
-    this._missileKind = 'single';
-    this._missileDeliver = null;
-    this._missileTargets = targets;
+  // A bat cleared in a match/blast flies off immediately toward the best cell.
+  _spawnAutoBat(r, c, color, exclude) {
+    const t = this._bestTargets(1, new Set(exclude))[0];
+    if (!t) return;
+    this.autoBats.push({
+      sx: Game.px(c) + CELL / 2, sy: Game.py(r) + CELL / 2,
+      tx: Game.px(t.c) + CELL / 2, ty: Game.py(t.r) + CELL / 2,
+      x: Game.px(c) + CELL / 2, y: Game.py(r) + CELL / 2,
+      t: 0, dur: 18, color, tr: t.r, tc: t.c, landed: false, trail: [],
+    });
     if (this.sound) this.sound.special();
-    this.phase = 'missile';
-    return true;
   }
 
   _settle() {
@@ -754,6 +762,16 @@ export class Game {
       m.y = m.sy + (m.ty - m.sy) * e;
       m.trail.push({ x: m.x, y: m.y });
       if (m.trail.length > 24) m.trail.shift();
+    }
+    for (const m of this.autoBats) { // bats flying concurrently with the clear
+      m.t += 1;
+      const p = Math.min(1, m.t / m.dur);
+      const e = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;
+      m.x = m.sx + (m.tx - m.sx) * e;
+      m.y = m.sy + (m.ty - m.sy) * e;
+      m.trail.push({ x: m.x, y: m.y });
+      if (m.trail.length > 24) m.trail.shift();
+      if (m.t >= m.dur) m.landed = true;
     }
   }
 
