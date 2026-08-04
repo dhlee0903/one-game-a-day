@@ -84,9 +84,9 @@ export class Renderer {
 
   _keys(game) {
     const playing = game.phase === 'playing';
-    const used = new Set(game.input);
+    // 중복 입력을 허용하므로 이미 쓴 숫자도 막지 않는다. 자리를 다 채우면 잠긴다.
     this.el.keypad.querySelectorAll('[data-digit]').forEach((btn) => {
-      btn.disabled = !playing || used.has(btn.dataset.digit) || game.input.length >= game.digits;
+      btn.disabled = !playing || game.input.length >= game.digits;
     });
     this.el.ok.disabled = !playing || game.input.length !== game.digits;
     this.el.hint.disabled = !playing || game.hintsLeft <= 0;
