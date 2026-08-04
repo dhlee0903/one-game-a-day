@@ -31,7 +31,8 @@ export class Renderer {
     this._hint(c, game);
     this._clearing(c, game);
     this._effects(c, game);
-    this._missiles(c, game);
+    this._missiles(c, game.missiles);
+    this._missiles(c, game.autoBats);
     this._armed(c, game);
     c.restore();
 
@@ -500,8 +501,8 @@ export class Renderer {
 
   // ---- guided missiles ----
 
-  _missiles(c, game) {
-    for (const m of game.missiles) {
+  _missiles(c, list) {
+    for (const m of list) {
       // target reticle (shown even before this missile launches — target locked)
       c.strokeStyle = 'rgba(255,210,63,.7)'; c.lineWidth = 2;
       const pulse = 8 + (m.t % 12) * 0.4;
