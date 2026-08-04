@@ -10,7 +10,7 @@ import {
 } from './config.js';
 import { Board } from './board.js';
 
-const EASE = 0.3;
+const EASE = 0.42; // gem tween speed — higher settles swaps/falls faster
 
 export class Game {
   constructor({ onHud, onState, onItems, sound, haptic } = {}) {
@@ -277,7 +277,7 @@ export class Game {
     this._consumeCells(sources);
     for (let i = 0; i < count; i += 1) {
       const src = sources[i % sources.length];
-      this._spawnMissile(src, targets[i % targets.length], i * 12, cols[i % cols.length]); // staggered launch
+      this._spawnMissile(src, targets[i % targets.length], i * 8, cols[i % cols.length]); // staggered launch
     }
     this._missileKind = 'single';
     this._missileDeliver = null;
@@ -317,7 +317,7 @@ export class Game {
     }
     this._consumeCells([rainbowCell, ...sources]);
     for (let i = 0; i < sources.length; i += 1) {
-      this._spawnMissile(sources[i], targets[i % targets.length], i * 6, color);
+      this._spawnMissile(sources[i], targets[i % targets.length], i * 4, color);
     }
     this._missileKind = 'single';
     this._missileDeliver = null;
@@ -341,7 +341,7 @@ export class Game {
       sx: Game.px(src.c) + CELL / 2, sy: Game.py(src.r) + CELL / 2,
       tx: Game.px(tgt.c) + CELL / 2, ty: Game.py(tgt.r) + CELL / 2,
       x: Game.px(src.c) + CELL / 2, y: Game.py(src.r) + CELL / 2,
-      t: 0, dur: 26, delay, fired: false, color, trail: [],
+      t: 0, dur: 18, delay, fired: false, color, trail: [],
     });
   }
 
@@ -636,6 +636,10 @@ export class Game {
       this.convertedGems = null;
     }
 
+    // a bat swept up in the clear fires the moment its match settles — before
+    // the rest of the cascade continues, so it doesn't wait around.
+    if (this._pendingMissiles.length && this._launchPendingMissiles()) return;
+
     const res = this.board.detect(null);
     if (res.matched.size > 0) {
       this.cascade += 1;
@@ -643,8 +647,6 @@ export class Game {
     } else {
       // chain ended — the last combo banner keeps fading on its own (see above)
       this.cascade = 0;
-      // any bats cleared during this cascade now fly out (fire however cleared)
-      if (this._pendingMissiles.length && this._launchPendingMissiles()) return;
       if (!this.board.hasMoves()) { this.board.reshuffle(); this._sync(false); return; }
       this._settle();
     }

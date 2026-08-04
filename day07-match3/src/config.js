@@ -1,11 +1,11 @@
 // Match-3 constants — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v7.30';
+export const VERSION = 'v7.31';
 
 // Frames a matched gem takes to shrink/fade out (its dying face + the pop).
-// Higher = the "터지는" pop reads a touch slower.
-export const CLEAR_LIFE = 30;
+// Lower = snappier "터지는" pop and faster cascades.
+export const CLEAR_LIFE = 16;
 
 // Moves-left threshold that triggers the low-moves alarm + urgent tempo.
 export const LOW_MOVES = 5;
