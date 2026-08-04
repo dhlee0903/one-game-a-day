@@ -27,6 +27,7 @@ export class Game {
     this._missileDeliver = null; // special type carried by a deliver missile
     this._missileTargets = null;
     this.autoBats = [];       // bats cleared in a match, flying concurrently
+    this._pendingSpecials = []; // new specials waiting to appear after the clear
     this.selected = null;
     this.armed = null;   // armed active item id (targeted)
     this.preview = null; // cell under the pointer while an item is armed
@@ -59,6 +60,7 @@ export class Game {
     this._missileDeliver = null;
     this._missileTargets = null;
     this.autoBats = [];       // bats cleared in a match, flying concurrently
+    this._pendingSpecials = []; // new specials waiting to appear after the clear
     this.selected = null;
     this.armed = null;
     this.preview = null;
@@ -547,7 +549,14 @@ export class Game {
   _beginClear(matched, specials, hapticHint = null) {
     const anchors = new Set(specials.keys());
     const remove = new Set();
-    for (const k of matched) if (!anchors.has(k)) remove.add(k);
+    // a special made earlier THIS move (justMade) is protected — it neither
+    // detonates nor gets swept up by the same move's clear/cascade.
+    for (const k of matched) {
+      if (anchors.has(k)) continue;
+      const g = this.board.grid[Math.floor(k / COLS)][k % COLS];
+      if (g && g.justMade) continue;
+      remove.add(k);
+    }
 
     // chain: any existing special caught in the removal detonates (+ its effect)
     let detonated = false;
@@ -556,7 +565,7 @@ export class Game {
       const k = queue.shift();
       const r = Math.floor(k / COLS); const c = k % COLS;
       const g = this.board.grid[r][c];
-      if (g && g.special !== SP.NONE) {
+      if (g && g.special !== SP.NONE && !g.justMade) {
         detonated = true;
         this._detonateFx(r, c, g);
         // a bat cleared any which way (3-match, item, another blast) fires at
@@ -564,6 +573,8 @@ export class Game {
         if (g.special === SP.MISSILE) this._spawnAutoBat(r, c, g.color, remove);
         for (const cell of this.board.effectCells(r, c, g)) {
           const kk = this.board.key(cell.r, cell.c);
+          const cg = this.board.grid[cell.r][cell.c];
+          if (cg && cg.justMade) continue; // don't sweep up a freshly-made special
           if (!anchors.has(kk) && !remove.has(kk)) { remove.add(kk); queue.push(kk); }
         }
       }
@@ -580,11 +591,11 @@ export class Game {
       }
     }
 
-    // create the new special blocks at their anchors
+    // queue the new special blocks — applied after this clear's pop finishes
+    // (_afterClear), so a freshly made block appears only after the effect.
     for (const [k, sp] of specials) {
-      const r = Math.floor(k / COLS); const c = k % COLS;
-      const g = this.board.grid[r][c];
-      if (g) { g.special = sp.type; if (sp.type === SP.COLOR) g.color = COLOR_GEM; }
+      const g = this.board.grid[Math.floor(k / COLS)][k % COLS];
+      if (g) this._pendingSpecials.push({ gem: g, type: sp.type });
     }
 
     const mult = Math.min(3, 1 + this.cascade * 0.3);
@@ -623,6 +634,14 @@ export class Game {
   _detonateFxAt(r, c, sp) { this._detonateFx(r, c, { special: sp, color: -1 }); }
 
   _afterClear() {
+    // the new specials appear now (after the clearing pop), then fall; justMade
+    // keeps them from firing during the rest of this move.
+    for (const ps of this._pendingSpecials) {
+      if (!ps.gem) continue;
+      ps.gem.special = ps.type; ps.gem.justMade = true;
+      if (ps.type === SP.COLOR) ps.gem.color = COLOR_GEM;
+    }
+    this._pendingSpecials = [];
     this.board.applyGravity();
     this._sync(false);
     this.phase = 'falling';
@@ -678,6 +697,10 @@ export class Game {
   }
 
   _settle() {
+    // move fully resolved — freshly-made specials become normal (fireable next move)
+    for (let r = 0; r < ROWS; r += 1) for (let c = 0; c < COLS; c += 1) {
+      const g = this.board.grid[r][c]; if (g) g.justMade = false;
+    }
     this.phase = 'idle';
     if (this.score >= this.target) {
       this.phase = 'won';

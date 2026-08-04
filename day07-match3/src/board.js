@@ -83,14 +83,17 @@ export class Board {
     const matched = new Set();
     const runs = [];
 
+    // A special made this move (justMade) acts as a wall — it doesn't join any
+    // match until the move fully settles, so it won't fire from the same move.
+    const ok = (cell) => cell && !cell.justMade;
     // horizontal runs
     for (let r = 0; r < ROWS; r += 1) {
       let c = 0;
       while (c < COLS) {
         const g = this.grid[r][c];
-        if (!g) { c += 1; continue; }
+        if (!ok(g)) { c += 1; continue; }
         let e = c;
-        while (e + 1 < COLS && this.grid[r][e + 1] && this.grid[r][e + 1].color === g.color) e += 1;
+        while (e + 1 < COLS && ok(this.grid[r][e + 1]) && this.grid[r][e + 1].color === g.color) e += 1;
         const len = e - c + 1;
         if (len >= 3) runs.push({ dir: 'h', r, c, len });
         c = e + 1;
@@ -101,9 +104,9 @@ export class Board {
       let r = 0;
       while (r < ROWS) {
         const g = this.grid[r][c];
-        if (!g) { r += 1; continue; }
+        if (!ok(g)) { r += 1; continue; }
         let e = r;
-        while (e + 1 < ROWS && this.grid[e + 1][c] && this.grid[e + 1][c].color === g.color) e += 1;
+        while (e + 1 < ROWS && ok(this.grid[e + 1][c]) && this.grid[e + 1][c].color === g.color) e += 1;
         const len = e - r + 1;
         if (len >= 3) runs.push({ dir: 'v', r, c, len });
         r = e + 1;
@@ -123,11 +126,10 @@ export class Board {
     for (let r = 0; r < ROWS - 1; r += 1) {
       for (let c = 0; c < COLS - 1; c += 1) {
         const g = this.grid[r][c];
-        if (!g) continue;
+        if (!ok(g)) continue;
         const col = g.color;
-        if (this.grid[r][c + 1] && this.grid[r][c + 1].color === col
-          && this.grid[r + 1][c] && this.grid[r + 1][c].color === col
-          && this.grid[r + 1][c + 1] && this.grid[r + 1][c + 1].color === col) {
+        const q = (cell) => ok(cell) && cell.color === col;
+        if (q(this.grid[r][c + 1]) && q(this.grid[r + 1][c]) && q(this.grid[r + 1][c + 1])) {
           squares.push({ r, c, color: col });
         }
       }
