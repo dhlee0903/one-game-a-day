@@ -12,16 +12,16 @@ export class Renderer {
       history: $('history'),
       tries: $('tries'),
       best: $('best'),
-      cands: $('cands'),
-      candRow: $('candRow'),
       msg: $('msg'),
       hint: $('hint'),
       keypad: $('keypad'),
       ok: $('ok'),
+      help: $('help'),
       ver: $('ver'),
     };
     this.el.ver.textContent = VERSION;
     this.helpOn = false;
+    this._lastCount = 0; // 새 기록 줄에만 등장 애니메이션을 준다
   }
 
   setHelp(on) { this.helpOn = on; }
@@ -33,15 +33,17 @@ export class Renderer {
     this._keys(game);
   }
 
-  // 입력 슬롯 — 입력한 숫자, 빈 자리, 힌트로 공개된 자리
+  // 입력 슬롯 — 입력한 숫자, 다음 입력 자리, 빈 자리, 힌트로 공개된 자리
   _slots(game) {
     const hint = new Map(game.hints.map((h) => [h.index, h.digit]));
+    const caret = game.phase === 'playing' ? game.input.length : -1;
     const cells = [];
     for (let i = 0; i < game.digits; i += 1) {
       const ch = game.input[i];
+      const active = i === caret ? ' active' : '';
       if (ch) cells.push(`<div class="slot filled">${ch}</div>`);
-      else if (hint.has(i)) cells.push(`<div class="slot hinted">${hint.get(i)}</div>`);
-      else cells.push('<div class="slot"></div>');
+      else if (hint.has(i)) cells.push(`<div class="slot hinted${active}">${hint.get(i)}</div>`);
+      else cells.push(`<div class="slot${active}"></div>`);
     }
     this.el.slots.innerHTML = cells.join('');
   }
@@ -50,23 +52,32 @@ export class Renderer {
   _history(game) {
     if (!game.guesses.length) {
       this.el.history.innerHTML = '<li class="empty">첫 숫자를 입력해 보자</li>';
+      this._lastCount = 0;
       return;
     }
+    const fresh = game.guesses.length !== this._lastCount; // 새 줄이 생겼는가
+    this._lastCount = game.guesses.length;
     const rows = game.guesses.map((g, i) => {
       const out = g.strikes === 0 && g.balls === 0;
       const badges = out
         ? '<span class="badge out">아웃</span>'
         : `${g.strikes ? `<span class="badge s">${g.strikes}S</span>` : ''}${g.balls ? `<span class="badge b">${g.balls}B</span>` : ''}`;
-      return `<li><span class="no">${i + 1}</span><span class="num">${g.guess}</span><span class="res">${badges}</span></li>`;
+      const isLatest = i === game.guesses.length - 1;
+      const cls = fresh && isLatest ? ' class="new"' : '';
+      return `<li${cls}><span class="no">${i + 1}</span><span class="num">${g.guess}</span><span class="res">${badges}</span></li>`;
     });
     this.el.history.innerHTML = rows.reverse().join('');
   }
 
   _status(game) {
+    const low = game.phase === 'playing' && game.triesLeft <= 3;
     this.el.tries.textContent = `${game.triesLeft} / ${game.maxTries}`;
+    this.el.tries.classList.toggle('low', low);
     this.el.best.textContent = game.best > 0 ? `${game.best}회` : '-';
-    this.el.candRow.hidden = !this.helpOn;
-    if (this.helpOn) this.el.cands.textContent = `${game.candidates.length.toLocaleString()}개`;
+    // 후보 수는 토글 버튼이 값까지 보여준다 — 켜고 꺼도 레이아웃이 흔들리지 않는다
+    this.el.help.textContent = this.helpOn
+      ? `후보 ${game.candidates.length.toLocaleString()}`
+      : '후보 수';
     this.el.msg.textContent = game.message;
     this.el.msg.classList.toggle('warn', !!game.message);
   }

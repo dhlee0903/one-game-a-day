@@ -1,7 +1,7 @@
 // 숫자야구 상수 — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v8.1';
+export const VERSION = 'v8.2';
 
 // 숫자 풀: 0-9, 중복 없음. 맨 앞자리 0도 허용한다.
 export const POOL = '0123456789';
