@@ -128,6 +128,10 @@
         <rect x="25" y="7" width="12" height="12" rx="3" fill="#ff5a63"/>
         <rect x="7" y="25" width="12" height="12" rx="3" fill="#3aa0ff"/>
         <circle cx="31" cy="31" r="6.5" fill="#a371f7"/></svg>`,
+      plane: `<svg viewBox="0 0 44 44">
+        <path d="M22 6 26 18l14 8-14-2-2 10 5 4H19l5-4-2-10-14 2 14-8z" fill="#2f6fd0"/>
+        <ellipse cx="22" cy="8" rx="7" ry="1.8" fill="#bfd8f5"/>
+        <circle cx="22" cy="19" r="2.4" fill="#bfe6ff"/></svg>`,
       baseball: `<svg viewBox="0 0 44 44">
         <circle cx="22" cy="22" r="14" fill="#f2f5f9" stroke="#aeb9c8"/>
         <path d="M13 11c4 4 5 7 5 11s-1 7-5 11M31 11c-4 4-5 7-5 11s1 7 5 11"
@@ -145,6 +149,7 @@
       { day: '06', dir: 'day06-runner',     name: '러너',        icon: 'runner',     tags: ['Canvas', '3-Lane', 'Pseudo-3D'],     hs: () => num('day06-runner-best'),   unit: 'm', lbl: '최고 거리' },
       { day: '07', dir: 'day07-match3',     name: '3매치 퍼즐',  icon: 'match3',     tags: ['Canvas', 'Match-3', '10 Stages'],    hs: () => num('og-hs-day07'),         unit: '점' },
       { day: '08', dir: 'day08-baseball',   name: '숫자야구',    icon: 'baseball',   tags: ['추리', 'S / B', '4자리'],          hs: () => num('og-hs-day08'),         unit: '회', lbl: '최소 시도' },
+      { day: '09', dir: 'day09-shooter',    name: 'SKY RAID',    icon: 'plane',      tags: ['Canvas', '슈팅', '보스전'],          hs: () => num('og-hs-day09'),         unit: '점' },
     ];
 
     const grid = document.getElementById('grid');
@@ -168,7 +173,7 @@
 
     const soon = document.createElement('div');
     soon.className = 'card soon';
-    soon.textContent = 'Day 09 · coming soon';
+    soon.textContent = 'Day 10 · coming soon';
     grid.appendChild(soon);
   </script>
 </body>
