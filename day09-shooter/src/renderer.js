@@ -1,11 +1,24 @@
-// 읽기 전용 렌더러: 게임 상태를 캔버스에 그린다. 상태를 바꾸지 않는다.
-// 배경은 밝은 대낮 바다 — 파도선과 섬이 아래로 흐른다.
+// 읽기 전용 렌더러 — 도트(픽셀) 그래픽. 모든 것을 PX 격자에 스냅해서 그린다.
+// 스프라이트는 문자 픽셀맵(sprites.js), 색은 팔레트로 갈아끼운다.
 
-import { W, H, HUD_H, PLAYER, BOSS, VERSION } from './config.js';
+import { W, H, HUD_H, BOSS, VERSION } from './config.js';
+import { PLAYER, ENEMY, BOMBER, BOSS as BOSS_SPR, DRONE, FONT } from './sprites.js';
 
-const LOOP = 1500; // 섬 배치가 반복되는 세계 높이
+const PX = 2;                    // 도트 하나의 논리 크기
+const snap = (v) => Math.round(v / PX) * PX;
+const LOOP = 1500;
 
-// 고정 배치(매 프레임 난수를 쓰지 않아 깜빡이지 않는다)
+// 팔레트: 스프라이트 문자 → 색
+const PAL = {
+  player: { K: '#16324f', E: '#2f6fd0', W: '#dbe6f5', C: '#8fd8ff', P: '#b9cde6', G: '#3c4552', Y: '#ffd23f' },
+  grunt: { K: '#173a1c', E: '#4aa054', W: '#cfe3cd', C: '#ffe9a8', P: '#9fb79c', G: '#2b3a2c', Y: '#ffd23f' },
+  zig: { K: '#4a3410', E: '#e0a32c', W: '#f7e6bd', C: '#ffe9a8', P: '#c9b184', G: '#4a3a1c', Y: '#ffd23f' },
+  diver: { K: '#4d1512', E: '#d8453c', W: '#f6d3d0', C: '#ffe0a8', P: '#c49a96', G: '#3f1a17', Y: '#ffd23f' },
+  gunner: { K: '#232b36', E: '#68758a', W: '#c3cddb', C: '#ffd27a', P: '#93a0b2', G: '#39424f', Y: '#ffd23f' },
+  boss: { K: '#1b2330', E: '#5b6a80', W: '#aab8cb', C: '#ffd27a', P: '#8d9bb0', G: '#333d4a', Y: '#ff8a3c' },
+};
+const ENEMY_PAL = { grunt: PAL.grunt, zig: PAL.zig, diver: PAL.diver };
+
 const ISLANDS = [
   { x: 52, y: 120, r: 26, kind: 'sand' },
   { x: 306, y: 400, r: 20, kind: 'green' },
@@ -23,6 +36,7 @@ export class Renderer {
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     this.ctx.scale(dpr, dpr);
+    this.ctx.imageSmoothingEnabled = false;
   }
 
   render(game) {
@@ -41,31 +55,89 @@ export class Renderer {
     this._hud(c, game);
   }
 
+  // ---- 픽셀 원시 도형 ----
+
+  _px(c, x, y, w = 1, h = 1) {
+    c.fillRect(snap(x), snap(y), w * PX, h * PX);
+  }
+
+  // 스프라이트를 (cx,cy) 중심에 그린다. scale은 도트 배율(정수).
+  _spr(c, rows, pal, cx, cy, scale = 1) {
+    const s = PX * scale;
+    const w = rows[0].length;
+    const x0 = snap(cx - (w * s) / 2);
+    const y0 = snap(cy - (rows.length * s) / 2);
+    for (let r = 0; r < rows.length; r += 1) {
+      const row = rows[r];
+      let run = 0;
+      let runCh = null;
+      for (let i = 0; i <= row.length; i += 1) {
+        const ch = row[i];
+        if (ch === runCh) { run += 1; continue; }
+        if (runCh && runCh !== '.') {                 // 같은 색은 한 번에 그린다
+          c.fillStyle = pal[runCh] || '#f0f';
+          c.fillRect(x0 + (i - run) * s, y0 + r * s, run * s, s);
+        }
+        runCh = ch; run = 1;
+      }
+    }
+  }
+
+  // 격자에 스냅된 타원 — 가장자리가 계단처럼 보여 도트 느낌이 난다
+  _blob(c, cx, cy, rx, ry, color) {
+    c.fillStyle = color;
+    const x0 = snap(cx - rx); const x1 = snap(cx + rx);
+    const y0 = snap(cy - ry); const y1 = snap(cy + ry);
+    for (let y = y0; y <= y1; y += PX) {
+      const dy = (y + PX / 2 - cy) / ry;
+      if (Math.abs(dy) > 1) continue;
+      const half = rx * Math.sqrt(Math.max(0, 1 - dy * dy));
+      const sx = snap(cx - half); const ex = snap(cx + half);
+      if (ex > sx) c.fillRect(sx, y, ex - sx, PX);
+    }
+  }
+
+  _text(c, str, x, y, color, scale = 1) {
+    const s = PX * scale;
+    c.fillStyle = color;
+    let cx = snap(x);
+    for (const raw of String(str).toUpperCase()) {
+      const g = FONT[raw];
+      if (!g) { cx += 4 * s; continue; }
+      for (let r = 0; r < 5; r += 1) {
+        for (let i = 0; i < 3; i += 1) {
+          if (g[r][i] === '1') c.fillRect(cx + i * s, snap(y) + r * s, s, s);
+        }
+      }
+      cx += 4 * s;
+    }
+    return cx;
+  }
+
   // ---- 배경 ----
 
   _sea(c, scroll) {
-    const g = c.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#5cc0f0');
-    g.addColorStop(0.5, '#2f9fdd');
-    g.addColorStop(1, '#1c7fc0');
-    c.fillStyle = g;
-    c.fillRect(0, 0, W, H);
-
-    // 파도선
-    c.strokeStyle = 'rgba(255,255,255,.22)';
-    c.lineWidth = 2; c.lineCap = 'round';
-    for (let k = 0; k < 14; k += 1) {
-      const y = ((k * 58 + scroll) % (H + 80)) - 40;
-      const off = (k % 3) * 90;
-      c.beginPath();
-      for (let i = 0; i < 3; i += 1) {
-        const x = ((i * 130 + off + k * 37) % (W + 60)) - 30;
-        c.moveTo(x, y);
-        c.quadraticCurveTo(x + 14, y - 4, x + 28, y);
-      }
-      c.stroke();
+    // 깊이별 색 띠(그라데이션 대신 단색 밴드 — 도트 감성)
+    const bands = ['#4fb8ee', '#38a5e0', '#2b93d2', '#1f80c2'];
+    const bh = Math.ceil(H / bands.length / PX) * PX;
+    for (let i = 0; i < bands.length; i += 1) {
+      c.fillStyle = bands[i];
+      c.fillRect(0, i * bh, W, bh);
     }
-
+    // 디더링 — 밴드 경계를 점으로 섞는다
+    c.fillStyle = 'rgba(255,255,255,.10)';
+    for (let i = 1; i < bands.length; i += 1) {
+      const y = i * bh;
+      for (let x = 0; x < W; x += PX * 2) this._px(c, x + (i % 2) * PX, y - PX);
+    }
+    // 파도 — 2도트 짜리 흰 점선이 아래로 흐른다
+    c.fillStyle = 'rgba(255,255,255,.5)';
+    for (let k = 0; k < 22; k += 1) {
+      const y = ((k * 42 + scroll) % (H + 60)) - 30;
+      const x = ((k * 97) % (W - 30)) + 8;
+      this._px(c, x, y, 3, 1);
+      this._px(c, x + 5 * PX, y + PX, 2, 1);
+    }
     // 섬
     for (const isl of ISLANDS) {
       const y = (isl.y + scroll) % LOOP;
@@ -75,273 +147,138 @@ export class Renderer {
   }
 
   _island(c, x, y, r, kind) {
-    c.fillStyle = 'rgba(255,255,255,.35)'; // 물결 테두리
-    c.beginPath(); c.ellipse(x, y, r * 1.22, r * 0.95, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#f0dfae';               // 모래
-    c.beginPath(); c.ellipse(x, y, r, r * 0.78, 0, 0, Math.PI * 2); c.fill();
+    this._blob(c, x, y, r * 1.25, r * 0.98, 'rgba(255,255,255,.30)'); // 여울
+    this._blob(c, x, y, r, r * 0.78, '#efdca8');                      // 모래
     if (kind === 'green') {
-      c.fillStyle = '#5cae57';
-      c.beginPath(); c.ellipse(x - r * 0.1, y - r * 0.06, r * 0.66, r * 0.5, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#4a9748';
-      c.beginPath(); c.ellipse(x + r * 0.22, y + r * 0.1, r * 0.3, r * 0.22, 0, 0, Math.PI * 2); c.fill();
+      this._blob(c, x - r * 0.1, y - r * 0.06, r * 0.64, r * 0.48, '#5cae57');
+      this._blob(c, x + r * 0.25, y + r * 0.12, r * 0.28, r * 0.2, '#478f45');
     }
   }
 
-  // ---- 플레이어 ----
+  // ---- 기체 ----
 
   _player(c, game) {
     const p = game.player;
     if (game.phase === 'dead' && game.lives < 0) return;
-    // 무적 중엔 깜빡인다
     if (p.invul > 0 && Math.floor(p.invul / 4) % 2 === 0) return;
-
     for (let i = 0; i < game.options; i += 1) {
-      this._drone(c, p.x + (i === 0 ? -26 : 26), p.y + 10);
+      this._spr(c, DRONE, PAL.player, p.x + (i === 0 ? -26 : 26), p.y + 10, 1);
     }
-    this._planeUp(c, p.x, p.y);
+    this._spr(c, PLAYER, PAL.player, p.x, p.y, 2);
   }
-
-  // 바다 위 그림자 — 깊이감을 준다
-  _shadow(c, w, h) {
-    c.fillStyle = 'rgba(10,50,80,.16)';
-    c.beginPath(); c.ellipse(3, 9, w, h, 0, 0, Math.PI * 2); c.fill();
-  }
-
-  _planeUp(c, x, y) {
-    c.save(); c.translate(x, y);
-    this._shadow(c, 17, 6);
-    // 프로펠러(기수 앞)
-    c.fillStyle = 'rgba(255,255,255,.5)';
-    c.beginPath(); c.ellipse(0, -17, 12, 3, 0, 0, Math.PI * 2); c.fill();
-    // 수평 미익(뒤쪽, 작게)
-    c.fillStyle = '#c9d5e4';
-    c.beginPath(); c.moveTo(-9, 11); c.lineTo(9, 11); c.lineTo(6, 16); c.lineTo(-6, 16); c.closePath(); c.fill();
-    // 주익 — 뒤로 젖혀진 사다리꼴
-    c.fillStyle = '#e8eef6';
-    c.beginPath(); c.moveTo(-20, 7); c.lineTo(20, 7); c.lineTo(13, -1); c.lineTo(-13, -1); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(47,111,208,.35)'; // 날개 끝 식별색
-    c.fillRect(-20, 3, 6, 4); c.fillRect(14, 3, 6, 4);
-    // 동체
-    c.fillStyle = '#2f6fd0';
-    c.beginPath();
-    c.moveTo(0, -16); c.quadraticCurveTo(5, -9, 5, 4); c.lineTo(3.4, 16);
-    c.lineTo(-3.4, 16); c.lineTo(-5, 4); c.quadraticCurveTo(-5, -9, 0, -16);
-    c.closePath(); c.fill();
-    // 캐노피
-    c.fillStyle = '#bfe6ff';
-    c.beginPath(); c.ellipse(0, -4, 3, 5, 0, 0, Math.PI * 2); c.fill();
-    c.restore();
-  }
-
-  _drone(c, x, y) {
-    c.save(); c.translate(x, y);
-    c.fillStyle = '#e8eef6';
-    c.beginPath(); c.ellipse(0, 0, 5.5, 7, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#2f6fd0';
-    c.beginPath(); c.ellipse(0, 0, 3, 4.4, 0, 0, Math.PI * 2); c.fill();
-    c.restore();
-  }
-
-  // ---- 적 ----
 
   _enemies(c, list) {
     for (const e of list) {
-      c.save(); c.translate(e.x, e.y);
-      if (e.hit > 0) c.globalAlpha = 0.55;
-      if (e.type === 'gunner') this._bomber(c);
-      else this._planeDown(c, e);
-      c.restore();
+      const flash = e.hit > 0;
+      if (e.type === 'gunner') this._spr(c, BOMBER, flash ? this._white(PAL.gunner) : PAL.gunner, e.x, e.y, 2);
+      else this._spr(c, ENEMY, flash ? this._white(ENEMY_PAL[e.type]) : ENEMY_PAL[e.type], e.x, e.y, 2);
     }
   }
 
-  // 아래를 향한 적기 — 기수가 아래, 미익이 위
-  _planeDown(c, e) {
-    const skin = { grunt: '#3f8f4a', zig: '#d9932a', diver: '#cf3b33' }[e.type] || '#5b6a7d';
-    const wing = { grunt: '#cfe3cd', zig: '#f4e2b6', diver: '#f0cbc8' }[e.type] || '#dfe6ee';
-    this._shadow(c, 15, 5);
-    // 프로펠러(기수 앞 = 아래)
-    c.fillStyle = 'rgba(255,255,255,.45)';
-    c.beginPath(); c.ellipse(0, 15, 10, 2.6, 0, 0, Math.PI * 2); c.fill();
-    // 수평 미익(위)
-    c.fillStyle = wing;
-    c.beginPath(); c.moveTo(-8, -13); c.lineTo(8, -13); c.lineTo(5, -8); c.lineTo(-5, -8); c.closePath(); c.fill();
-    // 주익 — 뒤(위)로 젖혀진 사다리꼴
-    c.beginPath(); c.moveTo(-17, -5); c.lineTo(17, -5); c.lineTo(11, 3); c.lineTo(-11, 3); c.closePath(); c.fill();
-    c.fillStyle = skin; c.globalAlpha = 0.45;
-    c.fillRect(-17, -5, 5, 4); c.fillRect(12, -5, 5, 4);
-    c.globalAlpha = 1;
-    // 동체
-    c.fillStyle = skin;
-    c.beginPath();
-    c.moveTo(0, 14); c.quadraticCurveTo(4.6, 7, 4.6, -4); c.lineTo(3.2, -13);
-    c.lineTo(-3.2, -13); c.lineTo(-4.6, -4); c.quadraticCurveTo(-4.6, 7, 0, 14);
-    c.closePath(); c.fill();
-    // 캐노피
-    c.fillStyle = 'rgba(255,255,255,.8)';
-    c.beginPath(); c.ellipse(0, 2, 2.4, 3.6, 0, 0, Math.PI * 2); c.fill();
+  // 피격 순간엔 스프라이트를 하얗게 — 도트 게임의 관례
+  _white(pal) {
+    const out = {};
+    for (const k of Object.keys(pal)) out[k] = k === 'K' ? '#7a8496' : '#ffffff';
+    return out;
   }
-
-  // 대형 폭격기(gunner) — 쌍발 엔진
-  _bomber(c) {
-    this._shadow(c, 22, 7);
-    c.fillStyle = 'rgba(255,255,255,.4)';
-    c.beginPath(); c.ellipse(0, 18, 12, 3, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#c3cddb';
-    c.beginPath(); c.moveTo(-11, -17); c.lineTo(11, -17); c.lineTo(7, -11); c.lineTo(-7, -11); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(-23, -6); c.lineTo(23, -6); c.lineTo(15, 4); c.lineTo(-15, 4); c.closePath(); c.fill();
-    c.fillStyle = '#57616f';
-    c.beginPath();
-    c.moveTo(0, 17); c.quadraticCurveTo(7, 8, 7, -5); c.lineTo(4.5, -16);
-    c.lineTo(-4.5, -16); c.lineTo(-7, -5); c.quadraticCurveTo(-7, 8, 0, 17);
-    c.closePath(); c.fill();
-    c.fillStyle = '#3c4552'; // 엔진
-    c.beginPath(); c.ellipse(-13, -2, 4, 7, 0, 0, Math.PI * 2); c.fill();
-    c.beginPath(); c.ellipse(13, -2, 4, 7, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#ffd27a';
-    c.beginPath(); c.ellipse(0, 5, 3, 4.5, 0, 0, Math.PI * 2); c.fill();
-  }
-
-  // ---- 보스 ----
 
   _boss(c, b) {
     if (!b) return;
-    c.save(); c.translate(b.x, b.y);
-    if (b.hit > 0) c.globalAlpha = 0.6;
-    // 주익
-    c.fillStyle = '#b9c4d2';
-    c.beginPath();
-    c.moveTo(-62, -6); c.lineTo(-18, 6); c.lineTo(18, 6); c.lineTo(62, -6);
-    c.lineTo(48, -24); c.lineTo(-48, -24); c.closePath(); c.fill();
-    // 동체
-    c.fillStyle = '#4a5666';
-    c.beginPath();
-    c.moveTo(0, 40); c.quadraticCurveTo(18, 20, 18, -12); c.lineTo(11, -30);
-    c.lineTo(-11, -30); c.lineTo(-18, -12); c.quadraticCurveTo(-18, 20, 0, 40);
-    c.closePath(); c.fill();
-    // 엔진 4기
-    c.fillStyle = '#333d4a';
-    for (const ex of [-40, -26, 26, 40]) {
-      c.beginPath(); c.ellipse(ex, -8, 6, 12, 0, 0, Math.PI * 2); c.fill();
-    }
-    // 콕핏·포탑
-    c.fillStyle = '#ffd27a';
-    c.beginPath(); c.ellipse(0, 6, 6, 9, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#2b3441';
-    c.beginPath(); c.arc(0, 26, 7, 0, Math.PI * 2); c.fill();
-    c.restore();
+    this._spr(c, BOSS_SPR, b.hit > 0 ? this._white(PAL.boss) : PAL.boss, b.x, b.y, 4);
   }
 
   // ---- 탄 ----
 
   _bullets(c, game) {
-    c.fillStyle = '#fff36b';
     for (const b of game.pb) {
-      c.beginPath(); c.ellipse(b.x, b.y, b.r * 0.7, b.r * 1.5, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#fff9c4';
+      this._px(c, b.x - PX, b.y - PX * 2, 2, 4);
+      c.fillStyle = '#ffe14d';
+      this._px(c, b.x - PX, b.y - PX, 2, 2);
     }
     for (const b of game.eb) {
-      c.fillStyle = 'rgba(255,90,80,.35)';
-      c.beginPath(); c.arc(b.x, b.y, b.r + 3, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ff4d44';
-      c.beginPath(); c.arc(b.x, b.y, b.r, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#ffe0dd';
-      c.beginPath(); c.arc(b.x - 1, b.y - 1, b.r * 0.42, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#ff8f88';                 // 바깥 테
+      this._px(c, b.x - PX * 2, b.y - PX, 4, 2);
+      this._px(c, b.x - PX, b.y - PX * 2, 2, 4);
+      c.fillStyle = '#ff2f24';                 // 심
+      this._px(c, b.x - PX, b.y - PX, 2, 2);
+      c.fillStyle = '#fff0ee';
+      this._px(c, b.x - PX, b.y - PX, 1, 1);
     }
   }
 
   // ---- 아이템 ----
 
   _pickups(c, list) {
-    const COL = { P: ['#ff5a63', '#fff'], O: ['#3fce6a', '#fff'], B: ['#3aa0ff', '#fff'], L: ['#ffb03a', '#fff'] };
+    const COL = { P: '#ff5a63', O: '#3fce6a', B: '#3aa0ff', L: '#ffb03a' };
     for (const it of list) {
-      const [bg, fg] = COL[it.kind] || ['#888', '#fff'];
       const bob = Math.sin(it.t / 9) * 2;
-      c.save(); c.translate(it.x, it.y + bob);
-      c.fillStyle = 'rgba(255,255,255,.85)';
-      this._round(c, -13, -13, 26, 26, 8); c.fill();
-      c.fillStyle = bg;
-      this._round(c, -11, -11, 22, 22, 7); c.fill();
-      c.fillStyle = fg;
-      c.font = '800 15px "Segoe UI", system-ui, sans-serif';
-      c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(it.kind, 0, 1);
-      c.restore();
+      const x = it.x; const y = it.y + bob;
+      c.fillStyle = '#ffffff';
+      this._px(c, x - PX * 6, y - PX * 6, 12, 12);
+      c.fillStyle = '#1b2330';
+      this._px(c, x - PX * 5, y - PX * 5, 10, 10);
+      c.fillStyle = COL[it.kind] || '#888';
+      this._px(c, x - PX * 4, y - PX * 4, 8, 8);
+      this._text(c, it.kind, x - PX * 1.5, y - PX * 2.5, '#ffffff', 1);
     }
-    c.textAlign = 'left'; c.textBaseline = 'alphabetic';
   }
 
-  // ---- 폭발 ----
+  // ---- 폭발: 도트 파편 ----
 
   _fx(c, list) {
     for (const f of list) {
       const p = f.t / f.life;
-      c.globalAlpha = 1 - p;
-      c.fillStyle = '#fff2b0';
-      c.beginPath(); c.arc(f.x, f.y, f.r * (0.35 + p * 0.9), 0, Math.PI * 2); c.fill();
-      c.strokeStyle = '#ff9a3c'; c.lineWidth = 3 * (1 - p);
-      c.beginPath(); c.arc(f.x, f.y, f.r * (0.5 + p * 1.25), 0, Math.PI * 2); c.stroke();
-      c.globalAlpha = 1;
+      const rad = f.r * (0.3 + p * 1.15);
+      c.fillStyle = p < 0.45 ? '#fff6c8' : '#ff9a3c';
+      const n = 8;
+      for (let i = 0; i < n; i += 1) {
+        const a = (i / n) * Math.PI * 2 + f.x * 0.01;
+        this._px(c, f.x + Math.cos(a) * rad, f.y + Math.sin(a) * rad, 2, 2);
+      }
+      if (p < 0.5) {
+        c.fillStyle = '#ffffff';
+        this._px(c, f.x - PX * 1.5, f.y - PX * 1.5, 3, 3);
+      }
     }
   }
 
   // ---- HUD ----
 
   _hud(c, game) {
-    const g = c.createLinearGradient(0, 0, 0, HUD_H);
-    g.addColorStop(0, 'rgba(6,26,44,.55)');
-    g.addColorStop(1, 'rgba(6,26,44,0)');
-    c.fillStyle = g;
+    c.fillStyle = '#0b2036';   // 불투명 — 위에서 진입하는 적기를 가려준다
     c.fillRect(0, 0, W, HUD_H);
+    c.fillStyle = 'rgba(255,255,255,.18)';
+    for (let x = 0; x < W; x += PX * 2) this._px(c, x, HUD_H - PX);
 
-    c.fillStyle = '#fff';
-    c.font = '800 17px "Segoe UI", system-ui, sans-serif';
-    c.textBaseline = 'alphabetic';
-    c.fillText(String(game.score).padStart(6, '0'), 10, 22);
-    c.font = '600 11px "Segoe UI", system-ui, sans-serif';
-    c.fillStyle = 'rgba(255,255,255,.85)';
-    c.fillText(`BEST ${Math.max(game.best, game.score)}`, 10, 36);
+    this._text(c, String(game.score).padStart(6, '0'), 8, 8, '#ffffff', 2);
+    this._text(c, `BEST ${Math.max(game.best, game.score)}`, 8, 26, '#a9d8ff', 1);
 
-    // 목숨(작은 기체) · 폭탄(원) · 파워
+    // 목숨(작은 기체) · 폭탄(도트 원)
     for (let i = 0; i < Math.max(0, game.lives); i += 1) {
-      const x = W - 14 - i * 15;
-      c.fillStyle = '#e8eef6';
-      c.beginPath(); c.moveTo(x, 10); c.lineTo(x + 5, 20); c.lineTo(x - 5, 20); c.closePath(); c.fill();
+      this._spr(c, PLAYER, PAL.player, W - 16 - i * 18, 15, 1);
     }
     for (let i = 0; i < game.bombs; i += 1) {
-      const x = W - 14 - i * 15;
+      const x = W - 16 - i * 14;
       c.fillStyle = '#ffd23f';
-      c.beginPath(); c.arc(x, 31, 4.5, 0, Math.PI * 2); c.fill();
+      this._px(c, x - PX * 2, 28, 4, 4);
+      c.fillStyle = '#fff6c8';
+      this._px(c, x - PX * 2, 28, 2, 2);
     }
-    c.fillStyle = 'rgba(255,255,255,.9)';
-    c.font = '800 11px "Segoe UI", system-ui, sans-serif';
-    c.textAlign = 'center';
-    c.fillText(`PWR ${game.power}${game.options ? ` +${game.options}` : ''}`, W / 2, 22);
-    c.textAlign = 'left';
+    this._text(c, `PWR ${game.power}${game.options ? ` +${game.options}` : ''}`, W / 2 - 34, 10, '#ffffff', 1);
 
-    // 보스 체력바
     const b = game.boss;
     if (b && b.state !== 'enter') {
-      const bw = W - 40;
-      c.fillStyle = 'rgba(0,0,0,.35)';
-      this._round(c, 20, HUD_H - 6, bw, 9, 4.5); c.fill();
+      const bw = Math.floor((W - 40) / PX) * PX;
+      c.fillStyle = '#1b2330';
+      c.fillRect(20, HUD_H + 2, bw, 8);
       const ratio = Math.max(0, b.hp / b.maxHp);
-      const col = ratio <= BOSS.phase3 ? '#ff4d44' : (ratio <= BOSS.phase2 ? '#ff9a2e' : '#ffd23f');
-      c.fillStyle = col;
-      this._round(c, 20, HUD_H - 6, Math.max(2, bw * ratio), 9, 4.5); c.fill();
+      c.fillStyle = ratio <= BOSS.phase3 ? '#ff2f24' : (ratio <= BOSS.phase2 ? '#ff9a2e' : '#ffd23f');
+      c.fillRect(20, HUD_H + 2, Math.max(PX, snap(bw * ratio)), 8);
+      c.fillStyle = 'rgba(255,255,255,.35)';
+      c.fillRect(20, HUD_H + 2, Math.max(PX, snap(bw * ratio)), PX);
     }
 
-    c.fillStyle = 'rgba(255,255,255,.5)';
-    c.font = '600 9px "Segoe UI", system-ui, sans-serif';
-    c.fillText(VERSION, W - 30, H - 8);
-  }
-
-  _round(c, x, y, w, h, r) {
-    const rr = Math.min(r, w / 2, h / 2);
-    c.beginPath();
-    c.moveTo(x + rr, y);
-    c.arcTo(x + w, y, x + w, y + h, rr);
-    c.arcTo(x + w, y + h, x, y + h, rr);
-    c.arcTo(x, y + h, x, y, rr);
-    c.arcTo(x, y, x + w, y, rr);
-    c.closePath();
+    this._text(c, VERSION, W - 32, H - 12, 'rgba(255,255,255,.45)', 1);
   }
 }
