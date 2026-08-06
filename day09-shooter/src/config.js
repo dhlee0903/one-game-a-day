@@ -1,7 +1,7 @@
 // 종스크롤 슈팅 상수 — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v9.0';
+export const VERSION = 'v9.1';
 
 // 논리 해상도(캔버스는 CSS로 확대된다). 세로형 9:16에 가깝게.
 export const W = 360;

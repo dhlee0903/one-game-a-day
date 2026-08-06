@@ -47,6 +47,7 @@ canvas {
   display: block; width: 100%; height: auto; aspect-ratio: 360 / 620;
   border-radius: 16px; box-shadow: 0 16px 40px rgba(20, 45, 70, .28);
   touch-action: none; cursor: crosshair;
+  image-rendering: pixelated; /* 확대돼도 도트가 뭉개지지 않게 */
   background: #2f9fdd;
 }
 
