@@ -1,31 +1,22 @@
-// 읽기 전용 렌더러 — 도트(픽셀) 그래픽. 모든 것을 PX 격자에 스냅해서 그린다.
-// 스프라이트는 문자 픽셀맵(sprites.js), 색은 팔레트로 갈아끼운다.
+// 읽기 전용 렌더러 — 1픽셀 = 1도트 해상도의 도트 그래픽.
+// 기체 스프라이트는 시작할 때 한 번 구워두고(sprites.js) 이후엔 blit만 한다.
 
 import { W, H, HUD_H, BOSS, VERSION } from './config.js';
-import { PLAYER, ENEMY, BOMBER, BOSS as BOSS_SPR, DRONE, FONT } from './sprites.js';
+import { bakeSprite, MAPS, FONT } from './sprites.js';
 
-const PX = 2;                    // 도트 하나의 논리 크기
-const snap = (v) => Math.round(v / PX) * PX;
 const LOOP = 1500;
 
-// 팔레트: 스프라이트 문자 → 색
-const PAL = {
-  player: { K: '#16324f', E: '#2f6fd0', W: '#dbe6f5', C: '#8fd8ff', P: '#b9cde6', G: '#3c4552', Y: '#ffd23f' },
-  grunt: { K: '#173a1c', E: '#4aa054', W: '#cfe3cd', C: '#ffe9a8', P: '#9fb79c', G: '#2b3a2c', Y: '#ffd23f' },
-  zig: { K: '#4a3410', E: '#e0a32c', W: '#f7e6bd', C: '#ffe9a8', P: '#c9b184', G: '#4a3a1c', Y: '#ffd23f' },
-  diver: { K: '#4d1512', E: '#d8453c', W: '#f6d3d0', C: '#ffe0a8', P: '#c49a96', G: '#3f1a17', Y: '#ffd23f' },
-  gunner: { K: '#232b36', E: '#68758a', W: '#c3cddb', C: '#ffd27a', P: '#93a0b2', G: '#39424f', Y: '#ffd23f' },
-  boss: { K: '#1b2330', E: '#5b6a80', W: '#aab8cb', C: '#ffd27a', P: '#8d9bb0', G: '#333d4a', Y: '#ff8a3c' },
-};
-const ENEMY_PAL = { grunt: PAL.grunt, zig: PAL.zig, diver: PAL.diver };
+// 바다 — 깊이별 색과 디더 패턴
+const SEA = ['#57bdf0', '#3ea9e2', '#2c95d4', '#1e7fc0'];
+const FOAM = 'rgba(255,255,255,.55)';
 
 const ISLANDS = [
-  { x: 52, y: 120, r: 26, kind: 'sand' },
-  { x: 306, y: 400, r: 20, kind: 'green' },
-  { x: 150, y: 700, r: 32, kind: 'green' },
-  { x: 36, y: 980, r: 17, kind: 'sand' },
-  { x: 328, y: 1160, r: 24, kind: 'sand' },
-  { x: 210, y: 1330, r: 15, kind: 'green' },
+  { x: 52, y: 120, r: 24, kind: 'sand' },
+  { x: 306, y: 400, r: 19, kind: 'green' },
+  { x: 150, y: 700, r: 30, kind: 'green' },
+  { x: 36, y: 980, r: 16, kind: 'sand' },
+  { x: 328, y: 1160, r: 22, kind: 'sand' },
+  { x: 210, y: 1330, r: 14, kind: 'green' },
 ];
 
 export class Renderer {
@@ -37,6 +28,11 @@ export class Renderer {
     canvas.height = H * dpr;
     this.ctx.scale(dpr, dpr);
     this.ctx.imageSmoothingEnabled = false;
+
+    // 스프라이트를 한 번만 굽는다
+    this.spr = {};
+    for (const name of Object.keys(MAPS)) this.spr[name] = bakeSprite(name);
+    this.flash = {};   // 피격용 흰색 실루엣(요청 시 생성)
   }
 
   render(game) {
@@ -55,104 +51,114 @@ export class Renderer {
     this._hud(c, game);
   }
 
-  // ---- 픽셀 원시 도형 ----
-
-  _px(c, x, y, w = 1, h = 1) {
-    c.fillRect(snap(x), snap(y), w * PX, h * PX);
+  // 스프라이트를 정수 좌표에 중심 정렬로 찍는다(반올림 → 도트가 흔들리지 않음)
+  _blit(c, img, x, y) {
+    c.drawImage(img, Math.round(x - img.width / 2), Math.round(y - img.height / 2));
   }
 
-  // 스프라이트를 (cx,cy) 중심에 그린다. scale은 도트 배율(정수).
-  _spr(c, rows, pal, cx, cy, scale = 1) {
-    const s = PX * scale;
-    const w = rows[0].length;
-    const x0 = snap(cx - (w * s) / 2);
-    const y0 = snap(cy - (rows.length * s) / 2);
-    for (let r = 0; r < rows.length; r += 1) {
-      const row = rows[r];
-      let run = 0;
-      let runCh = null;
-      for (let i = 0; i <= row.length; i += 1) {
-        const ch = row[i];
-        if (ch === runCh) { run += 1; continue; }
-        if (runCh && runCh !== '.') {                 // 같은 색은 한 번에 그린다
-          c.fillStyle = pal[runCh] || '#f0f';
-          c.fillRect(x0 + (i - run) * s, y0 + r * s, run * s, s);
-        }
-        runCh = ch; run = 1;
-      }
-    }
-  }
-
-  // 격자에 스냅된 타원 — 가장자리가 계단처럼 보여 도트 느낌이 난다
-  _blob(c, cx, cy, rx, ry, color) {
-    c.fillStyle = color;
-    const x0 = snap(cx - rx); const x1 = snap(cx + rx);
-    const y0 = snap(cy - ry); const y1 = snap(cy + ry);
-    for (let y = y0; y <= y1; y += PX) {
-      const dy = (y + PX / 2 - cy) / ry;
-      if (Math.abs(dy) > 1) continue;
-      const half = rx * Math.sqrt(Math.max(0, 1 - dy * dy));
-      const sx = snap(cx - half); const ex = snap(cx + half);
-      if (ex > sx) c.fillRect(sx, y, ex - sx, PX);
-    }
-  }
-
-  _text(c, str, x, y, color, scale = 1) {
-    const s = PX * scale;
-    c.fillStyle = color;
-    let cx = snap(x);
-    for (const raw of String(str).toUpperCase()) {
-      const g = FONT[raw];
-      if (!g) { cx += 4 * s; continue; }
-      for (let r = 0; r < 5; r += 1) {
-        for (let i = 0; i < 3; i += 1) {
-          if (g[r][i] === '1') c.fillRect(cx + i * s, snap(y) + r * s, s, s);
-        }
-      }
-      cx += 4 * s;
-    }
-    return cx;
+  // 피격 순간용 흰 실루엣 — 원본의 알파만 남겨 하얗게 태운다
+  _flashOf(name) {
+    if (this.flash[name]) return this.flash[name];
+    const src = this.spr[name];
+    const cv = document.createElement('canvas');
+    cv.width = src.width; cv.height = src.height;
+    const x = cv.getContext('2d');
+    x.drawImage(src, 0, 0);
+    x.globalCompositeOperation = 'source-atop';
+    x.fillStyle = 'rgba(255,255,255,.85)';
+    x.fillRect(0, 0, cv.width, cv.height);
+    this.flash[name] = cv;
+    return cv;
   }
 
   // ---- 배경 ----
 
   _sea(c, scroll) {
-    // 깊이별 색 띠(그라데이션 대신 단색 밴드 — 도트 감성)
-    const bands = ['#4fb8ee', '#38a5e0', '#2b93d2', '#1f80c2'];
-    const bh = Math.ceil(H / bands.length / PX) * PX;
-    for (let i = 0; i < bands.length; i += 1) {
-      c.fillStyle = bands[i];
+    const bh = Math.ceil(H / SEA.length);
+    for (let i = 0; i < SEA.length; i += 1) {
+      c.fillStyle = SEA[i];
       c.fillRect(0, i * bh, W, bh);
     }
-    // 디더링 — 밴드 경계를 점으로 섞는다
-    c.fillStyle = 'rgba(255,255,255,.10)';
-    for (let i = 1; i < bands.length; i += 1) {
+    // 경계를 2행 체커로 디더링 — 밴드 티가 덜 난다
+    for (let i = 1; i < SEA.length; i += 1) {
       const y = i * bh;
-      for (let x = 0; x < W; x += PX * 2) this._px(c, x + (i % 2) * PX, y - PX);
+      c.fillStyle = SEA[i - 1];
+      for (let x = 0; x < W; x += 2) { c.fillRect(x, y, 1, 1); c.fillRect(x + 1, y + 1, 1, 1); }
+      c.fillStyle = SEA[i];
+      for (let x = 0; x < W; x += 2) c.fillRect(x + 1, y - 2, 1, 1);
     }
-    // 파도 — 2도트 짜리 흰 점선이 아래로 흐른다
-    c.fillStyle = 'rgba(255,255,255,.5)';
-    for (let k = 0; k < 22; k += 1) {
-      const y = ((k * 42 + scroll) % (H + 60)) - 30;
-      const x = ((k * 97) % (W - 30)) + 8;
-      this._px(c, x, y, 3, 1);
-      this._px(c, x + 5 * PX, y + PX, 2, 1);
+    // 잔물결 — 1~3px 흰 점선이 아래로 흐른다
+    c.fillStyle = FOAM;
+    for (let k = 0; k < 46; k += 1) {
+      const y = Math.round(((k * 37 + scroll) % (H + 40)) - 20);
+      const x = Math.round((k * 89) % (W - 12)) + 4;
+      const len = 1 + (k % 3);
+      c.fillRect(x, y, len, 1);
+      if (k % 2) c.fillRect(x + len + 2, y + 1, 1, 1);
     }
-    // 섬
     for (const isl of ISLANDS) {
       const y = (isl.y + scroll) % LOOP;
-      if (y < -100 || y > H + 100) continue;
-      this._island(c, isl.x, y, isl.r, isl.kind);
+      if (y < -90 || y > H + 90) continue;
+      this._island(c, Math.round(isl.x), Math.round(y), isl.r, isl.kind);
+    }
+  }
+
+  // 픽셀 타원 — 반폭을 정수로 반올림해 가장자리가 계단지게
+  _ellipse(c, cx, cy, rx, ry, color) {
+    c.fillStyle = color;
+    for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y += 1) {
+      const dy = (y - cy) / ry;
+      const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - dy * dy)));
+      if (half > 0) c.fillRect(cx - half, y, half * 2, 1);
+    }
+  }
+
+  // 타원 테두리만 1도트로
+  _ellipseEdge(c, cx, cy, rx, ry, color) {
+    c.fillStyle = color;
+    for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y += 1) {
+      const dy = (y - cy) / ry;
+      const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - dy * dy)));
+      if (half <= 0) continue;
+      c.fillRect(cx - half, y, 1, 1);
+      c.fillRect(cx + half - 1, y, 1, 1);
+    }
+  }
+
+  // 두 타원 사이를 체커로 흩뿌린다 — 경계가 뭉개지지 않는 도트식 그라데이션
+  _ditherBand(c, cx, cy, rx, ry, inset, color) {
+    c.fillStyle = color;
+    for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y += 1) {
+      const dy = (y - cy) / ry;
+      const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - dy * dy)));
+      const inner = Math.round((rx - inset) * Math.sqrt(Math.max(0, 1 - ((y - cy) / (ry - inset)) ** 2)));
+      for (let x = cx - half; x < cx + half; x += 1) {
+        if (Math.abs(x - cx) < inner) continue;
+        if ((x + y) % 2) continue;
+        c.fillRect(x, y, 1, 1);
+      }
     }
   }
 
   _island(c, x, y, r, kind) {
-    this._blob(c, x, y, r * 1.25, r * 0.98, 'rgba(255,255,255,.30)'); // 여울
-    this._blob(c, x, y, r, r * 0.78, '#efdca8');                      // 모래
+    const rx = Math.round(r * 1.15);
+    const ry = Math.round(r * 0.80);
+    this._ditherBand(c, x, y, rx + 7, ry + 6, 4, '#7fd0f4');       // 얕은 물이 번지는 가장자리
+    this._ellipse(c, x, y, rx + 3, ry + 3, '#7fd0f4');             // 여울
+    this._ellipse(c, x, y, rx + 1, ry + 1, '#e8f6ff');             // 부서지는 파도
+    this._ellipse(c, x, y, rx, ry, '#c2a469');                     // 젖은 모래
+    this._ellipse(c, x, y - 1, rx - 3, ry - 2, '#e6cf95');         // 마른 모래
+    this._ellipse(c, x - 1, y - 2, rx - 7, ry - 5, '#f5e7bd');     // 모래 하이라이트
     if (kind === 'green') {
-      this._blob(c, x - r * 0.1, y - r * 0.06, r * 0.64, r * 0.48, '#5cae57');
-      this._blob(c, x + r * 0.25, y + r * 0.12, r * 0.28, r * 0.2, '#478f45');
+      this._ellipse(c, x, y - 1, rx - 5, ry - 4, '#3f8a45');       // 수풀
+      this._ellipse(c, x - 1, y - 2, rx - 7, ry - 6, '#5aab55');
+      this._ellipse(c, x - 2, y - 3, rx - 11, ry - 8, '#77c56a');  // 볕 드는 쪽
+      c.fillStyle = '#2b5f30';                                      // 나무 몇 그루
+      c.fillRect(x + rx - 9, y + 1, 2, 2);
+      c.fillRect(x - rx + 7, y - 1, 2, 2);
+      c.fillRect(x + 1, y + ry - 5, 2, 2);
     }
+    this._ellipseEdge(c, x, y, rx, ry, '#9c8149');                 // 물가 그림자
   }
 
   // ---- 기체 ----
@@ -162,123 +168,149 @@ export class Renderer {
     if (game.phase === 'dead' && game.lives < 0) return;
     if (p.invul > 0 && Math.floor(p.invul / 4) % 2 === 0) return;
     for (let i = 0; i < game.options; i += 1) {
-      this._spr(c, DRONE, PAL.player, p.x + (i === 0 ? -26 : 26), p.y + 10, 1);
+      this._blit(c, this.spr.drone, p.x + (i === 0 ? -24 : 24), p.y + 9);
     }
-    this._spr(c, PLAYER, PAL.player, p.x, p.y, 2);
+    this._blit(c, this.spr.player, p.x, p.y);
   }
 
   _enemies(c, list) {
     for (const e of list) {
-      const flash = e.hit > 0;
-      if (e.type === 'gunner') this._spr(c, BOMBER, flash ? this._white(PAL.gunner) : PAL.gunner, e.x, e.y, 2);
-      else this._spr(c, ENEMY, flash ? this._white(ENEMY_PAL[e.type]) : ENEMY_PAL[e.type], e.x, e.y, 2);
+      const img = e.hit > 0 ? this._flashOf(e.type) : this.spr[e.type];
+      this._blit(c, img, e.x, e.y);
     }
-  }
-
-  // 피격 순간엔 스프라이트를 하얗게 — 도트 게임의 관례
-  _white(pal) {
-    const out = {};
-    for (const k of Object.keys(pal)) out[k] = k === 'K' ? '#7a8496' : '#ffffff';
-    return out;
   }
 
   _boss(c, b) {
     if (!b) return;
-    this._spr(c, BOSS_SPR, b.hit > 0 ? this._white(PAL.boss) : PAL.boss, b.x, b.y, 4);
+    this._blit(c, b.hit > 0 ? this._flashOf('boss') : this.spr.boss, b.x, b.y);
   }
 
   // ---- 탄 ----
 
   _bullets(c, game) {
     for (const b of game.pb) {
-      c.fillStyle = '#fff9c4';
-      this._px(c, b.x - PX, b.y - PX * 2, 2, 4);
-      c.fillStyle = '#ffe14d';
-      this._px(c, b.x - PX, b.y - PX, 2, 2);
+      const x = Math.round(b.x); const y = Math.round(b.y);
+      c.fillStyle = '#fff8bd'; c.fillRect(x - 1, y - 5, 2, 8);   // 잔광
+      c.fillStyle = '#ffe14d'; c.fillRect(x - 1, y - 4, 2, 5);   // 심
+      c.fillStyle = '#ffffff'; c.fillRect(x - 1, y - 4, 2, 2);   // 앞머리
     }
     for (const b of game.eb) {
-      c.fillStyle = '#ff8f88';                 // 바깥 테
-      this._px(c, b.x - PX * 2, b.y - PX, 4, 2);
-      this._px(c, b.x - PX, b.y - PX * 2, 2, 4);
-      c.fillStyle = '#ff2f24';                 // 심
-      this._px(c, b.x - PX, b.y - PX, 2, 2);
-      c.fillStyle = '#fff0ee';
-      this._px(c, b.x - PX, b.y - PX, 1, 1);
+      const x = Math.round(b.x); const y = Math.round(b.y);
+      c.fillStyle = '#7a0f0a';                                    // 외곽
+      c.fillRect(x - 2, y - 3, 4, 6); c.fillRect(x - 3, y - 2, 6, 4);
+      c.fillStyle = '#ff3b2f';                                    // 본체
+      c.fillRect(x - 2, y - 2, 4, 4); c.fillRect(x - 1, y - 3, 2, 6); c.fillRect(x - 3, y - 1, 6, 2);
+      c.fillStyle = '#ffd2cd'; c.fillRect(x - 1, y - 2, 2, 2);    // 하이라이트
+      c.fillStyle = '#ffffff'; c.fillRect(x - 1, y - 2, 1, 1);
     }
   }
 
   // ---- 아이템 ----
 
   _pickups(c, list) {
-    const COL = { P: '#ff5a63', O: '#3fce6a', B: '#3aa0ff', L: '#ffb03a' };
+    const COL = { P: ['#ff5a63', '#7d1219'], O: ['#3fce6a', '#14601f'], B: ['#3aa0ff', '#123f78'], L: ['#ffb03a', '#7a4a08'] };
     for (const it of list) {
-      const bob = Math.sin(it.t / 9) * 2;
-      const x = it.x; const y = it.y + bob;
-      c.fillStyle = '#ffffff';
-      this._px(c, x - PX * 6, y - PX * 6, 12, 12);
-      c.fillStyle = '#1b2330';
-      this._px(c, x - PX * 5, y - PX * 5, 10, 10);
-      c.fillStyle = COL[it.kind] || '#888';
-      this._px(c, x - PX * 4, y - PX * 4, 8, 8);
-      this._text(c, it.kind, x - PX * 1.5, y - PX * 2.5, '#ffffff', 1);
+      const x = Math.round(it.x); const y = Math.round(it.y + Math.sin(it.t / 9) * 2);
+      const [bright, dark] = COL[it.kind] || ['#888', '#333'];
+      c.fillStyle = '#101822'; c.fillRect(x - 8, y - 8, 16, 16);   // 외곽
+      c.fillStyle = dark; c.fillRect(x - 7, y - 7, 14, 14);
+      c.fillStyle = bright; c.fillRect(x - 6, y - 6, 12, 12);
+      c.fillStyle = 'rgba(255,255,255,.55)'; c.fillRect(x - 6, y - 6, 12, 2);  // 상단 광택
+      this._text(c, it.kind, x - 2, y - 3, '#ffffff');
     }
   }
 
-  // ---- 폭발: 도트 파편 ----
+  // ---- 폭발: 도트 파편 + 링 ----
 
   _fx(c, list) {
     for (const f of list) {
       const p = f.t / f.life;
-      const rad = f.r * (0.3 + p * 1.15);
-      c.fillStyle = p < 0.45 ? '#fff6c8' : '#ff9a3c';
-      const n = 8;
-      for (let i = 0; i < n; i += 1) {
-        const a = (i / n) * Math.PI * 2 + f.x * 0.01;
-        this._px(c, f.x + Math.cos(a) * rad, f.y + Math.sin(a) * rad, 2, 2);
+      const cx = Math.round(f.x); const cy = Math.round(f.y);
+      const rad = f.r * (0.25 + p * 1.2);
+      // 화염 코어
+      if (p < 0.55) {
+        const cr = Math.round(f.r * (0.55 - p) * 1.6);
+        c.fillStyle = p < 0.25 ? '#ffffff' : '#ffe066';
+        this._ellipse(c, cx, cy, cr, cr, p < 0.25 ? '#ffffff' : '#ffe066');
       }
-      if (p < 0.5) {
-        c.fillStyle = '#ffffff';
-        this._px(c, f.x - PX * 1.5, f.y - PX * 1.5, 3, 3);
+      // 파편
+      c.fillStyle = p < 0.5 ? '#ffd24d' : '#ff7a2e';
+      const n = 10;
+      for (let i = 0; i < n; i += 1) {
+        const a = (i / n) * Math.PI * 2 + (cx % 7) * 0.3;
+        const r = rad * (i % 2 ? 1 : 0.72);
+        c.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r), 2, 2);
+      }
+      // 연기 잔재
+      if (p > 0.5) {
+        c.fillStyle = 'rgba(90,90,110,.35)';
+        for (let i = 0; i < 5; i += 1) {
+          const a = (i / 5) * Math.PI * 2;
+          c.fillRect(Math.round(cx + Math.cos(a) * rad * 0.6), Math.round(cy + Math.sin(a) * rad * 0.6), 3, 3);
+        }
       }
     }
+  }
+
+  // ---- 텍스트(5x7 도트 폰트) ----
+
+  _text(c, str, x, y, color, scale = 1) {
+    c.fillStyle = color;
+    let cx = Math.round(x);
+    const yy = Math.round(y);
+    for (const raw of String(str).toUpperCase()) {
+      const g = FONT[raw];
+      if (!g) { cx += 6 * scale; continue; }
+      for (let r = 0; r < 7; r += 1) {
+        const row = g[r];
+        for (let i = 0; i < 5; i += 1) {
+          if (row[i] === '1') c.fillRect(cx + i * scale, yy + r * scale, scale, scale);
+        }
+      }
+      cx += 6 * scale;
+    }
+    return cx;
   }
 
   // ---- HUD ----
 
   _hud(c, game) {
-    c.fillStyle = '#0b2036';   // 불투명 — 위에서 진입하는 적기를 가려준다
+    c.fillStyle = '#0a1c2e';
     c.fillRect(0, 0, W, HUD_H);
-    c.fillStyle = 'rgba(255,255,255,.18)';
-    for (let x = 0; x < W; x += PX * 2) this._px(c, x, HUD_H - PX);
+    c.fillStyle = '#16324f';
+    c.fillRect(0, HUD_H - 2, W, 1);
+    c.fillStyle = '#25496f';
+    for (let x = 0; x < W; x += 2) c.fillRect(x, HUD_H - 1, 1, 1);
 
     this._text(c, String(game.score).padStart(6, '0'), 8, 8, '#ffffff', 2);
-    this._text(c, `BEST ${Math.max(game.best, game.score)}`, 8, 26, '#a9d8ff', 1);
+    this._text(c, `BEST ${Math.max(game.best, game.score)}`, 8, 26, '#7fc4ff', 1);
 
-    // 목숨(작은 기체) · 폭탄(도트 원)
     for (let i = 0; i < Math.max(0, game.lives); i += 1) {
-      this._spr(c, PLAYER, PAL.player, W - 16 - i * 18, 15, 1);
+      const x = W - 16 - i * 16;
+      c.fillStyle = '#3f83d8';
+      c.fillRect(x - 1, 10, 2, 9); c.fillRect(x - 5, 14, 10, 2); c.fillRect(x - 3, 18, 6, 1);
+      c.fillStyle = '#bfe9ff'; c.fillRect(x - 1, 11, 1, 2);
     }
     for (let i = 0; i < game.bombs; i += 1) {
-      const x = W - 16 - i * 14;
-      c.fillStyle = '#ffd23f';
-      this._px(c, x - PX * 2, 28, 4, 4);
-      c.fillStyle = '#fff6c8';
-      this._px(c, x - PX * 2, 28, 2, 2);
+      const x = W - 15 - i * 12;
+      c.fillStyle = '#7a4a08'; c.fillRect(x - 3, 27, 6, 6);
+      c.fillStyle = '#ffd23f'; c.fillRect(x - 3, 27, 5, 5);
+      c.fillStyle = '#fff6c8'; c.fillRect(x - 3, 27, 2, 2);
     }
-    this._text(c, `PWR ${game.power}${game.options ? ` +${game.options}` : ''}`, W / 2 - 34, 10, '#ffffff', 1);
+    this._text(c, `PWR ${game.power}${game.options ? ` +${game.options}` : ''}`, W / 2 - 30, 12, '#ffffff', 1);
 
     const b = game.boss;
     if (b && b.state !== 'enter') {
-      const bw = Math.floor((W - 40) / PX) * PX;
-      c.fillStyle = '#1b2330';
-      c.fillRect(20, HUD_H + 2, bw, 8);
+      const bw = W - 40;
+      c.fillStyle = '#10161f'; c.fillRect(19, HUD_H + 3, bw + 2, 9);
+      c.fillStyle = '#2a3444'; c.fillRect(20, HUD_H + 4, bw, 7);
       const ratio = Math.max(0, b.hp / b.maxHp);
-      c.fillStyle = ratio <= BOSS.phase3 ? '#ff2f24' : (ratio <= BOSS.phase2 ? '#ff9a2e' : '#ffd23f');
-      c.fillRect(20, HUD_H + 2, Math.max(PX, snap(bw * ratio)), 8);
-      c.fillStyle = 'rgba(255,255,255,.35)';
-      c.fillRect(20, HUD_H + 2, Math.max(PX, snap(bw * ratio)), PX);
+      const fw = Math.max(1, Math.round(bw * ratio));
+      c.fillStyle = ratio <= BOSS.phase3 ? '#e03024' : (ratio <= BOSS.phase2 ? '#ff8a2e' : '#ffd23f');
+      c.fillRect(20, HUD_H + 4, fw, 7);
+      c.fillStyle = 'rgba(255,255,255,.45)'; c.fillRect(20, HUD_H + 4, fw, 1);
     }
 
-    this._text(c, VERSION, W - 32, H - 12, 'rgba(255,255,255,.45)', 1);
+    this._text(c, VERSION, W - 26, H - 10, 'rgba(255,255,255,.4)', 1);
   }
 }
