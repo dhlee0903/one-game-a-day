@@ -51,17 +51,18 @@ canvas {
   background: #2f9fdd;
 }
 
+/* 도트 그래픽과 어울리게 그라데이션 없이 각진 단색 버튼 */
 .bomb {
   position: absolute; right: 12px; bottom: 12px; z-index: 5;
-  width: 54px; height: 54px; border-radius: 50%; opacity: .92;
-  font-size: 12px; font-weight: 800; font-family: inherit; letter-spacing: .04em;
+  width: 54px; height: 50px; border-radius: 0; opacity: .94;
+  font-size: 12px; font-weight: 800; font-family: inherit; letter-spacing: .06em;
   cursor: pointer; color: #4a3000;
-  background: radial-gradient(circle at 35% 30%, #ffe08a, #ffb03a 60%, #e08a12);
-  border: 2px solid rgba(255, 255, 255, .75);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .28);
-  transition: transform .1s, filter .1s;
+  background: #ffc84a;
+  border: 3px solid #7a4a08;
+  box-shadow: inset 0 3px 0 #ffe9a8, inset 0 -3px 0 #e08a12, 0 3px 0 #0a1c2e;
+  transition: transform .06s;
 }
-.bomb:active { transform: scale(.92); filter: brightness(1.08); }
+.bomb:active { transform: translateY(3px); box-shadow: inset 0 3px 0 #ffe9a8, inset 0 -3px 0 #e08a12; }
 
 .overlay {
   position: absolute; inset: 0; border-radius: 16px;
