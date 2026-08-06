@@ -12,21 +12,21 @@ const col = (i, n) => (W * (i + 1)) / (n + 1); // 화면을 n등분한 x
 //  vee    — V자 대형
 //  sides  — 좌우 가장자리에서 대칭으로
 export const STAGE = [
-  { t: 40, kind: 'line', type: 'grunt', n: 4 },
-  { t: 150, kind: 'stream', type: 'grunt', n: 5, x: W * 0.25 },
-  { t: 190, kind: 'stream', type: 'grunt', n: 5, x: W * 0.75, drop: 'P' },
-  { t: 330, kind: 'vee', type: 'zig', n: 5 },
-  { t: 470, kind: 'sides', type: 'diver', n: 4 },
-  { t: 560, kind: 'line', type: 'gunner', n: 2, drop: 'O' },
-  { t: 700, kind: 'stream', type: 'diver', n: 6, x: W * 0.5 },
-  { t: 780, kind: 'vee', type: 'grunt', n: 7, drop: 'P' },
-  { t: 920, kind: 'sides', type: 'zig', n: 6 },
-  { t: 1020, kind: 'line', type: 'gunner', n: 3, drop: 'B' },
-  { t: 1160, kind: 'stream', type: 'diver', n: 8, x: W * 0.3 },
-  { t: 1200, kind: 'stream', type: 'diver', n: 8, x: W * 0.7 },
-  { t: 1340, kind: 'vee', type: 'zig', n: 7, drop: 'P' },
-  { t: 1480, kind: 'line', type: 'gunner', n: 4, drop: 'L' },
-  { t: 1660, kind: 'boss' },
+  { t: 50, kind: 'line', type: 'grunt', n: 4 },
+  { t: 200, kind: 'stream', type: 'grunt', n: 5, x: W * 0.25 },
+  { t: 250, kind: 'stream', type: 'grunt', n: 5, x: W * 0.75, drop: 'P' },
+  { t: 430, kind: 'vee', type: 'zig', n: 5 },
+  { t: 610, kind: 'sides', type: 'diver', n: 4 },
+  { t: 730, kind: 'line', type: 'gunner', n: 2, drop: 'O' },
+  { t: 910, kind: 'stream', type: 'diver', n: 6, x: W * 0.5 },
+  { t: 1010, kind: 'vee', type: 'grunt', n: 7, drop: 'P' },
+  { t: 1200, kind: 'sides', type: 'zig', n: 6 },
+  { t: 1330, kind: 'line', type: 'gunner', n: 3, drop: 'B' },
+  { t: 1510, kind: 'stream', type: 'diver', n: 8, x: W * 0.3 },
+  { t: 1560, kind: 'stream', type: 'diver', n: 8, x: W * 0.7 },
+  { t: 1740, kind: 'vee', type: 'zig', n: 7, drop: 'P' },
+  { t: 1920, kind: 'line', type: 'gunner', n: 4, drop: 'L' },
+  { t: 2160, kind: 'boss' },
 ];
 
 // 편대 하나를 실제 스폰 목록으로 펼친다. 반환: [{ type, x, y, delay, drop, sway }]
@@ -39,7 +39,7 @@ export function expand(entry) {
     }
   } else if (kind === 'stream') {
     for (let i = 0; i < n; i += 1) {
-      out.push({ type, x, y: -30, delay: i * 22, drop: i === n - 1 ? drop : null });
+      out.push({ type, x, y: -30, delay: i * 30, drop: i === n - 1 ? drop : null });
     }
   } else if (kind === 'vee') {
     const mid = (n - 1) / 2;
@@ -51,7 +51,7 @@ export function expand(entry) {
     for (let i = 0; i < n; i += 1) {
       const left = i % 2 === 0;
       out.push({
-        type, x: left ? 26 : W - 26, y: -30, delay: Math.floor(i / 2) * 26,
+        type, x: left ? 26 : W - 26, y: -30, delay: Math.floor(i / 2) * 34,
         sway: left ? 1 : -1, drop: i === n - 1 ? drop : null,
       });
     }
