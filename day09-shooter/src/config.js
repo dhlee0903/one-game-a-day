@@ -1,7 +1,7 @@
 // 종스크롤 슈팅 상수 — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v9.5';
+export const VERSION = 'v9.6';
 
 // 게임 로직은 초당 60회로 고정한다. 모니터 주사율(60/120/144Hz)이 달라도
 // 같은 속도로 진행되게 하는 기준값 — 아래 상수는 모두 "1스텝당" 값이다.
@@ -46,7 +46,9 @@ export const BOMB = { dmg: 40, flash: 34, invul: 70 };
 // ---- 점수 ----
 export const SCORE = {
   grunt: 100, zig: 150, diver: 200, gunner: 300,
-  boss: 5000, pickup: 50, bombLeft: 300, lifeLeft: 500,
+  boss: [5000, 8000, 12000],   // 스테이지별 보스 격파 점수
+  stageClear: 2000,            // 스테이지 하나를 넘길 때마다
+  pickup: 50, bombLeft: 300, lifeLeft: 500,
 };
 
 export const KEY_BEST = 'og-hs-day09'; // 홈 카드와 공유(높을수록 좋음)
@@ -61,8 +63,9 @@ export const ENEMY = {
 };
 
 // ---- 보스 ----
+// 체력·스프라이트·공격 주기는 스테이지마다 다르다(waves.js STAGES)
 export const BOSS = {
-  hp: 260, r: 21, enterY: 110, score: SCORE.boss,
+  r: 21, enterY: 110,
   phase2: 0.55,   // 이 비율 이하로 떨어지면 2페이즈
   phase3: 0.25,
 };
