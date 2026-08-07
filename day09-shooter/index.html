@@ -17,8 +17,37 @@
 
     <div class="board-wrap">
       <canvas id="board"></canvas>
+
+      <button class="gear" id="gear" aria-label="일시정지 · 설정">
+        <svg viewBox="0 0 16 16" width="20" height="20" shape-rendering="crispEdges" aria-hidden="true">
+          <mask id="gearMask">
+            <rect width="16" height="16" fill="#000"/>
+            <g fill="#fff">
+              <rect x="6" y="0" width="4" height="16"/>
+              <rect x="0" y="6" width="16" height="4"/>
+              <rect x="3" y="3" width="10" height="10"/>
+              <rect x="2" y="2" width="3" height="3"/><rect x="11" y="2" width="3" height="3"/>
+              <rect x="2" y="11" width="3" height="3"/><rect x="11" y="11" width="3" height="3"/>
+            </g>
+            <rect x="6" y="6" width="4" height="4" fill="#000"/>
+          </mask>
+          <rect width="16" height="16" fill="currentColor" mask="url(#gearMask)"/>
+        </svg>
+      </button>
+
       <button class="bomb" id="bomb" aria-label="폭탄">BOMB</button>
+
       <div class="overlay" id="overlay"></div>
+
+      <div class="overlay menu" id="pause">
+        <h2>일시정지</h2>
+        <div class="menu-list">
+          <button class="btn" id="pResume">계속하기</button>
+          <button class="btn ghost" id="pRestart">다시 시작</button>
+          <a class="btn ghost" href="../">홈으로</a>
+        </div>
+        <p class="dim">PC: Esc 또는 P로도 열고 닫는다</p>
+      </div>
     </div>
   </div>
 

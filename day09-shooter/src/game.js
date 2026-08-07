@@ -45,6 +45,7 @@ export class Game {
     this.bombFlash = 0;
     this.keys = { l: 0, r: 0, u: 0, d: 0 };
     this.endTimer = 0;
+    this.paused = false;
     this.stageIdx = 0;
     this.banner = null;      // 화면 가운데 크게 뜨는 안내(스테이지 표시)
     this.stageWait = 0;      // 다음 스테이지로 넘어가기까지 남은 프레임
@@ -64,12 +65,28 @@ export class Game {
     this.pickups = [];
     this.boss = null;
     this.stageWait = 0;
-    this.banner = { text: `STAGE ${i + 1}`, sub: this.stage.name, t: 0, life: 130 };
+    // 조작이 들어올 때까지 편대를 내보내지 않는다 — 배경만 흐르는 제자리 비행 상태
+    this.armed = false;
+    this.player.x = W / 2;
+    this.player.y = PLAYER.startY;
+    this.player.wantX = 0; this.player.wantY = 0; this.player.bank = 0;
+    this.banner = {
+      text: `STAGE ${i + 1}`, sub: this.stage.name, hint: 'MOVE TO START',
+      t: 0, life: 130, hold: true,
+    };
+  }
+
+  // 첫 조작이 들어오면 스테이지를 연다.
+  arm() {
+    if (this.armed || this.phase !== 'playing' || this.paused) return;
+    this.armed = true;
+    if (this.banner) { this.banner.hold = false; this.banner.life = this.banner.t + 22; }
   }
 
   start() {
     if (this.phase === 'ready' || this.phase === 'dead' || this.phase === 'clear') {
       this.reset();
+      this.paused = false;
       this.phase = 'playing';
       this.onState('playing');
     }
@@ -87,7 +104,8 @@ export class Game {
   // 드래그가 직접 좌표를 옮기지 않는다 — 요청만 쌓고 _player()가 상한을 걸어 소화한다.
   // (손가락에 1:1로 붙이면 플릭 한 번에 순간이동해 키보드와 체감이 크게 갈렸다)
   movePlayerBy(dx, dy) {
-    if (this.phase !== 'playing') return;
+    if (this.phase !== 'playing' || this.paused) return;
+    this.arm();
     const p = this.player;
     p.wantX = clamp(p.wantX + dx, -PLAYER.dragMax, PLAYER.dragMax);
     p.wantY = clamp(p.wantY + dy, -PLAYER.dragMax, PLAYER.dragMax);
@@ -96,10 +114,22 @@ export class Game {
   // 새 터치가 시작되면 이전 플릭의 잔량을 버린다
   resetDrag() { this.player.wantX = 0; this.player.wantY = 0; }
 
-  setKey(k, on) { this.keys[k] = on ? 1 : 0; }
+  setKey(k, on) { this.keys[k] = on ? 1 : 0; if (on) this.arm(); }
+
+  // 일시정지 — 진행 중일 때만. 풀 때 눌린 키·드래그 잔량이 남아 튀지 않게 비운다.
+  setPaused(on) {
+    if (this.phase !== 'playing') { this.paused = false; return false; }
+    this.paused = !!on;
+    this.keys = { l: 0, r: 0, u: 0, d: 0 };
+    this.resetDrag();
+    return this.paused;
+  }
+
+  togglePause() { return this.setPaused(!this.paused); }
 
   useBomb() {
-    if (this.phase !== 'playing' || this.bombs <= 0) return;
+    if (this.phase !== 'playing' || this.paused || this.bombs <= 0) return;
+    this.arm();
     this.bombs -= 1;
     this.bombFlash = BOMB.flash;
     this.player.invul = Math.max(this.player.invul, BOMB.invul);
@@ -113,11 +143,19 @@ export class Game {
   // ---- 프레임 ----
 
   update() {
+    if (this.paused) return;
     if (this.phase !== 'playing') { this.scroll += 1; return; }
+    this.scroll += 2.2;                    // 대기 중에도 배경은 흐른다(제자리 비행)
+    if (this.banner) {
+      this.banner.t += 1;
+      if (!this.banner.hold && this.banner.t >= this.banner.life) this.banner = null;
+    }
+
+    // 첫 조작 전에는 편대·타이머가 멈춰 있다
+    if (!this.armed) { this._fx(); this.fx = this.fx.filter((f) => f.t < f.life); return; }
+
     this.t += 1;
-    this.scroll += 2.2;
     if (this.bombFlash > 0) this.bombFlash -= 1;
-    if (this.banner && (this.banner.t += 1) >= this.banner.life) this.banner = null;
     if (this.stageWait > 0 && --this.stageWait === 0) this._enterStage(this.stageIdx + 1);
 
     this._spawnWaves();

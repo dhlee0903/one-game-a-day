@@ -1,7 +1,7 @@
 // 종스크롤 슈팅 상수 — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v9.6';
+export const VERSION = 'v9.7';
 
 // 게임 로직은 초당 60회로 고정한다. 모니터 주사율(60/120/144Hz)이 달라도
 // 같은 속도로 진행되게 하는 기준값 — 아래 상수는 모두 "1스텝당" 값이다.
