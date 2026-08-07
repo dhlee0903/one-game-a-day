@@ -17,6 +17,7 @@ export class Game {
     this.onState = onState || (() => {});
     this.sfx = sfx || (() => {});
     this.best = getBest();
+    this.stageGen = 0;   // 스테이지가 바뀔 때마다 올라간다(입력 세대 구분). 리셋해도 되돌리지 않는다
     this.reset();
   }
 
@@ -65,11 +66,12 @@ export class Game {
     this.boss = null;
     this.stageWait = 0;
     // pickups는 비우지 않는다 — 보스가 떨군 보상을 다음 스테이지에서도 주울 수 있게
-    // 조작이 들어올 때까지 편대를 내보내지 않는다 — 배경만 흐르는 제자리 비행 상태
+    // 조작이 들어올 때까지 편대를 내보내지 않는다 — 배경만 흐르는 제자리 비행 상태.
+    // 세대를 올려서, 넘어오기 전부터 이어지던 드래그로는 시작되지 않게 한다
+    // (손을 뗐다가 다시 잡아야 한다).
     this.armed = false;
-    this.player.x = W / 2;
-    this.player.y = PLAYER.startY;
-    this.player.wantX = 0; this.player.wantY = 0; this.player.bank = 0;
+    this.stageGen += 1;
+    this._flyIn();
     this.banner = {
       text: `STAGE ${i + 1}`, sub: this.stage.name, hint: 'MOVE TO START',
       t: 0, life: 130, hold: true,
@@ -154,6 +156,7 @@ export class Game {
     // 첫 조작 전에는 편대·타이머가 멈춰 있다.
     // 다만 떨어지는 아이템(보스 보상)은 계속 내려오고 주울 수 있다.
     if (!this.armed) {
+      this._glide();                    // 대기 중에도 기체는 아래에서 올라온다
       this._pickups();
       this._collide();
       this._fx();
@@ -241,12 +244,8 @@ export class Game {
       return;
     }
 
-    if (p.enter > 0) {
-      // 복귀 진입: 시작 위치까지 올라오는 동안은 조작을 받지 않는다
-      p.enter -= 1;
-      p.y += (PLAYER.startY - p.y) * 0.16;
-      if (p.enter === 0) p.y = PLAYER.startY;
-      p.wantX = 0; p.wantY = 0; p.bank = 0;
+    if (this._glide()) {
+      // 진입 활공 중에는 조작을 받지 않는다
     } else {
       // 키보드와 드래그를 한 벡터로 합치고 **같은 상한**으로 자른다.
       // 대각선이 빨라지지 않도록 축별이 아니라 크기로 자른다.
@@ -270,13 +269,29 @@ export class Game {
     if (--p.fireCd <= 0) { p.fireCd = PLAYER.fireEvery; this._fire(); }
   }
 
-  _respawn() {
+  // 화면 밖 아래에서 시작 위치까지 날아 들어온다(스테이지 시작·격추 복귀 공용)
+  _flyIn() {
     const p = this.player;
     p.x = W / 2;
-    p.y = H + 24;                     // 화면 밖 아래에서 진입
+    p.y = H + 24;
     p.enter = PLAYER.respawnLock;
-    p.invul = PLAYER.respawnInvul;
     p.wantX = 0; p.wantY = 0; p.bank = 0;
+  }
+
+  // 진입 활공 한 스텝 — 조작 대기 중에도 돌려야 기체가 실제로 올라온다
+  _glide() {
+    const p = this.player;
+    if (p.enter <= 0) return false;
+    p.enter -= 1;
+    p.y += (PLAYER.startY - p.y) * 0.16;
+    if (p.enter === 0) p.y = PLAYER.startY;
+    p.wantX = 0; p.wantY = 0; p.bank = 0;
+    return true;
+  }
+
+  _respawn() {
+    this._flyIn();
+    this.player.invul = PLAYER.respawnInvul;
   }
 
   // 무기 강화 단계에 따라 탄을 뿌린다. 보조기는 항상 직선탄 1발씩.
