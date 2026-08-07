@@ -64,190 +64,227 @@ const BOSS_ROWS = [
 // ---- 픽셀맵(왼쪽 절반 + 가운데 열) ----
 
 export const MAPS = {
-  // 자기 기체 25x27 — 날렵한 단발 함상 전투기.
-  // 회전 잔상(p)이 스피너와 같은 줄에 걸쳐 프로펠러 디스크처럼 보이게 했다.
+  // 자기 기체 33x36 — 단발 함상 전투기. 카울 링·배기구·캐노피·주익 국적표식.
+  // 회전 잔상(p)이 스피너를 감싸 프로펠러 디스크처럼 보이게 했다.
   player: {
-    w: 25,
+    w: 33,
     core: 4,          // 동체 반폭 — 롤을 줄 때 이 바깥 열만 기운다
     faceDown: false,
     rows: [
-      '..p.p.p.p.pXX',
-      '...p.p.p.p.X4',
-      '..p.p.p.p.X34',
-      '.........XCCc',
-      '.........XcCC',
-      '........cX234',
-      '........X1234',
-      '........X12gG',
-      '........X12GG',
-      '........X12gG',
-      '........X1234',
-      '.......X61234',
-      '.....XX871234',
-      '...XX88771234',
-      '.XX8r77771234',
-      'X88rRr7771234',
-      '6677r76661234',
-      'XX55555661234',
-      '..XXXXX551234',
-      '.......XX1234',
-      '.........X234',
-      '.........X234',
-      '........X8234',
-      '......X777234',
-      '......XX55234',
-      '..........X23',
-      '...........XX',
-    ],
-  },
-
-  // 잡졸 21x22 — 성형엔진 카울의 뭉툭한 전투기
-  grunt: {
-    w: 21,
-    faceDown: true,
-    rows: [
-      '.p.p.p.p.XX',
-      '..p.p.p.pXC',
-      '.p.p.p.pX34',
-      '.......XCCc',
-      '.......XcCC',
-      '.......X234',
-      '......X12gG',
-      '......X12GG',
-      '......X12gg',
-      '....XX71234',
-      '..XX8871234',
-      'X8rr7771234',
-      '66r77661234',
-      'XX555661234',
-      '..XXX551234',
-      '.....XX1234',
-      '.......X234',
-      '......X8234',
-      '....X772234',
-      '....XX52234',
-      '........X23',
-      '.........XX',
-    ],
-  },
-
-  // 지그재그 23x22 — 인라인 엔진에 배기구가 늘어선 긴 주익 기체
-  zig: {
-    w: 23,
-    faceDown: true,
-    rows: [
-      '..p.p.p.p.XX',
-      '...p.p.p.pX4',
-      '..p.p.p.pX34',
-      '........X234',
-      '.......cX234',
-      '.......cX234',
-      '.......X1234',
-      '.......X1gGG',
-      '.......X1gGG',
-      '.......X1ggg',
-      '......X71234',
-      '....XX871234',
-      '..XX88771234',
-      'X8rr77771234',
-      '66r776661234',
-      'XX5555661234',
-      '..XXXX551234',
-      '......XX1234',
-      '........X234',
-      '.....X882234',
-      '.....XX52234',
-      '.........X23',
-    ],
-  },
-
-  // 급강하 19x22 — 뾰족한 기수에 후퇴각이 큰 좁은 기체
-  diver: {
-    w: 19,
-    faceDown: true,
-    rows: [
-      '.p.p.p.p.X',
-      '..p.p.p.X4',
-      '.p.p.p.X34',
-      '......X234',
-      '......X2gG',
-      '......X2gG',
-      '.....X12gg',
-      '....X71234',
-      '...X871234',
-      '..X8771234',
-      '.X87761234',
-      'X776661234',
-      'X555561234',
-      '.XXX551234',
-      '.....X1234',
-      '......X234',
-      '......X234',
-      '....X82234',
-      '...X772234',
-      '...XX52234',
-      '.......X23',
-      '........XX',
-    ],
-  },
-
-  // 폭격기 33x27 — 쌍발 나셀이 주익 앞으로 튀어나오고 그 앞에 프로펠러 디스크
-  gunner: {
-    w: 33,
-    faceDown: true,
-    rows: [
-      '..p.p.p.p.p......',
-      '...p.p.p.p.......',
-      '..p.p.p.p.p....XX',
-      '....XcCcX.....X34',
-      '....XcCcX....X2gG',
-      '....XcCcX....X2gG',
-      '....XcCcX...X1234',
-      '....XcCcX...X1234',
-      '....XcCcX...X1234',
-      '....XcCcXXXX11234',
-      '....XcCcX88811234',
-      '...XXcCcX77811234',
-      '.XX8XcCcX77711234',
-      'X8r7XcCcX77711234',
-      '6rRrXcCcX66611234',
-      'X5r6XcCcX66611234',
-      'XX55XcCcX55611234',
-      '..XXXXX5555511234',
-      '.......XXXXXX1234',
+      '.................',
+      '.....p.p.p.p.p.p.',
+      '.........p.p.p.pX',
+      '...........p.p.pX',
+      '.............XXXc',
+      '.............XCCc',
+      '.............XCCc',
+      '.............XCCc',
+      '...........X.X234',
+      '.............X23g',
+      '...........X.X2gG',
+      '.............X2gG',
+      '...........X.X2gG',
+      '.............X2gG',
+      '.............X23g',
+      '.............X234',
+      '.............X234',
+      '.............X234',
+      '.............X234',
       '............X1234',
+      '.........XXX81234',
+      '........X88871234',
+      '.....XXX877771234',
+      '....XrRr777761234',
+      '.XXX87r7666661234',
+      'X8886666666661234',
+      'X6666666566651234',
+      'X5555555555551234',
+      'XXXXXXXXX55551234',
+      '.........XXXX1234',
       '.............X234',
-      '.........X8882234',
-      '........X77772234',
-      '........XX5552234',
-      '.............X234',
-      '..............X23',
+      '..........XXX1234',
+      '.......XXX8888134',
+      '.......X775555134',
+      '.......XXXXXXXX34',
       '...............XX',
     ],
   },
 
-  // 보스 49x40 — 4발 대형 폭격기. 유리 기수 · 등 포탑 · 꼬리 포탑 · 굵은 미익
-  // 2·3스테이지 보스는 같은 실루엣에 팔레트만 갈아끼운다(도트 게임의 팔레트 스왑)
-  boss: { w: 49, faceDown: true, rows: BOSS_ROWS },
-  boss2: { w: 49, faceDown: true, pal: 'boss2', rows: BOSS_ROWS },
-  boss3: { w: 49, faceDown: true, pal: 'boss3', rows: BOSS_ROWS },
+  // 잡졸 27x29 — 성형엔진 카울의 뭉툭한 전투기
+  grunt: {
+    w: 27,
+    faceDown: true,
+    rows: [
+      '...p.p.p.p.p.p',
+      '.......p.p.p.p',
+      '.........p.pXp',
+      '..........XXCX',
+      '..........XCCc',
+      '..........XCCc',
+      '..........XCCc',
+      '..........X23g',
+      '..........X2gG',
+      '..........X2gG',
+      '..........X2gG',
+      '..........X23g',
+      '..........X234',
+      '..........X234',
+      '........XX1234',
+      '.......X881234',
+      '....XXX8771234',
+      '...X8r87771234',
+      'XXX8rRr6661234',
+      'X8866r66661234',
+      'X6655555551234',
+      'XXXXXXX5551234',
+      '.......XXXX134',
+      '...........X34',
+      '.....XXXXXX134',
+      '.....X88888134',
+      '.....X55555134',
+      '.....XXXXXXX34',
+      '............XX',
+    ],
+  },
 
-  // 보조기 11x11 — 유리 눈이 달린 작은 원반 드론
+  // 지그재그 29x29 — 인라인 엔진에 배기구가 늘어선 긴 주익 기체
+  zig: {
+    w: 29,
+    faceDown: true,
+    rows: [
+      '...............',
+      '...p.p.p.p.p.p.',
+      '.......p.p.p.pX',
+      '.........p.pXpX',
+      '.........X..XX4',
+      '............X34',
+      '.........X..X34',
+      '...........X23g',
+      '...........X2gG',
+      '...........X2gG',
+      '...........X2gG',
+      '...........X23g',
+      '...........X234',
+      '..........X1234',
+      '.......XXX81234',
+      '.....XX88871234',
+      '..XXX8877771234',
+      'XX888r777761234',
+      'X866rRr66661234',
+      'X6566r666661234',
+      'XXX555555551234',
+      '...XXXX55551234',
+      '.......XXXXX234',
+      '............X34',
+      '............X34',
+      '.......XXXXX134',
+      '......X88888134',
+      '......X55555134',
+      '......XXXXXXXXX',
+    ],
+  },
+
+  // 급강하 25x29 — 뾰족한 기수에 후퇴각이 큰 좁은 기체
+  diver: {
+    w: 25,
+    faceDown: true,
+    rows: [
+      '.............',
+      '...p.p.p.p.p.',
+      '.......p.p.pX',
+      '.........p.pX',
+      '..........XX4',
+      '..........X34',
+      '.........X23g',
+      '.........X2gG',
+      '.........X2gG',
+      '.........X2gG',
+      '.........X23g',
+      '.........X234',
+      '.........X234',
+      '........X1234',
+      '......XX81234',
+      '.....X8871234',
+      '....X87771234',
+      '...X877661234',
+      '.XX8766661234',
+      'X886666551234',
+      'X666655551234',
+      'X555555XXX234',
+      'XXXXXXX...X34',
+      '..........X34',
+      '.....XXXXX134',
+      '.....X8888134',
+      '.....X5555514',
+      '.....XXXXXX14',
+      '...........XX',
+    ],
+  },
+
+  // 폭격기 43x35 — 쌍발 나셀이 주익 앞으로 길게 나온다
+  gunner: {
+    w: 43,
+    faceDown: true,
+    rows: [
+      '...........p.p.p.p.p.p',
+      '...............p.p.p.p',
+      '.................p.pXp',
+      '......XXXXX........X3X',
+      '......XcCcX.......X234',
+      '.....XcCCCcX......X234',
+      '.....XcCCCcX......X234',
+      '.....XcCCCcX.....X23gG',
+      '.....XcCCCcX.....X2gGG',
+      '.....XcCCCcX.....X2gGG',
+      '.....XcCCCcX.....X2gGG',
+      '.....XcCCCcX.....X2gGG',
+      '.....XcCCCcX.....X23gG',
+      '.....XcCCCcX.....X2334',
+      '.....XcCCCcX.....X2334',
+      '.....XcCCCcX.XXXX12334',
+      '.....XcCCCccX888812334',
+      '.....XcCCCcc8777712334',
+      '....XccCCCcc7777712334',
+      '.XXX8crCCCcc7666612334',
+      'X8886rRrCCcc6666612334',
+      'X66666rcCcc66666612334',
+      'X55555ccCcc55555512334',
+      'XXXXXX5555555555512334',
+      '......XXXXXXXXXX512334',
+      '................XX2334',
+      '..................X234',
+      '..................X234',
+      '............XXXXXX1234',
+      '.........XXX8888881234',
+      '.........X887777771234',
+      '.........X555555551234',
+      '.........XXXXXXXXXX134',
+      '...................X34',
+      '...................XXX',
+    ],
+  },
+
+  // 보스 49x40 — 4발 대형 폭격기(1스테이지). 2·3스테이지 보스는 전용 루틴으로 굽는다
+  boss: { w: 49, faceDown: true, rows: BOSS_ROWS },
+
+  // 보조기 13x13 — 유리 눈이 달린 작은 원반 드론
   drone: {
-    w: 11,
+    w: 13,
     faceDown: false,
     rows: [
-      '....XX',
-      '..XXcC',
-      '.XcCC4',
-      'XcCC44',
-      'XcC4GG',
-      'XcC4GG',
-      'XcCC44',
-      'XcCCC4',
-      '.XcCCC',
-      '..XXcC',
-      '....XX',
+      '.....XX',
+      '...XXcC',
+      '..XcCC4',
+      '.XcCC44',
+      'XcCC444',
+      'XcC4GGG',
+      'XcC4GGG',
+      'XcC4GGG',
+      'XcCC444',
+      '.XcCC44',
+      '..XcCC4',
+      '...XXcC',
+      '.....XX',
     ],
   },
 };
@@ -296,23 +333,17 @@ export const PALETTES = {
     glass: '#5f7c96', glassHi: '#dcf1ff',
     mark: '#c8352c', markHi: '#ffffff', prop: '#c6d1de',
   },
-  // 2스테이지 보스 — 사막 도장
-  boss2: {
-    line: '#241a10',
-    body: ['#5b4a2c', '#77613a', '#967c4c', '#bda471'],
-    wing: ['#7d6a4a', '#9c8863', '#bda684', '#dcc9aa'],
-    metal: ['#3a2f1e', '#50432c', '#84714f'],
-    glass: '#7d8f6a', glassHi: '#eaf6d4',
-    mark: '#c0392b', markHi: '#ffffff', prop: '#cbbb98',
-  },
-  // 3스테이지 보스 — 야간 도장
-  boss3: {
-    line: '#0a0a10',
-    body: ['#2b1c22', '#3f2a32', '#573b45', '#7b5763'],
-    wing: ['#4a3a42', '#66525c', '#867079', '#ab949c'],
-    metal: ['#161318', '#241f26', '#453b44'],
-    glass: '#8a2b2b', glassHi: '#ffb8a8',
-    mark: '#e0d24a', markHi: '#2a2410', prop: '#9b8c93',
+  // 2스테이지 보스 전익기 — 사막 도장의 거대한 삼각 날개
+  wingboss: {
+    line: '#1b1408',
+    wing: ['#4a3d22', '#66552f', '#87703e', '#b09456'],
+    body: ['#3a301b', '#544526', '#725d33', '#9c8046'],
+    panel: '#3d3219',
+    metal: ['#2b2617', '#443c26', '#6f6544'],
+    intake: '#100d06',
+    glass: '#5d6b3a', glassHi: '#d8ecac',
+    glow: '#e0642c', glowHi: '#ffc06a',
+    mark: '#a8291f', markHi: '#f0e0c0',
   },
   // 라스트 보스 비공정 — 검은 기낭에 등불만 살아 있다
   airship: {
@@ -401,6 +432,139 @@ export function bakeSprite(name, { bank = 0 } = {}) {
       img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b;
       img.data[o + 3] = ch === 'p' ? 105 : 255;
     }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
+/**
+ * 2스테이지 보스 — 거대 전익기(flying wing). 79x54. 기수가 아래를 향한다.
+ * 폭격기와 실루엣이 완전히 달라야 "보스"로 읽힌다 — 낮고 넓은 삼각 날개에
+ * 앞전을 따라 흡입구 넷, 가운데 융기한 동체와 캐노피, 날개 끝 포탑.
+ */
+export function bakeWing() {
+  const W = 79; const H = 54;
+  const cx = (W - 1) / 2;
+  const pal = PALETTES.wingboss;
+  const px = new Array(W * H).fill(null);
+  const put = (x, y, col) => {
+    const xi = Math.round(x); const yi = Math.round(y);
+    if (xi < 0 || xi >= W || yi < 0 || yi >= H) return;
+    px[yi * W + xi] = col;
+  };
+  const rowFill = (y, x0, x1, col) => { for (let x = Math.ceil(x0); x <= Math.floor(x1); x += 1) put(x, y, col); };
+
+  const SPAN = 38;
+  const lead = (f) => 48 - 31 * f;      // 앞전(아래) — 바깥으로 갈수록 뒤로 젖혀진다
+  const trail = (f) => 5 + 10 * f;      // 뒷전(위)
+
+  // ---- 주익 ----
+  for (let x = 0; x < W; x += 1) {
+    const adx = Math.abs(x - cx);
+    if (adx > SPAN) continue;
+    const f = adx / SPAN;
+    const y0 = trail(f); const y1 = lead(f);
+    for (let y = Math.round(y0); y <= Math.round(y1); y += 1) {
+      const t = (y - y0) / Math.max(1, y1 - y0);      // 0 뒷전 → 1 앞전
+      const tip = 1 - 0.3 * f;                        // 끝으로 갈수록 어둡게
+      const v = (0.3 + 0.7 * t) * tip;
+      const i = v > 0.78 ? 3 : (v > 0.55 ? 2 : (v > 0.3 ? 1 : 0));
+      put(x, y, pal.wing[i]);
+    }
+    // 앞전 하이라이트
+    put(x, Math.round(y1), pal.wing[3]);
+    // 익면 패널선
+    if (adx % 9 === 0 && adx > 6) for (let y = Math.round(y0) + 2; y <= Math.round(y1) - 2; y += 1) put(x, y, pal.panel);
+  }
+
+  // ---- 엔진 흡입구 + 배기 ----
+  for (const sgn of [-1, 1]) {
+    for (const d of [13, 26]) {
+      const ex = cx + sgn * d;
+      const f = d / SPAN;
+      const ly = lead(f);
+      for (let y = Math.round(ly) - 13; y <= Math.round(ly) - 2; y += 1) {
+        const w = (y < ly - 11 || y > ly - 4) ? 2 : 4;
+        for (let x = ex - w; x <= ex + w; x += 1) {
+          const u = Math.abs(x - ex) / w;
+          put(x, y, u > 0.75 ? pal.line : (u > 0.3 ? pal.metal[0] : pal.metal[2]));
+        }
+      }
+      rowFill(Math.round(ly) - 2, ex - 3, ex + 3, pal.intake);     // 시커먼 흡입구
+      rowFill(Math.round(ly) - 3, ex - 2, ex + 2, pal.intake);
+      put(ex, Math.round(trail(f)) + 1, pal.glow);                  // 뒤쪽 배기 불빛
+      put(ex - 1, Math.round(trail(f)) + 1, pal.glowHi);
+    }
+  }
+
+  // ---- 가운데 융기한 동체 ----
+  for (let y = 3; y <= 51; y += 1) {
+    const t = (y - 3) / 48;
+    const hw = 9 * Math.sin(Math.PI * (0.18 + 0.82 * t) ** 0.8);
+    if (hw < 1) continue;
+    for (let x = Math.ceil(cx - hw); x <= Math.floor(cx + hw); x += 1) {
+      const u = Math.abs(x - cx) / hw;
+      const i = u > 0.9 ? 0 : (u > 0.62 ? 1 : (u > 0.28 ? 2 : 3));
+      put(x, y, pal.body[i]);
+    }
+  }
+  // 캐노피 — 기수 쪽에 낮게 붙은 유리
+  for (let y = 34; y <= 44; y += 1) {
+    const hw = 4 - Math.abs(y - 39) * 0.42;
+    for (let x = Math.ceil(cx - hw); x <= Math.floor(cx + hw); x += 1) {
+      put(x, y, Math.abs(x - cx) / Math.max(1, hw) > 0.55 ? pal.glass : pal.glassHi);
+    }
+  }
+  // 등 포탑
+  for (let y = 12; y <= 20; y += 1) {
+    const w = (y < 14 || y > 18) ? 2 : 4;
+    for (let x = cx - w; x <= cx + w; x += 1) put(x, y, Math.abs(x - cx) > w - 1 ? pal.line : pal.metal[1]);
+  }
+  put(cx, 21, pal.glow); put(cx, 22, pal.glow);
+
+  // ---- 날개 끝 포탑(윙렛) ----
+  for (const sgn of [-1, 1]) {
+    const tx = cx + sgn * (SPAN - 3);
+    for (let y = 14; y <= 24; y += 1) {
+      const w = (y < 16 || y > 22) ? 1 : 2;
+      for (let x = tx - w; x <= tx + w; x += 1) put(x, y, Math.abs(x - tx) > w - 1 ? pal.line : pal.metal[2]);
+    }
+    put(tx, 25, pal.glow);
+  }
+
+  // ---- 국적 표식 ----
+  for (const sgn of [-1, 1]) {
+    const mx = cx + sgn * 20;
+    const my = Math.round((trail(20 / SPAN) + lead(20 / SPAN)) / 2);
+    for (let dy = -1; dy <= 1; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
+        if (Math.abs(dx) + Math.abs(dy) > 1) continue;
+        put(mx + dx, my + dy, dx === 0 && dy === 0 ? pal.markHi : pal.mark);
+      }
+    }
+  }
+
+  // ---- 외곽선 ----
+  const filled = (x, y) => x >= 0 && x < W && y >= 0 && y < H && px[y * W + x] !== null;
+  const edge = [];
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      if (!filled(x, y)) continue;
+      if (!filled(x - 1, y) || !filled(x + 1, y) || !filled(x, y - 1) || !filled(x, y + 1)) edge.push(y * W + x);
+    }
+  }
+  for (const i of edge) px[i] = pal.line;
+
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  for (let i = 0; i < px.length; i += 1) {
+    const col = px[i];
+    if (!col) continue;
+    const [r, g, b] = hex(col);
+    const o = i * 4;
+    img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
   return cv;

@@ -2,7 +2,7 @@
 // 기체 스프라이트는 시작할 때 한 번 구워두고(sprites.js) 이후엔 blit만 한다.
 
 import { W, H, HUD_H, BOSS, PLAYER, VERSION } from './config.js';
-import { bakeSprite, bakeAirship, MAPS, FONT } from './sprites.js';
+import { bakeSprite, bakeAirship, bakeWing, MAPS, FONT } from './sprites.js';
 import { Backdrop } from './backdrop.js';
 
 export class Renderer {
@@ -21,7 +21,9 @@ export class Renderer {
     // 좌우 기울기: 같은 픽셀맵에서 주익만 기울여 굽는다
     this.spr.bankL = bakeSprite('player', { bank: -1 });
     this.spr.bankR = bakeSprite('player', { bank: 1 });
-    this.spr.airship = bakeAirship();   // 라스트 보스 — 픽셀맵이 아니라 전용 루틴으로 굽는다
+    // 큰 보스 둘은 픽셀맵이 아니라 전용 루틴으로 굽는다
+    this.spr.wingboss = bakeWing();
+    this.spr.airship = bakeAirship();
     this.flash = {};   // 피격용 흰색 실루엣(요청 시 생성)
     this.backdrop = new Backdrop('day');
     this.showHitbox = false;   // 디버그 콘솔에서 켠다
@@ -97,7 +99,7 @@ export class Renderer {
     if (p.dead > 0) return;                                          // 격추 후 잠시 사라진다
     if (p.invul > 0 && Math.floor(p.invul / 4) % 2 === 0) return;    // 무적 동안 깜빡임
     for (let i = 0; i < game.options; i += 1) {
-      this._blit(c, this.spr.drone, p.x + (i === 0 ? -24 : 24), p.y + 9);
+      this._blit(c, this.spr.drone, p.x + (i === 0 ? -32 : 32), p.y + 11);
     }
     // 좌우로 움직이면 기울어진 자세로
     const b = p.bank || 0;

@@ -317,7 +317,7 @@ export class Game {
       } else {
         p.wantX = 0; p.wantY = 0;
       }
-      const nx = clamp(p.x + dx, 12, W - 12);
+      const nx = clamp(p.x + dx, 16, W - 16);
       p.bank = p.bank * 0.6 + (nx - p.x) * 0.4;   // 부드럽게 — 한 프레임 떨림으로 스프라이트가 깜빡이지 않게
       p.x = nx;
       p.y = clamp(p.y + dy, 40, H - 20);
@@ -358,26 +358,30 @@ export class Game {
       x: sx, y: sy, vx: Math.sin(ang) * P_BULLET.speed, vy: -Math.cos(ang) * P_BULLET.speed,
       r: P_BULLET.r, dmg, dead: false,
     });
-    // 1 단발 → 2 2연 → 3 3방향 → 4 4연 → 5 5방향
+    // 1 단발 → 2 2연 → 3 3방향 → 4 4연 → 5 5방향 → 6 6방향(넓은 부채)
     const L = this.power;
     if (L === 1) {
-      shot(x, y - 14);
+      shot(x, y - 18);
     } else if (L === 2) {
-      shot(x - 7, y - 12); shot(x + 7, y - 12);
+      shot(x - 8, y - 16); shot(x + 8, y - 16);
     } else if (L === 3) {
-      shot(x, y - 14);
-      shot(x - 8, y - 10, -0.18); shot(x + 8, y - 10, 0.18);
+      shot(x, y - 18);
+      shot(x - 10, y - 13, -0.18); shot(x + 10, y - 13, 0.18);
     } else if (L === 4) {
-      shot(x - 6, y - 14); shot(x + 6, y - 14);
-      shot(x - 13, y - 8, -0.26); shot(x + 13, y - 8, 0.26);
+      shot(x - 7, y - 18); shot(x + 7, y - 18);
+      shot(x - 16, y - 11, -0.26); shot(x + 16, y - 11, 0.26);
+    } else if (L === 5) {
+      shot(x, y - 19);
+      shot(x - 9, y - 16); shot(x + 9, y - 16);
+      shot(x - 18, y - 10, -0.34); shot(x + 18, y - 10, 0.34);
     } else {
-      shot(x, y - 15);
-      shot(x - 8, y - 12); shot(x + 8, y - 12);
-      shot(x - 15, y - 7, -0.34); shot(x + 15, y - 7, 0.34);
+      shot(x - 4, y - 19); shot(x + 4, y - 19);
+      shot(x - 12, y - 15, -0.16); shot(x + 12, y - 15, 0.16);
+      shot(x - 20, y - 9, -0.42); shot(x + 20, y - 9, 0.42);
     }
     for (let i = 0; i < this.options; i += 1) {
-      const ox = x + (i === 0 ? -26 : 26);
-      shot(ox, y + 6);
+      const ox = x + (i === 0 ? -32 : 32);
+      shot(ox, y + 8);
     }
     this.sfx('shot');
   }
@@ -486,6 +490,7 @@ export class Game {
     const ratio = b.hp / b.maxHp;
     const ph = ratio <= BOSS.phase3 ? 3 : (ratio <= BOSS.phase2 ? 2 : 1);
     if (b.kind === 'airship') { this._airship(b, ph); return; }   // 라스트 보스는 패턴이 따로다
+    if (b.kind === 'wing') { this._wingBoss(b, ph); return; }
 
     b.x = W / 2 + Math.sin(b.t / (ph === 3 ? 40 : 62)) * (W / 2 - 60);
 
@@ -507,6 +512,43 @@ export class Game {
         else this._aimedSpread(b, 5, 0.28, 3.2);
         b.atkCd = Math.round(48 * b.cd);
       }
+    }
+  }
+
+  // 2스테이지 보스(전익기) — 빠르게 횡단하며 넓게 뿌린다.
+  // 폭격기가 제자리에서 쏜다면 이쪽은 이동 자체가 압박이다.
+  _wingBoss(b, ph) {
+    const sweep = ph === 3 ? 44 : (ph === 2 ? 54 : 66);
+    b.x = W / 2 + Math.sin(b.t / sweep) * (W / 2 - 52);
+    b.y = BOSS.enterY + Math.sin(b.t / 51) * 6;
+
+    if (--b.atkCd > 0) return;
+    const P = ph === 1 ? 3 : (ph === 2 ? 4 : 5);
+    b.pattern = (b.pattern + 1) % P;
+    const cd = (n) => Math.round(n * b.cd);
+
+    if (b.pattern === 0) {                       // 넓은 부채
+      this._aimedSpread(b, ph === 3 ? 9 : 7, 0.19);
+      b.atkCd = cd(ph === 3 ? 48 : 64);
+    } else if (b.pattern === 1) {                // 날개 끝 교차 사격
+      for (const sgn of [-1, 1]) {
+        this._aimed({ x: b.x + sgn * 34, y: b.y + 8 }, 2.9);
+        this._aimedSpread({ x: b.x + sgn * 34, y: b.y + 8 }, 3, 0.26);
+      }
+      b.atkCd = cd(ph === 3 ? 44 : 58);
+    } else if (b.pattern === 2) {                // 흡입구 넷에서 동시에
+      for (const d of [-26, -13, 13, 26]) {
+        this._aimed({ x: b.x + d, y: b.y + 10 }, 2.5);
+      }
+      b.atkCd = cd(ph === 3 ? 50 : 68);
+    } else if (b.pattern === 3) {                // 링 + 조준탄
+      this._ring(b, ph === 3 ? 18 : 14, 2.2, b.t / 26);
+      this._aimed(b, 3.2);
+      b.atkCd = cd(66);
+    } else {                                     // 3페이즈 — 벽 + 부채
+      this._wall(b, 2.4, this.player.x, 52);
+      this._aimedSpread(b, 5, 0.3, 3.1);
+      b.atkCd = cd(72);
     }
   }
 

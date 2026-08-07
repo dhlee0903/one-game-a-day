@@ -1,7 +1,7 @@
 // 종스크롤 슈팅 상수 — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v9.11';
+export const VERSION = 'v9.12';
 
 // 게임 로직은 초당 60회로 고정한다. 모니터 주사율(60/120/144Hz)이 달라도
 // 같은 속도로 진행되게 하는 기준값 — 아래 상수는 모두 "1스텝당" 값이다.
@@ -17,7 +17,7 @@ export const PLAY_TOP = 0;        // 적은 화면 위 밖에서 들어온다
 
 // ---- 플레이어 ----
 export const PLAYER = {
-  r: 5,               // 피격 판정 반지름(그림보다 훨씬 작게 — 슈팅 관례)
+  r: 6,               // 피격 판정 반지름(그림보다 훨씬 작게 — 슈팅 관례)
   // 한 스텝(1/60초)당 최대 이동 거리. 키보드와 드래그가 **같은 상한**을 쓴다.
   // 드래그를 손가락에 1:1로 붙이면 플릭 한 번에 순간이동해 키보드와 체감이 갈렸다.
   speed: 6,
@@ -33,7 +33,7 @@ export const PLAYER = {
 export const START_LIVES = 3;
 export const START_BOMBS = 2;
 export const MAX_BOMBS = 5;
-export const MAX_POWER = 5;       // 무기 강화 1~5
+export const MAX_POWER = 6;       // 무기 강화 1~6
 export const MAX_OPTIONS = 2;     // 보조기 최대 2기
 
 // ---- 탄 ----
@@ -56,10 +56,10 @@ export const KEY_BEST = 'og-hs-day09'; // 홈 카드와 공유(높을수록 좋�
 // ---- 적 종류 ----
 // hp / 속도 / 사격 주기(0=안 쏨) / 점수
 export const ENEMY = {
-  grunt:  { hp: 1, speed: 1.9, fire: 0,   score: SCORE.grunt,  r: 8 },
-  zig:    { hp: 2, speed: 1.5, fire: 105, score: SCORE.zig,    r: 9 },
-  diver:  { hp: 2, speed: 3.4, fire: 0,   score: SCORE.diver,  r: 7 },
-  gunner: { hp: 5, speed: 1.0, fire: 70,  score: SCORE.gunner, r: 13 },
+  grunt:  { hp: 1, speed: 1.9, fire: 0,   score: SCORE.grunt,  r: 10 },
+  zig:    { hp: 2, speed: 1.5, fire: 105, score: SCORE.zig,    r: 11 },
+  diver:  { hp: 2, speed: 3.4, fire: 0,   score: SCORE.diver,  r: 9 },
+  gunner: { hp: 5, speed: 1.0, fire: 70,  score: SCORE.gunner, r: 17 },
 };
 
 // ---- 보스 ----
