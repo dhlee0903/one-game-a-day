@@ -24,7 +24,13 @@ export class Game {
     this.t = 0;
     this.scroll = 0;
     this.phase = 'ready';
-    this.player = { x: W / 2, y: PLAYER.startY, invul: 0, fireCd: 0 };
+    // wantX/wantY = 드래그로 쌓인 이동 요청(스텝마다 상한만큼 소화한다)
+    // dead = 격추 후 사라져 있는 프레임, enter = 아래에서 복귀 진입하는 프레임
+    // bank = 최근 좌우 이동량(부호 포함) — 기울기 스프라이트 선택에 쓴다
+    this.player = {
+      x: W / 2, y: PLAYER.startY, invul: 0, fireCd: 0,
+      wantX: 0, wantY: 0, dead: 0, enter: 0, bank: 0,
+    };
     this.lives = START_LIVES;
     this.bombs = START_BOMBS;
     this.power = 1;
@@ -61,12 +67,17 @@ export class Game {
 
   // ---- 입력 ----
 
+  // 드래그가 직접 좌표를 옮기지 않는다 — 요청만 쌓고 _player()가 상한을 걸어 소화한다.
+  // (손가락에 1:1로 붙이면 플릭 한 번에 순간이동해 키보드와 체감이 크게 갈렸다)
   movePlayerBy(dx, dy) {
     if (this.phase !== 'playing') return;
     const p = this.player;
-    p.x = clamp(p.x + dx, 12, W - 12);
-    p.y = clamp(p.y + dy, 40, H - 20);
+    p.wantX = clamp(p.wantX + dx, -PLAYER.dragMax, PLAYER.dragMax);
+    p.wantY = clamp(p.wantY + dy, -PLAYER.dragMax, PLAYER.dragMax);
   }
+
+  // 새 터치가 시작되면 이전 플릭의 잔량을 버린다
+  resetDrag() { this.player.wantX = 0; this.player.wantY = 0; }
 
   setKey(k, on) { this.keys[k] = on ? 1 : 0; }
 
@@ -151,11 +162,51 @@ export class Game {
   _player() {
     const p = this.player;
     if (p.invul > 0) p.invul -= 1;
-    const k = this.keys;
-    if (k.l || k.r || k.u || k.d) {
-      this.movePlayerBy((k.r - k.l) * PLAYER.speed, (k.d - k.u) * PLAYER.speed);
+
+    // 격추 직후 — 기체가 사라져 있다가 화면 아래에서 다시 날아 들어온다
+    if (p.dead > 0) {
+      p.dead -= 1;
+      p.bank = 0;
+      if (p.dead === 0 && this.lives >= 0) this._respawn();
+      return;
     }
+
+    if (p.enter > 0) {
+      // 복귀 진입: 시작 위치까지 올라오는 동안은 조작을 받지 않는다
+      p.enter -= 1;
+      p.y += (PLAYER.startY - p.y) * 0.16;
+      if (p.enter === 0) p.y = PLAYER.startY;
+      p.wantX = 0; p.wantY = 0; p.bank = 0;
+    } else {
+      // 키보드와 드래그를 한 벡터로 합치고 **같은 상한**으로 자른다.
+      // 대각선이 빨라지지 않도록 축별이 아니라 크기로 자른다.
+      const k = this.keys;
+      let dx = (k.r - k.l) * PLAYER.speed + p.wantX;
+      let dy = (k.d - k.u) * PLAYER.speed + p.wantY;
+      const len = Math.hypot(dx, dy);
+      if (len > PLAYER.speed) {
+        const s = PLAYER.speed / len;
+        dx *= s; dy *= s;
+        p.wantX *= 1 - s; p.wantY *= 1 - s;   // 소화한 만큼만 덜어내고 나머지는 다음 스텝에
+      } else {
+        p.wantX = 0; p.wantY = 0;
+      }
+      const nx = clamp(p.x + dx, 12, W - 12);
+      p.bank = p.bank * 0.6 + (nx - p.x) * 0.4;   // 부드럽게 — 한 프레임 떨림으로 스프라이트가 깜빡이지 않게
+      p.x = nx;
+      p.y = clamp(p.y + dy, 40, H - 20);
+    }
+
     if (--p.fireCd <= 0) { p.fireCd = PLAYER.fireEvery; this._fire(); }
+  }
+
+  _respawn() {
+    const p = this.player;
+    p.x = W / 2;
+    p.y = H + 24;                     // 화면 밖 아래에서 진입
+    p.enter = PLAYER.respawnLock;
+    p.invul = PLAYER.respawnInvul;
+    p.wantX = 0; p.wantY = 0; p.bank = 0;
   }
 
   // 무기 강화 단계에 따라 탄을 뿌린다. 보조기는 항상 직선탄 1발씩.
@@ -349,13 +400,15 @@ export class Game {
       }
     }
 
-    // 아이템 획득
-    for (const it of this.pickups) {
-      if (it.dead) continue;
-      if (dist2(it, p) < (12 + PLAYER.r) ** 2) { it.dead = true; this._take(it.kind); }
+    // 아이템 획득 — 사라져 있는 동안은 줍지 않는다
+    if (p.dead === 0) {
+      for (const it of this.pickups) {
+        if (it.dead) continue;
+        if (dist2(it, p) < (12 + PLAYER.r) ** 2) { it.dead = true; this._take(it.kind); }
+      }
     }
 
-    if (p.invul > 0 || this.phase !== 'playing') return;
+    if (p.invul > 0 || p.dead > 0 || this.phase !== 'playing') return;
 
     // 적 탄 → 플레이어
     for (const b of this.eb) {
@@ -385,15 +438,18 @@ export class Game {
   }
 
   // 피격: 목숨 하나를 잃고 무기 한 단계 하락, 보조기는 사라진다.
+  // 그 자리에서 즉시 부활하지 않고 잠시 사라졌다가 시작 위치로 복귀한다.
   _die() {
     const p = this.player;
+    if (p.dead > 0) return;
     this.fx.push({ x: p.x, y: p.y, t: 0, life: 26, r: 22, kind: 'boom' });
     this.sfx('hit');
     this.lives -= 1;
     this.power = Math.max(1, this.power - 1);
     this.options = 0;
-    p.invul = PLAYER.respawnInvul;
-    p.x = W / 2; p.y = PLAYER.startY;
+    p.dead = PLAYER.deadPause;
+    p.invul = 0;
+    p.wantX = 0; p.wantY = 0;
     this._emit();
     if (this.lives < 0) { this.endTimer = 55; this._pendingWin = false; }
   }

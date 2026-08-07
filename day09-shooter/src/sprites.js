@@ -25,6 +25,7 @@ export const MAPS = {
   // 회전 잔상(p)이 스피너와 같은 줄에 걸쳐 프로펠러 디스크처럼 보이게 했다.
   player: {
     w: 25,
+    core: 4,          // 동체 반폭 — 롤을 줄 때 이 바깥 열만 기운다
     faceDown: false,
     rows: [
       '..p.p.p.p.pXX',
@@ -315,16 +316,43 @@ export function mirrorRow(half) {
   return out;
 }
 
-/** 픽셀맵을 캔버스로 구워 돌려준다. faceDown이면 위아래를 뒤집는다. */
-export function bakeSprite(name) {
+/**
+ * 롤(좌우 기울기): 동체 바깥 열을 중심에서 멀수록 세로로 밀어낸다.
+ * 기울면 한쪽 날개가 내려가고 반대쪽이 올라가는 걸 그대로 옮긴 것 —
+ * 열 단위로 통째로 밀기 때문에 외곽선·국적 표식·명암이 원본 그대로 따라간다.
+ * dir = -1 왼쪽으로 기움(왼 날개가 내려감), +1 오른쪽.
+ */
+function shear(rows, w, core, dir) {
+  const h = rows.length;
+  const cx = (w - 1) / 2;
+  const out = Array.from({ length: h }, () => new Array(w).fill('.'));
+  for (let x = 0; x < w; x += 1) {
+    const d = Math.abs(x - cx) - core;                  // 동체 안쪽은 기울지 않는다
+    const sh = d <= 0 ? 0 : Math.round(dir * Math.sign(x - cx) * d * 0.42);
+    for (let y = 0; y < h; y += 1) {
+      const ch = rows[y][x];
+      if (ch === '.') continue;
+      const ny = y + sh;
+      if (ny >= 0 && ny < h) out[ny][x] = ch;
+    }
+  }
+  return out.map((r) => r.join(''));
+}
+
+/**
+ * 픽셀맵을 캔버스로 구워 돌려준다.
+ * faceDown이면 위아래를 뒤집고, bank가 있으면 주익을 기울인다.
+ */
+export function bakeSprite(name, { bank = 0 } = {}) {
   const map = MAPS[name];
-  const pal = PALETTES[name] || PALETTES.player;
-  const rows = map.rows.map(mirrorRow);
+  const pal = PALETTES[map.pal || name] || PALETTES.player;
+  let rows = map.rows.map(mirrorRow);
   const w = map.w;
   const h = rows.length;
   for (const [i, r] of rows.entries()) {
     if (r.length !== w) throw new Error(`sprite ${name} row ${i}: ${r.length} != ${w}`);
   }
+  if (bank) rows = shear(rows, w, map.core ?? 4, bank);
 
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;

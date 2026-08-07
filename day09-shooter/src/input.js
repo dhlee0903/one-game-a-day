@@ -21,6 +21,7 @@ export class InputController {
       canvas.setPointerCapture(e.pointerId);
       dragging = true;
       lastX = e.clientX; lastY = e.clientY;
+      game.resetDrag();   // 이전 플릭의 잔량을 버리고 새로 잡는다
       game.start(); // 시작 화면에서 탭하면 바로 시작
     });
 

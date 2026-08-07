@@ -1,7 +1,7 @@
 // 읽기 전용 렌더러 — 1픽셀 = 1도트 해상도의 도트 그래픽.
 // 기체 스프라이트는 시작할 때 한 번 구워두고(sprites.js) 이후엔 blit만 한다.
 
-import { W, H, HUD_H, BOSS, VERSION } from './config.js';
+import { W, H, HUD_H, BOSS, PLAYER, VERSION } from './config.js';
 import { bakeSprite, MAPS, FONT } from './sprites.js';
 
 const LOOP = 1500;
@@ -32,6 +32,9 @@ export class Renderer {
     // 스프라이트를 한 번만 굽는다
     this.spr = {};
     for (const name of Object.keys(MAPS)) this.spr[name] = bakeSprite(name);
+    // 좌우 기울기: 같은 픽셀맵에서 주익만 기울여 굽는다
+    this.spr.bankL = bakeSprite('player', { bank: -1 });
+    this.spr.bankR = bakeSprite('player', { bank: 1 });
     this.flash = {};   // 피격용 흰색 실루엣(요청 시 생성)
   }
 
@@ -166,11 +169,15 @@ export class Renderer {
   _player(c, game) {
     const p = game.player;
     if (game.phase === 'dead' && game.lives < 0) return;
-    if (p.invul > 0 && Math.floor(p.invul / 4) % 2 === 0) return;
+    if (p.dead > 0) return;                                          // 격추 후 잠시 사라진다
+    if (p.invul > 0 && Math.floor(p.invul / 4) % 2 === 0) return;    // 무적 동안 깜빡임
     for (let i = 0; i < game.options; i += 1) {
       this._blit(c, this.spr.drone, p.x + (i === 0 ? -24 : 24), p.y + 9);
     }
-    this._blit(c, this.spr.player, p.x, p.y);
+    // 좌우로 움직이면 기울어진 자세로
+    const b = p.bank || 0;
+    const name = b < -PLAYER.bankAt ? 'bankL' : (b > PLAYER.bankAt ? 'bankR' : 'player');
+    this._blit(c, this.spr[name], p.x, p.y);
   }
 
   _enemies(c, list) {
