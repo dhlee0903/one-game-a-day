@@ -1,7 +1,7 @@
 // 종스크롤 슈팅 상수 — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v9.7';
+export const VERSION = 'v9.8';
 
 // 게임 로직은 초당 60회로 고정한다. 모니터 주사율(60/120/144Hz)이 달라도
 // 같은 속도로 진행되게 하는 기준값 — 아래 상수는 모두 "1스텝당" 값이다.
@@ -33,7 +33,7 @@ export const PLAYER = {
 export const START_LIVES = 3;
 export const START_BOMBS = 2;
 export const MAX_BOMBS = 5;
-export const MAX_POWER = 4;       // 무기 강화 1~4
+export const MAX_POWER = 5;       // 무기 강화 1~5
 export const MAX_OPTIONS = 2;     // 보조기 최대 2기
 
 // ---- 탄 ----

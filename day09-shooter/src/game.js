@@ -62,9 +62,9 @@ export class Game {
     this.queue = [];
     this.enemies = [];
     this.eb = [];
-    this.pickups = [];
     this.boss = null;
     this.stageWait = 0;
+    // pickups는 비우지 않는다 — 보스가 떨군 보상을 다음 스테이지에서도 주울 수 있게
     // 조작이 들어올 때까지 편대를 내보내지 않는다 — 배경만 흐르는 제자리 비행 상태
     this.armed = false;
     this.player.x = W / 2;
@@ -151,8 +151,16 @@ export class Game {
       if (!this.banner.hold && this.banner.t >= this.banner.life) this.banner = null;
     }
 
-    // 첫 조작 전에는 편대·타이머가 멈춰 있다
-    if (!this.armed) { this._fx(); this.fx = this.fx.filter((f) => f.t < f.life); return; }
+    // 첫 조작 전에는 편대·타이머가 멈춰 있다.
+    // 다만 떨어지는 아이템(보스 보상)은 계속 내려오고 주울 수 있다.
+    if (!this.armed) {
+      this._pickups();
+      this._collide();
+      this._fx();
+      this.pickups = this.pickups.filter((p) => !p.dead);
+      this.fx = this.fx.filter((f) => f.t < f.life);
+      return;
+    }
 
     this.t += 1;
     if (this.bombFlash > 0) this.bombFlash -= 1;
@@ -278,11 +286,23 @@ export class Game {
       x: sx, y: sy, vx: Math.sin(ang) * P_BULLET.speed, vy: -Math.cos(ang) * P_BULLET.speed,
       r: P_BULLET.r, dmg, dead: false,
     });
+    // 1 단발 → 2 2연 → 3 3방향 → 4 4연 → 5 5방향
     const L = this.power;
-    if (L === 1) shot(x, y - 14);
-    else if (L === 2) { shot(x - 7, y - 12); shot(x + 7, y - 12); }
-    else if (L === 3) { shot(x, y - 14); shot(x - 8, y - 10, -0.18); shot(x + 8, y - 10, 0.18); }
-    else { shot(x - 6, y - 14); shot(x + 6, y - 14); shot(x - 12, y - 8, -0.26); shot(x + 12, y - 8, 0.26); }
+    if (L === 1) {
+      shot(x, y - 14);
+    } else if (L === 2) {
+      shot(x - 7, y - 12); shot(x + 7, y - 12);
+    } else if (L === 3) {
+      shot(x, y - 14);
+      shot(x - 8, y - 10, -0.18); shot(x + 8, y - 10, 0.18);
+    } else if (L === 4) {
+      shot(x - 6, y - 14); shot(x + 6, y - 14);
+      shot(x - 13, y - 8, -0.26); shot(x + 13, y - 8, 0.26);
+    } else {
+      shot(x, y - 15);
+      shot(x - 8, y - 12); shot(x + 8, y - 12);
+      shot(x - 15, y - 7, -0.34); shot(x + 15, y - 7, 0.34);
+    }
     for (let i = 0; i < this.options; i += 1) {
       const ox = x + (i === 0 ? -26 : 26);
       shot(ox, y + 6);
@@ -398,6 +418,8 @@ export class Game {
       b.hp = 0; b.state = 'dying'; b.t = 0;
       this.score += SCORE.boss[this.stageIdx];
       this.eb.length = 0;
+      this._drop(b.x - 16, b.y, 'P');       // 보스 격파 보상
+      this._drop(b.x + 16, b.y, 'B');
       const last = this.stageIdx >= STAGES.length - 1;
       if (last) {
         this.endTimer = 90; this._pendingWin = true;

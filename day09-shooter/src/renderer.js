@@ -202,18 +202,6 @@ export class Renderer {
     this._text(c, String(game.score).padStart(6, '0'), 8, 8, '#ffffff', 2);
     this._text(c, `BEST ${Math.max(game.best, game.score)}`, 8, 26, '#7fc4ff', 1);
 
-    for (let i = 0; i < Math.max(0, game.lives); i += 1) {
-      const x = W - 16 - i * 16;
-      c.fillStyle = '#3f83d8';
-      c.fillRect(x - 1, 10, 2, 9); c.fillRect(x - 5, 14, 10, 2); c.fillRect(x - 3, 18, 6, 1);
-      c.fillStyle = '#bfe9ff'; c.fillRect(x - 1, 11, 1, 2);
-    }
-    for (let i = 0; i < game.bombs; i += 1) {
-      const x = W - 15 - i * 12;
-      c.fillStyle = '#7a4a08'; c.fillRect(x - 3, 27, 6, 6);
-      c.fillStyle = '#ffd23f'; c.fillRect(x - 3, 27, 5, 5);
-      c.fillStyle = '#fff6c8'; c.fillRect(x - 3, 27, 2, 2);
-    }
     this._text(c, `PWR ${game.power}${game.options ? ` +${game.options}` : ''}`, W / 2 - 30, 22, '#ffffff', 1);
     this._text(c, `STAGE ${game.stageIdx + 1}`, W / 2 - 24, 9, '#ffd23f', 1);
 
@@ -230,6 +218,49 @@ export class Renderer {
     }
 
     this._text(c, VERSION, W - 26, H - 10, 'rgba(255,255,255,.4)', 1);
+    this._status(c, game);
+  }
+
+  // 남은 목숨·폭탄 — 조작하면서 눈이 자주 가는 좌측 하단에 둔다.
+  // (상단 HUD에 있으면 기체에서 시선이 너무 멀다)
+  _status(c, game) {
+    const lives = Math.max(0, game.lives);
+    const bombs = Math.max(0, game.bombs);
+    const CAP = 5;                       // 이보다 많으면 아이콘 하나 + 개수로
+    // 상한을 넘으면 아이콘 하나 + 개수로 줄인다
+    const lifeN = lives > CAP ? 1 : lives;
+    const bombN = bombs > CAP ? 1 : bombs;
+    const wide = Math.max(
+      lives > CAP ? 13 + 18 : lifeN * 13,
+      bombs > CAP ? 10 + 18 : bombN * 10,
+    );
+    const pw = Math.max(34, wide + 10);
+    const px = 6;
+    const py = H - 40;
+
+    // 바탕 — 밝은 바다에서도 읽히게. 기체가 겹쳐도 비쳐 보이도록 반투명.
+    c.fillStyle = 'rgba(8,22,38,.62)';
+    c.fillRect(px, py, pw, 34);
+    c.fillStyle = 'rgba(127,196,255,.35)';
+    c.fillRect(px, py, pw, 1);
+
+    // 목숨 — 작은 기체 아이콘
+    const life = (x, y) => {
+      c.fillStyle = '#3f83d8';
+      c.fillRect(x + 5, y, 2, 9); c.fillRect(x + 1, y + 4, 10, 2); c.fillRect(x + 3, y + 8, 6, 1);
+      c.fillStyle = '#bfe9ff'; c.fillRect(x + 5, y + 1, 1, 2);
+    };
+    for (let i = 0; i < lifeN; i += 1) life(px + 5 + i * 13, py + 4);
+    if (lives > CAP) this._text(c, `X${lives}`, px + 5 + 13, py + 5, '#bfe9ff', 1);
+
+    // 폭탄
+    const bomb = (x, y) => {
+      c.fillStyle = '#7a4a08'; c.fillRect(x, y, 7, 7);
+      c.fillStyle = '#ffd23f'; c.fillRect(x, y, 6, 6);
+      c.fillStyle = '#fff6c8'; c.fillRect(x, y, 2, 2);
+    };
+    for (let i = 0; i < bombN; i += 1) bomb(px + 5 + i * 10, py + 19);
+    if (bombs > CAP) this._text(c, `X${bombs}`, px + 5 + 10, py + 19, '#ffd23f', 1);
   }
 
   // ---- 스테이지 안내 ----

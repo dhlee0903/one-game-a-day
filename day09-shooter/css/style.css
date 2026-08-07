@@ -69,9 +69,9 @@ canvas {
 .bomb:active { transform: translateY(3px); box-shadow: inset 0 3px 0 #ffe9a8, inset 0 -3px 0 #e08a12; }
 .bomb[hidden] { display: none; }
 
-/* 설정(일시정지) — 폭탄 버튼의 반대쪽 구석 */
+/* 설정(일시정지) — 목숨·폭탄이 좌측 하단으로 내려가면서 비워진 우측 상단 */
 .gear {
-  position: absolute; left: 12px; bottom: 12px; z-index: 5;
+  position: absolute; right: 8px; top: 5px; z-index: 5;
   width: 38px; height: 34px; padding: 0; border-radius: 0;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; color: #cfe4f5;
