@@ -238,8 +238,10 @@ export class Renderer {
   _banner(c, game) {
     const b = game.banner;
     if (!b) return;
-    const p = b.t / b.life;
-    const a = Math.min(1, Math.min(p, 1 - p) * 7);
+    // hold(조작 대기) 중에는 사라지지 않는다 — 들어올 때만 서서히 나타난다
+    const fadeIn = Math.min(1, b.t / 10);
+    const fadeOut = b.hold ? 1 : Math.max(0, Math.min(1, (b.life - b.t) / 14));
+    const a = Math.min(fadeIn, fadeOut);
     if (a <= 0) return;
     const cy = Math.round(H * 0.42);
     const draw = (txt, scale, y, col) => {
@@ -253,5 +255,9 @@ export class Renderer {
     c.fillRect(0, cy - 12, W, 1); c.fillRect(0, cy + 31, W, 1);
     draw(b.text, 3, cy - 6, `rgba(255,255,255,${a})`);
     if (b.sub) draw(b.sub, 1, cy + 18, `rgba(255,210,63,${a})`);
+    // 조작 대기 중에는 안내가 깜빡인다
+    if (b.hold && Math.floor(b.t / 26) % 2 === 0) {
+      draw(b.hint || 'MOVE TO START', 1, cy + 44, `rgba(255,255,255,${0.85 * a})`);
+    }
   }
 }

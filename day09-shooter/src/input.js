@@ -22,7 +22,7 @@ export class InputController {
       dragging = true;
       lastX = e.clientX; lastY = e.clientY;
       game.resetDrag();   // 이전 플릭의 잔량을 버리고 새로 잡는다
-      game.start(); // 시작 화면에서 탭하면 바로 시작
+      if (!game.paused) { game.start(); game.arm(); }  // 시작 화면에서 탭하면 바로 시작
     });
 
     canvas.addEventListener('pointermove', (e) => {
@@ -51,6 +51,7 @@ export class InputController {
       ArrowDown: 'd', s: 'd', S: 'd',
     };
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') { game.togglePause(); e.preventDefault(); return; }
       if (e.key === ' ' || e.key === 'x' || e.key === 'X') { game.useBomb(); e.preventDefault(); return; }
       if (e.key === 'Enter') { game.start(); e.preventDefault(); return; }
       const k = MAP[e.key];

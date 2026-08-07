@@ -9,11 +9,20 @@ const $ = (id) => document.getElementById(id);
 
 const renderer = new Renderer($('board'));
 const overlay = $('overlay');
+const pauseEl = $('pause');
+const gearBtn = $('gear');
+const bombBtn = $('bomb');
 
 const game = new Game({ onState: handleState });
 
 // eslint-disable-next-line no-new
-new InputController($('board'), game, $('bomb'));
+new InputController($('board'), game, bombBtn);
+
+gearBtn.addEventListener('click', () => game.setPaused(true));
+$('pResume').addEventListener('click', () => game.setPaused(false));
+$('pRestart').addEventListener('click', () => { game.setPaused(false); game.reset(); game.start(); });
+// 탭을 벗어나면 저절로 멈춘다 — 돌아왔더니 죽어 있는 일이 없게
+document.addEventListener('visibilitychange', () => { if (document.hidden) game.setPaused(true); });
 
 function showOverlay(title, html, btn) {
   overlay.innerHTML = `<h2>${title}</h2><p>${html}</p><button class="btn" id="ovBtn">${btn}</button>`;
@@ -36,8 +45,19 @@ function handleState(state, p) {
 let acc = 0;
 let prev = 0;
 
+// 일시정지·타이틀 화면에서는 보드 위 버튼을 감춘다
+function syncChrome() {
+  const show = game.phase === 'playing' && !game.paused;
+  pauseEl.classList.toggle('show', game.paused);
+  gearBtn.hidden = !show;
+  bombBtn.hidden = !show;
+}
+
 function loop(now) {
   requestAnimationFrame(loop);
+  syncChrome();
+  // 멈춰 있는 동안은 시간을 쌓지 않는다 — 풀었을 때 몰아서 돌지 않게
+  if (game.paused) { acc = 0; prev = now; renderer.render(game); return; }
   if (!prev) { prev = now; renderer.render(game); return; }
 
   // 탭을 비활성화했다 돌아오면 간격이 크게 벌어진다 — 몰아서 돌리지 않고 잘라낸다
