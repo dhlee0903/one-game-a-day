@@ -314,6 +314,17 @@ export const PALETTES = {
     glass: '#8a2b2b', glassHi: '#ffb8a8',
     mark: '#e0d24a', markHi: '#2a2410', prop: '#9b8c93',
   },
+  // 라스트 보스 비공정 — 검은 기낭에 등불만 살아 있다
+  airship: {
+    line: '#04060a',
+    env: ['#0a0c11', '#14171d', '#23272f', '#363c48'],   // 기낭(가장자리→가운데)
+    rib: '#06080c',
+    fin: ['#0c0f14', '#232833'],
+    metal: ['#191d24', '#2a2f39', '#454c59'],
+    hull: ['#14171d', '#232833'],
+    lamp: '#8a4a12', lampHi: '#ffb648',
+    glow: '#e0402c', prop: '#8d94a2',
+  },
   boss: {
     line: '#0e141d',
     body: ['#333f57', '#455674', '#5c7295', '#889fc2'],
@@ -390,6 +401,163 @@ export function bakeSprite(name, { bank = 0 } = {}) {
       img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b;
       img.data[o + 3] = ch === 'p' ? 105 : 255;
     }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
+/**
+ * 라스트 보스 — 까만 열기구 비공정. 69x112. 기수가 아래를 향한다.
+ * 손으로 찍기엔 너무 커서(반쪽만 해도 35x112) 전용 루틴으로 굽는다.
+ * 그리는 순서: 미익 → 기낭 → 등지느러미 → 기수 캡 → 엔진 포드 → 측면 포탑 → 곤돌라 → 외곽선
+ */
+export function bakeAirship() {
+  const W = 69; const H = 112;
+  const cx = (W - 1) / 2;
+  const pal = PALETTES.airship;
+  const px = new Array(W * H).fill(null);
+  const put = (x, y, col) => {
+    const xi = Math.round(x); const yi = Math.round(y);
+    if (xi < 0 || xi >= W || yi < 0 || yi >= H) return;
+    px[yi * W + xi] = col;
+  };
+  const row = (y, x0, x1, col) => { for (let x = Math.ceil(x0); x <= Math.floor(x1); x += 1) put(x, y, col); };
+
+  // ---- 기낭 단면: 꼬리(위)는 뾰족하고 기수(아래)는 뭉툭한 물방울 ----
+  const ENV0 = 2; const ENV1 = 90; const MAXHALF = 26; const PEAK = 0.6;
+  const half = (y) => {
+    const t = (y - ENV0) / (ENV1 - ENV0);
+    if (t < 0 || t > 1) return -1;
+    const f = t < PEAK
+      ? Math.sin((t / PEAK) * (Math.PI / 2)) ** 0.68
+      : 0.6 + 0.4 * Math.cos(((t - PEAK) / (1 - PEAK)) * (Math.PI / 2));
+    return MAXHALF * f;
+  };
+
+  // ---- 수평 미익: 뒤로 갈수록 넓어지는 삼각 안정판 ----
+  for (let y = 5; y <= 31; y += 1) {
+    const t = (y - 5) / 26;
+    const sp = 33 - 21 * t;
+    const inner = 8;
+    const tone = t > 0.55 ? pal.fin[1] : pal.fin[0];
+    row(y, cx - sp, cx - inner, tone);
+    row(y, cx + inner, cx + sp, tone);
+    // 앞전을 한 도트 밝게 — 판이 겹쳐 보이지 않게
+    put(cx - sp, y, pal.fin[1]); put(cx + sp, y, pal.fin[1]);
+  }
+
+  // ---- 기낭 ----
+  for (let y = ENV0; y <= ENV1; y += 1) {
+    const hw = half(y);
+    if (hw < 0.6) continue;
+    for (let x = Math.ceil(cx - hw); x <= Math.floor(cx + hw); x += 1) {
+      const u = Math.abs(x - cx) / hw;
+      const i = u > 0.93 ? 0 : (u > 0.68 ? 1 : (u > 0.34 ? 2 : 3));
+      put(x, y, pal.env[i]);
+    }
+    // 늑재 — 천을 나눈 가로 이음선
+    if ((y - ENV0) % 12 === 0 && y > ENV0 + 6 && y < ENV1 - 8) row(y, cx - hw + 1, cx + hw - 1, pal.rib);
+  }
+  // 세로 이음선 두 줄
+  for (let y = ENV0 + 4; y <= ENV1 - 4; y += 1) {
+    const hw = half(y);
+    if (hw < 6) continue;
+    put(cx - hw * 0.58, y, pal.rib);
+    put(cx + hw * 0.58, y, pal.rib);
+  }
+
+  // ---- 등지느러미(수직 미익) ----
+  for (let y = 1; y <= 30; y += 1) {
+    const w = 1 + Math.round(y / 9);
+    row(y, cx - w, cx + w, y < 5 ? pal.fin[0] : pal.fin[1]);
+    put(cx, y, pal.env[3]);
+  }
+
+  // ---- 기수 캡 ----
+  for (let y = 82; y <= ENV1; y += 1) {
+    const hw = half(y);
+    if (hw < 1) continue;
+    for (let x = Math.ceil(cx - hw); x <= Math.floor(cx + hw); x += 1) {
+      const u = Math.abs(x - cx) / Math.max(1, hw);
+      put(x, y, u > 0.72 ? pal.metal[0] : (u > 0.36 ? pal.metal[1] : pal.metal[2]));
+    }
+  }
+  row(81, cx - half(81) + 1, cx + half(81) - 1, pal.metal[2]);   // 캡 테두리 광택
+
+  // ---- 엔진 포드 + 프로펠러 ----
+  for (const sgn of [-1, 1]) {
+    const ex = cx + sgn * 30;
+    for (let y = 50; y <= 74; y += 1) {
+      const w = (y < 54 || y > 70) ? 2 : 4;
+      for (let x = Math.ceil(ex - w); x <= Math.floor(ex + w); x += 1) {
+        const u = Math.abs(x - ex) / w;
+        put(x, y, u > 0.72 ? pal.metal[0] : (u > 0.3 ? pal.metal[1] : pal.metal[2]));
+      }
+    }
+    put(ex, 49, pal.metal[2]);
+    for (let x = -6; x <= 6; x += 1) {                 // 프로펠러 잔상
+      if (x % 2) continue;
+      put(ex + x, 77, pal.prop);
+      if (Math.abs(x) < 3) put(ex + x, 78, pal.prop);
+    }
+  }
+
+  // ---- 측면 포탑: 기낭 옆구리에 달린 반구 + 붉은 조준등 ----
+  for (const sgn of [-1, 1]) {
+    const tx = cx + sgn * 21;
+    for (let y = 58; y <= 68; y += 1) {
+      const w = (y < 60 || y > 66) ? 2 : 4;
+      for (let x = tx - w; x <= tx + w; x += 1) {
+        put(x, y, Math.abs(x - tx) > w - 1 ? pal.line : pal.metal[1]);
+      }
+    }
+    put(tx, 69, pal.glow); put(tx, 70, pal.glow);
+  }
+
+  // ---- 곤돌라: 기낭 밑에 매달려 기수 앞으로 나온다. 창에 불이 켜져 있다 ----
+  for (let y = 72; y <= 106; y += 1) {
+    let w;
+    if (y < 76) w = 5 + (y - 72) * 1.6;
+    else if (y > 100) w = 11 - (y - 100) * 1.8;
+    else w = 11;
+    if (w < 1) continue;
+    for (let x = Math.ceil(cx - w); x <= Math.floor(cx + w); x += 1) {
+      const u = Math.abs(x - cx) / w;
+      put(x, y, u > 0.86 ? pal.line : (u > 0.48 ? pal.hull[0] : pal.hull[1]));
+    }
+  }
+  for (let r = 0; r < 4; r += 1) {                     // 줄지어 켜진 창
+    for (let i = -2; i <= 2; i += 1) {
+      put(cx + i * 4, 80 + r * 6, pal.lamp);
+      put(cx + i * 4 + 1, 80 + r * 6, pal.lampHi);
+    }
+  }
+  for (let y = 74; y <= 104; y += 2) put(cx - 12, y, pal.line);   // 용골 그림자
+  for (let y = 74; y <= 104; y += 2) put(cx + 12, y, pal.line);
+
+  // ---- 외곽선 ----
+  const filled = (x, y) => x >= 0 && x < W && y >= 0 && y < H && px[y * W + x] !== null;
+  const edge = [];
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
+      if (!filled(x, y) || px[y * W + x] === pal.prop) continue;
+      if (!filled(x - 1, y) || !filled(x + 1, y) || !filled(x, y - 1) || !filled(x, y + 1)) edge.push(y * W + x);
+    }
+  }
+  for (const i of edge) px[i] = pal.line;
+
+  // ---- 캔버스로 ----
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  for (let i = 0; i < px.length; i += 1) {
+    const col = px[i];
+    if (!col) continue;
+    const [r, g, b] = hex(col);
+    const o = i * 4;
+    img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b;
+    img.data[o + 3] = col === pal.prop ? 110 : 255;
   }
   ctx.putImageData(img, 0, 0);
   return cv;

@@ -2,7 +2,7 @@
 // 기체 스프라이트는 시작할 때 한 번 구워두고(sprites.js) 이후엔 blit만 한다.
 
 import { W, H, HUD_H, BOSS, PLAYER, VERSION } from './config.js';
-import { bakeSprite, MAPS, FONT } from './sprites.js';
+import { bakeSprite, bakeAirship, MAPS, FONT } from './sprites.js';
 import { Backdrop } from './backdrop.js';
 
 export class Renderer {
@@ -21,6 +21,7 @@ export class Renderer {
     // 좌우 기울기: 같은 픽셀맵에서 주익만 기울여 굽는다
     this.spr.bankL = bakeSprite('player', { bank: -1 });
     this.spr.bankR = bakeSprite('player', { bank: 1 });
+    this.spr.airship = bakeAirship();   // 라스트 보스 — 픽셀맵이 아니라 전용 루틴으로 굽는다
     this.flash = {};   // 피격용 흰색 실루엣(요청 시 생성)
     this.backdrop = new Backdrop('day');
     this.showHitbox = false;   // 디버그 콘솔에서 켠다
@@ -28,6 +29,15 @@ export class Renderer {
 
   render(game) {
     const c = this.ctx;
+    // 화면 흔들림 — 월드만 밀어 그리고 HUD는 제자리에 둔다.
+    // 방향을 game.shake.t로 뽑아 렌더 횟수(주사율)와 무관하게 같은 그림이 나온다.
+    const sh = game.shake || { mag: 0, t: 0 };
+    const shaking = sh.mag > 0;
+    if (shaking) {
+      c.save();
+      c.translate(Math.round(Math.sin(sh.t * 2.7) * sh.mag), Math.round(Math.cos(sh.t * 3.9) * sh.mag));
+    }
+
     this.backdrop.set(game.stage ? game.stage.theme : 'day');
     this.backdrop.below(c, game.scroll);
     this._pickups(c, game.pickups);
@@ -37,11 +47,15 @@ export class Renderer {
     this._bullets(c, game);
     this.backdrop.above(c, game.scroll);      // 구름은 기체 위를 지나간다
     this._fx(c, game.fx);
+    this._parts(c, game.parts);
+    if (this.showHitbox) this._hitboxes(c, game);
+
+    if (shaking) c.restore();
+
     if (game.bombFlash > 0) {
       c.fillStyle = `rgba(255,255,255,${(game.bombFlash / 34) * 0.7})`;
       c.fillRect(0, 0, W, H);
     }
-    if (this.showHitbox) this._hitboxes(c, game);
     this._hud(c, game);
     this._banner(c, game);
   }
@@ -167,6 +181,30 @@ export class Renderer {
           const a = (i / 5) * Math.PI * 2;
           c.fillRect(Math.round(cx + Math.cos(a) * rad * 0.6), Math.round(cy + Math.sin(a) * rad * 0.6), 3, 3);
         }
+      }
+    }
+  }
+
+  // ---- 파편: 불꽃 · 금속 조각 · 연기 ----
+
+  _parts(c, list) {
+    if (!list) return;
+    for (const p of list) {
+      const k = p.t / p.life;
+      const x = Math.round(p.x);
+      const y = Math.round(p.y);
+      if (p.kind === 'smoke') {
+        c.fillStyle = `rgba(126,132,148,${(0.34 * (1 - k)).toFixed(3)})`;
+        const s = 2 + Math.round(k * 4);
+        c.fillRect(x - (s >> 1), y - (s >> 1), s, s);
+      } else if (p.kind === 'shard') {
+        // 달궈진 금속이 식어가며 어두워진다
+        c.fillStyle = k < 0.2 ? '#fff2c4' : (k < 0.5 ? '#c8b48a' : '#6f7b8c');
+        c.fillRect(x, y, 2, 2);
+      } else {
+        c.fillStyle = k < 0.25 ? '#ffffff' : (k < 0.55 ? '#ffd24d' : '#ff7a2e');
+        const s = k < 0.5 ? 2 : 1;
+        c.fillRect(x, y, s, s);
       }
     }
   }
