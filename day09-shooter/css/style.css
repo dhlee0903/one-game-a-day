@@ -123,6 +123,32 @@ canvas {
 
 :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+/* ---- 디버그 콘솔 (PC 전용 — debug.js가 마우스 환경에서만 DOM을 만든다) ---- */
+.dbg {
+  position: fixed; right: 10px; top: 10px; z-index: 100;
+  width: 246px; padding: 8px 10px 10px;
+  background: rgba(8, 20, 34, .93); color: #cfe4f5;
+  border: 1px solid #274a6e; border-radius: 8px;
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+.dbg[hidden] { display: none; }
+.dbg-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-weight: 700; letter-spacing: .12em; color: #ffd23f;
+  padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid #274a6e;
+}
+.dbg-key { font-weight: 400; letter-spacing: 0; color: #6d87a3; }
+.dbg-stats { white-space: pre; margin-bottom: 8px; color: #b6cee4; }
+.dbg-row { display: flex; gap: 4px; margin-top: 4px; }
+.dbg-btn {
+  flex: 1; padding: 5px 0; cursor: pointer;
+  font: inherit; color: #cfe4f5;
+  background: #16324f; border: 1px solid #2c5075; border-radius: 4px;
+}
+.dbg-btn:hover { background: #1e4166; }
+.dbg-btn.on { background: #ffd23f; border-color: #ffd23f; color: #3a2600; font-weight: 700; }
+
 
 /* ---- 모바일: 전체 화면 ----
    페이지 헤더·홈 링크를 걷어내고 보드를 화면 가득 띄운다.

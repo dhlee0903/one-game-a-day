@@ -61,11 +61,15 @@ export class Game {
     this.t = 0;
     this.waveIdx = 0;
     this.queue = [];
+    // 맵에 남아 있던 것들을 모두 치운다 — 안 그러면 대기 중에 얼어붙은 채로 떠 있는다
     this.enemies = [];
     this.eb = [];
+    this.pb = [];
+    this.fx = [];
     this.boss = null;
     this.stageWait = 0;
-    // pickups는 비우지 않는다 — 보스가 떨군 보상을 다음 스테이지에서도 주울 수 있게
+    // pickups만 남긴다 — 보스가 떨군 보상을 다음 스테이지에서 주울 수 있게.
+    // (아이템은 대기 중에도 계속 내려오므로 얼어붙지 않는다)
     // 조작이 들어올 때까지 편대를 내보내지 않는다 — 배경만 흐르는 제자리 비행 상태.
     // 세대를 올려서, 넘어오기 전부터 이어지던 드래그로는 시작되지 않게 한다
     // (손을 뗐다가 다시 잡아야 한다).
@@ -518,7 +522,7 @@ export class Game {
       }
     }
 
-    if (p.invul > 0 || p.dead > 0 || this.phase !== 'playing') return;
+    if (this.debugInvul || p.invul > 0 || p.dead > 0 || this.phase !== 'playing') return;
 
     // 적 탄 → 플레이어
     for (const b of this.eb) {
