@@ -5,7 +5,7 @@ import {
   W, H, PLAYER, START_LIVES, START_BOMBS, MAX_BOMBS, MAX_POWER, MAX_OPTIONS,
   P_BULLET, E_BULLET, BOMB, SCORE, ENEMY, BOSS,
 } from './config.js';
-import { STAGE, expand } from './waves.js';
+import { STAGES, expand } from './waves.js';
 import { submitScore, getBest } from './storage.js';
 
 const clamp = (v, lo, hi) => (v < lo ? lo : (v > hi ? hi : v));
@@ -42,12 +42,29 @@ export class Game {
     this.pickups = [];
     this.fx = [];
     this.boss = null;
-    this.waveIdx = 0;
-    this.queue = [];     // 지연 스폰 대기열
     this.bombFlash = 0;
     this.keys = { l: 0, r: 0, u: 0, d: 0 };
     this.endTimer = 0;
+    this.stageIdx = 0;
+    this.banner = null;      // 화면 가운데 크게 뜨는 안내(스테이지 표시)
+    this.stageWait = 0;      // 다음 스테이지로 넘어가기까지 남은 프레임
+    this._enterStage(0);
     this._emit();
+  }
+
+  // 스테이지 하나를 연다. 무기·보조기·폭탄·목숨은 그대로 이어간다.
+  _enterStage(i) {
+    this.stageIdx = i;
+    this.stage = STAGES[i];
+    this.t = 0;
+    this.waveIdx = 0;
+    this.queue = [];
+    this.enemies = [];
+    this.eb = [];
+    this.pickups = [];
+    this.boss = null;
+    this.stageWait = 0;
+    this.banner = { text: `STAGE ${i + 1}`, sub: this.stage.name, t: 0, life: 130 };
   }
 
   start() {
@@ -100,6 +117,8 @@ export class Game {
     this.t += 1;
     this.scroll += 2.2;
     if (this.bombFlash > 0) this.bombFlash -= 1;
+    if (this.banner && (this.banner.t += 1) >= this.banner.life) this.banner = null;
+    if (this.stageWait > 0 && --this.stageWait === 0) this._enterStage(this.stageIdx + 1);
 
     this._spawnWaves();
     this._player();
@@ -121,8 +140,10 @@ export class Game {
   // ---- 스폰 ----
 
   _spawnWaves() {
-    while (this.waveIdx < STAGE.length && STAGE[this.waveIdx].t <= this.t) {
-      const entry = STAGE[this.waveIdx];
+    if (this.stageWait > 0) return;         // 스테이지 사이에는 새 편대를 내보내지 않는다
+    const line = this.stage.timeline;
+    while (this.waveIdx < line.length && line[this.waveIdx].t <= this.t) {
+      const entry = line[this.waveIdx];
       this.waveIdx += 1;
       if (entry.kind === 'boss') { this._spawnBoss(); continue; }
       for (const s of expand(entry)) this.queue.push({ ...s, at: this.t + (s.delay || 0) });
@@ -134,7 +155,8 @@ export class Game {
   _spawnEnemy({ type, x, y, drop, sway }) {
     const def = ENEMY[type];
     const e = {
-      type, x, y, r: def.r, hp: def.hp, maxHp: def.hp, score: def.score,
+      type, x, y, r: def.r, hp: def.hp + this.stage.hpBonus, maxHp: def.hp + this.stage.hpBonus,
+      score: def.score,
       fire: def.fire, fireCd: 50 + Math.floor(Math.random() * 50),
       drop: drop || null, t: 0, vx: 0, vy: def.speed, hit: 0, dead: false,
     };
@@ -149,8 +171,10 @@ export class Game {
   }
 
   _spawnBoss() {
+    const st = this.stage;
     this.boss = {
-      x: W / 2, y: -70, r: BOSS.r, hp: BOSS.hp, maxHp: BOSS.hp,
+      x: W / 2, y: -70, r: BOSS.r, hp: st.bossHp, maxHp: st.bossHp,
+      sprite: st.bossSprite, cd: st.bossCd,
       state: 'enter', t: 0, hit: 0, atkCd: 90, pattern: 0,
     };
     this.sfx('boss');
@@ -254,12 +278,15 @@ export class Game {
     }
   }
 
+  // 스테이지가 올라갈수록 적 탄이 조금씩 빨라진다
   _aimed(from, speed = E_BULLET.speed) {
+    speed *= this.stage.bulletMul;
     const a = Math.atan2(this.player.y - from.y, this.player.x - from.x);
     this.eb.push({ x: from.x, y: from.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r: E_BULLET.r, dead: false });
   }
 
   _aimedSpread(from, n, spread, speed = E_BULLET.speed) {
+    speed *= this.stage.bulletMul;
     const base = Math.atan2(this.player.y - from.y, this.player.x - from.x);
     for (let i = 0; i < n; i += 1) {
       const a = base + (i - (n - 1) / 2) * spread;
@@ -268,6 +295,7 @@ export class Game {
   }
 
   _ring(from, n, speed, offset = 0) {
+    speed *= this.stage.bulletMul;
     for (let i = 0; i < n; i += 1) {
       const a = offset + (i / n) * Math.PI * 2;
       this.eb.push({ x: from.x, y: from.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r: E_BULLET.r, dead: false });
@@ -308,17 +336,17 @@ export class Game {
         if (b.pattern === 0) this._aimedSpread(b, 5, 0.2);
         else if (b.pattern === 1) { this._ring(b, 10, 2.2, b.t / 40); }
         else this._aimedSpread(b, 3, 0.5);
-        b.atkCd = 78;
+        b.atkCd = Math.round(78 * b.cd);
       } else if (ph === 2) {
         if (b.pattern === 0) this._aimedSpread(b, 7, 0.18);
         else if (b.pattern === 1) this._ring(b, 14, 2.4, b.t / 30);
         else { this._aimed(b, 3.4); this._aimedSpread(b, 4, 0.34); }
-        b.atkCd = 62;
+        b.atkCd = Math.round(62 * b.cd);
       } else {
         if (b.pattern === 0) this._aimedSpread(b, 9, 0.16, 3);
         else if (b.pattern === 1) { this._ring(b, 18, 2.6, b.t / 22); this._ring(b, 18, 1.8, -b.t / 22); }
         else this._aimedSpread(b, 5, 0.28, 3.2);
-        b.atkCd = 48;
+        b.atkCd = Math.round(48 * b.cd);
       }
     }
   }
@@ -330,9 +358,16 @@ export class Game {
     b.hit = 4;
     if (b.hp <= 0) {
       b.hp = 0; b.state = 'dying'; b.t = 0;
-      this.score += BOSS.score;
+      this.score += SCORE.boss[this.stageIdx];
       this.eb.length = 0;
-      this.endTimer = 90; this._pendingWin = true;
+      const last = this.stageIdx >= STAGES.length - 1;
+      if (last) {
+        this.endTimer = 90; this._pendingWin = true;
+      } else {
+        this.stageWait = 110;                 // 잠깐 뜸을 들였다가 다음 스테이지
+        this.banner = { text: 'STAGE CLEAR', sub: `+${SCORE.stageClear}`, t: 0, life: 110 };
+        this.score += SCORE.stageClear;
+      }
       this._emit();
     }
   }

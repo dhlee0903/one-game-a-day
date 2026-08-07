@@ -3,21 +3,7 @@
 
 import { W, H, HUD_H, BOSS, PLAYER, VERSION } from './config.js';
 import { bakeSprite, MAPS, FONT } from './sprites.js';
-
-const LOOP = 1500;
-
-// 바다 — 깊이별 색과 디더 패턴
-const SEA = ['#57bdf0', '#3ea9e2', '#2c95d4', '#1e7fc0'];
-const FOAM = 'rgba(255,255,255,.55)';
-
-const ISLANDS = [
-  { x: 52, y: 120, r: 24, kind: 'sand' },
-  { x: 306, y: 400, r: 19, kind: 'green' },
-  { x: 150, y: 700, r: 30, kind: 'green' },
-  { x: 36, y: 980, r: 16, kind: 'sand' },
-  { x: 328, y: 1160, r: 22, kind: 'sand' },
-  { x: 210, y: 1330, r: 14, kind: 'green' },
-];
+import { Backdrop } from './backdrop.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -36,22 +22,26 @@ export class Renderer {
     this.spr.bankL = bakeSprite('player', { bank: -1 });
     this.spr.bankR = bakeSprite('player', { bank: 1 });
     this.flash = {};   // 피격용 흰색 실루엣(요청 시 생성)
+    this.backdrop = new Backdrop('day');
   }
 
   render(game) {
     const c = this.ctx;
-    this._sea(c, game.scroll);
+    this.backdrop.set(game.stage ? game.stage.theme : 'day');
+    this.backdrop.below(c, game.scroll);
     this._pickups(c, game.pickups);
     this._enemies(c, game.enemies);
     this._boss(c, game.boss);
     this._player(c, game);
     this._bullets(c, game);
+    this.backdrop.above(c, game.scroll);      // 구름은 기체 위를 지나간다
     this._fx(c, game.fx);
     if (game.bombFlash > 0) {
       c.fillStyle = `rgba(255,255,255,${(game.bombFlash / 34) * 0.7})`;
       c.fillRect(0, 0, W, H);
     }
     this._hud(c, game);
+    this._banner(c, game);
   }
 
   // 스프라이트를 정수 좌표에 중심 정렬로 찍는다(반올림 → 도트가 흔들리지 않음)
@@ -74,94 +64,13 @@ export class Renderer {
     return cv;
   }
 
-  // ---- 배경 ----
-
-  _sea(c, scroll) {
-    const bh = Math.ceil(H / SEA.length);
-    for (let i = 0; i < SEA.length; i += 1) {
-      c.fillStyle = SEA[i];
-      c.fillRect(0, i * bh, W, bh);
-    }
-    // 경계를 2행 체커로 디더링 — 밴드 티가 덜 난다
-    for (let i = 1; i < SEA.length; i += 1) {
-      const y = i * bh;
-      c.fillStyle = SEA[i - 1];
-      for (let x = 0; x < W; x += 2) { c.fillRect(x, y, 1, 1); c.fillRect(x + 1, y + 1, 1, 1); }
-      c.fillStyle = SEA[i];
-      for (let x = 0; x < W; x += 2) c.fillRect(x + 1, y - 2, 1, 1);
-    }
-    // 잔물결 — 1~3px 흰 점선이 아래로 흐른다
-    c.fillStyle = FOAM;
-    for (let k = 0; k < 46; k += 1) {
-      const y = Math.round(((k * 37 + scroll) % (H + 40)) - 20);
-      const x = Math.round((k * 89) % (W - 12)) + 4;
-      const len = 1 + (k % 3);
-      c.fillRect(x, y, len, 1);
-      if (k % 2) c.fillRect(x + len + 2, y + 1, 1, 1);
-    }
-    for (const isl of ISLANDS) {
-      const y = (isl.y + scroll) % LOOP;
-      if (y < -90 || y > H + 90) continue;
-      this._island(c, Math.round(isl.x), Math.round(y), isl.r, isl.kind);
-    }
-  }
-
-  // 픽셀 타원 — 반폭을 정수로 반올림해 가장자리가 계단지게
+  // 픽셀 타원 — 폭발 코어에 쓴다(배경 쪽 타원은 backdrop.js가 따로 갖고 있다)
   _ellipse(c, cx, cy, rx, ry, color) {
     c.fillStyle = color;
     for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y += 1) {
-      const dy = (y - cy) / ry;
-      const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - dy * dy)));
-      if (half > 0) c.fillRect(cx - half, y, half * 2, 1);
+      const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - ((y - cy) / ry) ** 2)));
+      if (half > 0) c.fillRect(Math.round(cx) - half, y, half * 2, 1);
     }
-  }
-
-  // 타원 테두리만 1도트로
-  _ellipseEdge(c, cx, cy, rx, ry, color) {
-    c.fillStyle = color;
-    for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y += 1) {
-      const dy = (y - cy) / ry;
-      const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - dy * dy)));
-      if (half <= 0) continue;
-      c.fillRect(cx - half, y, 1, 1);
-      c.fillRect(cx + half - 1, y, 1, 1);
-    }
-  }
-
-  // 두 타원 사이를 체커로 흩뿌린다 — 경계가 뭉개지지 않는 도트식 그라데이션
-  _ditherBand(c, cx, cy, rx, ry, inset, color) {
-    c.fillStyle = color;
-    for (let y = Math.ceil(cy - ry); y <= Math.floor(cy + ry); y += 1) {
-      const dy = (y - cy) / ry;
-      const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - dy * dy)));
-      const inner = Math.round((rx - inset) * Math.sqrt(Math.max(0, 1 - ((y - cy) / (ry - inset)) ** 2)));
-      for (let x = cx - half; x < cx + half; x += 1) {
-        if (Math.abs(x - cx) < inner) continue;
-        if ((x + y) % 2) continue;
-        c.fillRect(x, y, 1, 1);
-      }
-    }
-  }
-
-  _island(c, x, y, r, kind) {
-    const rx = Math.round(r * 1.15);
-    const ry = Math.round(r * 0.80);
-    this._ditherBand(c, x, y, rx + 7, ry + 6, 4, '#7fd0f4');       // 얕은 물이 번지는 가장자리
-    this._ellipse(c, x, y, rx + 3, ry + 3, '#7fd0f4');             // 여울
-    this._ellipse(c, x, y, rx + 1, ry + 1, '#e8f6ff');             // 부서지는 파도
-    this._ellipse(c, x, y, rx, ry, '#c2a469');                     // 젖은 모래
-    this._ellipse(c, x, y - 1, rx - 3, ry - 2, '#e6cf95');         // 마른 모래
-    this._ellipse(c, x - 1, y - 2, rx - 7, ry - 5, '#f5e7bd');     // 모래 하이라이트
-    if (kind === 'green') {
-      this._ellipse(c, x, y - 1, rx - 5, ry - 4, '#3f8a45');       // 수풀
-      this._ellipse(c, x - 1, y - 2, rx - 7, ry - 6, '#5aab55');
-      this._ellipse(c, x - 2, y - 3, rx - 11, ry - 8, '#77c56a');  // 볕 드는 쪽
-      c.fillStyle = '#2b5f30';                                      // 나무 몇 그루
-      c.fillRect(x + rx - 9, y + 1, 2, 2);
-      c.fillRect(x - rx + 7, y - 1, 2, 2);
-      c.fillRect(x + 1, y + ry - 5, 2, 2);
-    }
-    this._ellipseEdge(c, x, y, rx, ry, '#9c8149');                 // 물가 그림자
   }
 
   // ---- 기체 ----
@@ -189,7 +98,8 @@ export class Renderer {
 
   _boss(c, b) {
     if (!b) return;
-    this._blit(c, b.hit > 0 ? this._flashOf('boss') : this.spr.boss, b.x, b.y);
+    const key = b.sprite || 'boss';
+    this._blit(c, b.hit > 0 ? this._flashOf(key) : this.spr[key], b.x, b.y);
   }
 
   // ---- 탄 ----
@@ -304,7 +214,8 @@ export class Renderer {
       c.fillStyle = '#ffd23f'; c.fillRect(x - 3, 27, 5, 5);
       c.fillStyle = '#fff6c8'; c.fillRect(x - 3, 27, 2, 2);
     }
-    this._text(c, `PWR ${game.power}${game.options ? ` +${game.options}` : ''}`, W / 2 - 30, 12, '#ffffff', 1);
+    this._text(c, `PWR ${game.power}${game.options ? ` +${game.options}` : ''}`, W / 2 - 30, 22, '#ffffff', 1);
+    this._text(c, `STAGE ${game.stageIdx + 1}`, W / 2 - 24, 9, '#ffd23f', 1);
 
     const b = game.boss;
     if (b && b.state !== 'enter') {
@@ -319,5 +230,28 @@ export class Renderer {
     }
 
     this._text(c, VERSION, W - 26, H - 10, 'rgba(255,255,255,.4)', 1);
+  }
+
+  // ---- 스테이지 안내 ----
+
+  // 가운데 크게 뜨는 도트 문자. 들어올 때·나갈 때만 흐려진다.
+  _banner(c, game) {
+    const b = game.banner;
+    if (!b) return;
+    const p = b.t / b.life;
+    const a = Math.min(1, Math.min(p, 1 - p) * 7);
+    if (a <= 0) return;
+    const cy = Math.round(H * 0.42);
+    const draw = (txt, scale, y, col) => {
+      const w = String(txt).length * 6 * scale - scale;
+      this._text(c, txt, Math.round(W / 2 - w / 2), y, col, scale);
+    };
+    // 뒤에 깔리는 반투명 띠 — 배경이 밝아도 글자가 읽힌다
+    c.fillStyle = `rgba(8,20,34,${0.62 * a})`;
+    c.fillRect(0, cy - 12, W, 44);
+    c.fillStyle = `rgba(255,210,63,${0.7 * a})`;
+    c.fillRect(0, cy - 12, W, 1); c.fillRect(0, cy + 31, W, 1);
+    draw(b.text, 3, cy - 6, `rgba(255,255,255,${a})`);
+    if (b.sub) draw(b.sub, 1, cy + 18, `rgba(255,210,63,${a})`);
   }
 }

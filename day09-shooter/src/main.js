@@ -25,7 +25,7 @@ function handleState(state, p) {
   if (state === 'playing' || state === 'boss') { overlay.classList.remove('show'); return; }
   const line = p && p.isNewBest ? '<b>신기록</b>' : `최고 ${p ? p.best : 0}`;
   if (state === 'clear') {
-    showOverlay('STAGE CLEAR', `점수 ${p.score}<br>${line}<br><span class="dim">남은 폭탄·목숨 보너스 포함</span>`, '다시 하기');
+    showOverlay('ALL CLEAR', `3스테이지 격파 · 점수 ${p.score}<br>${line}<br><span class="dim">남은 폭탄·목숨 보너스 포함</span>`, '다시 하기');
   } else {
     showOverlay('GAME OVER', `점수 ${p.score}<br>${line}`, '다시 하기');
   }
