@@ -94,7 +94,7 @@ export const STAGES = [
   },
   {
     name: 'SUNSET STRAIT', theme: 'dusk', timeline: S2,
-    bossHp: 380, bossSprite: 'boss2', bossKind: 'bomber', bossR: 21,
+    bossHp: 420, bossSprite: 'wingboss', bossKind: 'wing', bossR: 26,
     bossCd: 0.86, hpBonus: 1, bulletMul: 1.12,
   },
   {
