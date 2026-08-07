@@ -1,7 +1,7 @@
 // 종스크롤 슈팅 상수 — single source of truth.
 
 // Bump this on every gameplay/patch change so the live build is identifiable.
-export const VERSION = 'v9.4';
+export const VERSION = 'v9.5';
 
 // 게임 로직은 초당 60회로 고정한다. 모니터 주사율(60/120/144Hz)이 달라도
 // 같은 속도로 진행되게 하는 기준값 — 아래 상수는 모두 "1스텝당" 값이다.
@@ -18,9 +18,15 @@ export const PLAY_TOP = 0;        // 적은 화면 위 밖에서 들어온다
 // ---- 플레이어 ----
 export const PLAYER = {
   r: 5,               // 피격 판정 반지름(그림보다 훨씬 작게 — 슈팅 관례)
-  speed: 4.4,         // 키보드 이동 속도
+  // 한 스텝(1/60초)당 최대 이동 거리. 키보드와 드래그가 **같은 상한**을 쓴다.
+  // 드래그를 손가락에 1:1로 붙이면 플릭 한 번에 순간이동해 키보드와 체감이 갈렸다.
+  speed: 6,
+  dragMax: 90,        // 드래그로 쌓아둘 수 있는 이동 요청 상한(플릭 억제)
+  bankAt: 1.6,        // 이만큼 좌우로 움직이면 기울어진 스프라이트로 바뀐다
   fireEvery: 7,       // 자동 발사 간격(프레임)
-  respawnInvul: 110,  // 피격 후 무적 프레임
+  deadPause: 42,      // 격추 후 기체가 사라져 있는 시간
+  respawnLock: 36,    // 아래에서 복귀 진입하는 동안 — 조작 불가
+  respawnInvul: 120,  // 복귀 후 무적(깜빡임) 프레임
   startY: H - 110,
 };
 
