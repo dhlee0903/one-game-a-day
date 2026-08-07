@@ -87,7 +87,7 @@ export class Game {
   update() {
     if (this.phase !== 'playing') { this.scroll += 1; return; }
     this.t += 1;
-    this.scroll += 1.6;
+    this.scroll += 2.2;
     if (this.bombFlash > 0) this.bombFlash -= 1;
 
     this._spawnWaves();
@@ -132,7 +132,7 @@ export class Game {
       e.vx = Math.cos(a) * def.speed;
       e.vy = Math.sin(a) * def.speed;
     }
-    if (sway) { e.vx = sway * 1.2; e.vy = def.speed * 0.75; }
+    if (sway) { e.vx = sway * 1.6; e.vy = def.speed * 0.75; }
     if (type === 'gunner') e.holdY = 110 + Math.random() * 70;
     this.enemies.push(e);
   }
@@ -185,7 +185,7 @@ export class Game {
       if (e.hit > 0) e.hit -= 1;
       if (e.type === 'zig') {
         e.y += e.vy;
-        e.x += Math.sin(e.t / 26) * 1.5 + e.vx;
+        e.x += Math.sin(e.t / 20) * 1.9 + e.vx;
       } else if (e.type === 'gunner') {
         if (e.y < e.holdY) e.y += e.vy;
         else e.x += Math.sin(e.t / 45) * 1.3;
@@ -232,7 +232,7 @@ export class Game {
     if (b.hit > 0) b.hit -= 1;
 
     if (b.state === 'enter') {
-      b.y += 1.05;
+      b.y += 1.4;
       if (b.y >= BOSS.enterY) { b.y = BOSS.enterY; b.state = 'fight'; }
       return;
     }
@@ -249,25 +249,25 @@ export class Game {
 
     const ratio = b.hp / b.maxHp;
     const ph = ratio <= BOSS.phase3 ? 3 : (ratio <= BOSS.phase2 ? 2 : 1);
-    b.x = W / 2 + Math.sin(b.t / (ph === 3 ? 52 : 80)) * (W / 2 - 60);
+    b.x = W / 2 + Math.sin(b.t / (ph === 3 ? 40 : 62)) * (W / 2 - 60);
 
     if (--b.atkCd <= 0) {
       b.pattern = (b.pattern + 1) % 3;
       if (ph === 1) {
         if (b.pattern === 0) this._aimedSpread(b, 5, 0.2);
-        else if (b.pattern === 1) { this._ring(b, 10, 1.8, b.t / 52); }
+        else if (b.pattern === 1) { this._ring(b, 10, 2.2, b.t / 40); }
         else this._aimedSpread(b, 3, 0.5);
-        b.atkCd = 92;
+        b.atkCd = 78;
       } else if (ph === 2) {
         if (b.pattern === 0) this._aimedSpread(b, 7, 0.18);
-        else if (b.pattern === 1) this._ring(b, 14, 1.9, b.t / 40);
-        else { this._aimed(b, 2.7); this._aimedSpread(b, 4, 0.34); }
-        b.atkCd = 74;
+        else if (b.pattern === 1) this._ring(b, 14, 2.4, b.t / 30);
+        else { this._aimed(b, 3.4); this._aimedSpread(b, 4, 0.34); }
+        b.atkCd = 62;
       } else {
-        if (b.pattern === 0) this._aimedSpread(b, 9, 0.16, 2.4);
-        else if (b.pattern === 1) { this._ring(b, 18, 2.1, b.t / 30); this._ring(b, 18, 1.5, -b.t / 30); }
-        else this._aimedSpread(b, 5, 0.28, 2.6);
-        b.atkCd = 58;
+        if (b.pattern === 0) this._aimedSpread(b, 9, 0.16, 3);
+        else if (b.pattern === 1) { this._ring(b, 18, 2.6, b.t / 22); this._ring(b, 18, 1.8, -b.t / 22); }
+        else this._aimedSpread(b, 5, 0.28, 3.2);
+        b.atkCd = 48;
       }
     }
   }
@@ -301,7 +301,7 @@ export class Game {
   }
 
   _drop(x, y, kind) {
-    this.pickups.push({ x, y, kind, vy: 0.95, t: 0, dead: false });
+    this.pickups.push({ x, y, kind, vy: 1.15, t: 0, dead: false });
   }
 
   // ---- 탄·아이템 ----
