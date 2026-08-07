@@ -82,22 +82,25 @@ const S3 = [
 /**
  * 스테이지 정의.
  *  theme    — 배경 테마(backdrop.js)
- *  boss     — 체력·팔레트·공격 주기 배율(작을수록 빠르다)
+ *  boss     — 체력·스프라이트·패턴 종류·피격 반지름·공격 주기 배율(작을수록 빠르다)
  *  hpBonus  — 잡몹 체력 가산
  *  bulletMul— 적 탄속 배율
  */
 export const STAGES = [
   {
     name: 'PACIFIC', theme: 'day', timeline: S1,
-    bossHp: 260, bossSprite: 'boss', bossCd: 1, hpBonus: 0, bulletMul: 1,
+    bossHp: 260, bossSprite: 'boss', bossKind: 'bomber', bossR: 21,
+    bossCd: 1, hpBonus: 0, bulletMul: 1,
   },
   {
     name: 'SUNSET STRAIT', theme: 'dusk', timeline: S2,
-    bossHp: 380, bossSprite: 'boss2', bossCd: 0.86, hpBonus: 1, bulletMul: 1.12,
+    bossHp: 380, bossSprite: 'boss2', bossKind: 'bomber', bossR: 21,
+    bossCd: 0.86, hpBonus: 1, bulletMul: 1.12,
   },
   {
     name: 'NIGHT RAID', theme: 'night', timeline: S3,
-    bossHp: 520, bossSprite: 'boss3', bossCd: 0.74, hpBonus: 1, bulletMul: 1.24,
+    bossHp: 640, bossSprite: 'airship', bossKind: 'airship', bossR: 30,
+    bossCd: 0.74, hpBonus: 1, bulletMul: 1.24,
   },
 ];
 

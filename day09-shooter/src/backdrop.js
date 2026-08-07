@@ -11,6 +11,9 @@ import { W, H } from './config.js';
 // 결정적 난수 — 같은 스테이지는 항상 같은 배치가 나온다
 const lcg = (s) => () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
 
+// 화면 흔들림으로 밀렸을 때 가장자리에 빈 줄이 생기지 않도록 바탕만 조금 넓게 굽는다
+const BLEED = 16;
+
 const LOOP_DEEP = 900;
 const LOOP_SURF = 1200;
 const LOOP_SKY = 800;
@@ -88,7 +91,7 @@ export class Backdrop {
 
   // 기체 아래에 깔리는 층
   below(c, scroll) {
-    c.drawImage(this.base, 0, 0);
+    c.drawImage(this.base, -BLEED, -BLEED);
     this._tile(c, this.deep, scroll * 0.45);
     this._tile(c, this.surf, scroll);
   }
@@ -107,19 +110,23 @@ export class Backdrop {
 
   // 수심 밴드: 아래로 갈수록 깊고 어둡다. 경계는 두 줄 체커로 흩어 밴드 티를 없앤다.
   _base(th) {
-    const { cv, c } = surface(W, H);
+    const bw = W + BLEED * 2;
+    const { cv, c } = surface(bw, H + BLEED * 2);
     const n = th.sea.length;
     const bh = Math.ceil(H / n);
+    // 맨 위·아래 밴드를 BLEED만큼 더 그려서 흔들려도 빈 줄이 드러나지 않는다
     for (let i = 0; i < n; i += 1) {
       c.fillStyle = th.sea[i];
-      c.fillRect(0, i * bh, W, bh);
+      const y0 = i === 0 ? 0 : BLEED + i * bh;
+      const y1 = i === n - 1 ? H + BLEED * 2 : BLEED + (i + 1) * bh;
+      c.fillRect(0, y0, bw, y1 - y0);
     }
     for (let i = 1; i < n; i += 1) {
-      const y = i * bh;
+      const y = BLEED + i * bh;
       c.fillStyle = th.sea[i - 1];
-      for (let x = 0; x < W; x += 2) { c.fillRect(x, y, 1, 1); c.fillRect(x + 1, y + 2, 1, 1); }
+      for (let x = 0; x < bw; x += 2) { c.fillRect(x, y, 1, 1); c.fillRect(x + 1, y + 2, 1, 1); }
       c.fillStyle = th.sea[i];
-      for (let x = 0; x < W; x += 2) { c.fillRect(x + 1, y - 3, 1, 1); c.fillRect(x, y - 1, 1, 1); }
+      for (let x = 0; x < bw; x += 2) { c.fillRect(x + 1, y - 3, 1, 1); c.fillRect(x, y - 1, 1, 1); }
     }
     return cv;
   }

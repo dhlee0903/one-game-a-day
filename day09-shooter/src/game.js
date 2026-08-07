@@ -42,6 +42,8 @@ export class Game {
     this.eb = [];        // 적 탄
     this.pickups = [];
     this.fx = [];
+    this.parts = [];         // 불꽃·파편·연기
+    this.shake = { mag: 0, t: 0 };
     this.boss = null;
     this.bombFlash = 0;
     this.keys = { l: 0, r: 0, u: 0, d: 0 };
@@ -66,6 +68,7 @@ export class Game {
     this.eb = [];
     this.pb = [];
     this.fx = [];
+    this.parts = [];
     this.boss = null;
     this.stageWait = 0;
     // pickups만 남긴다 — 보스가 떨군 보상을 다음 스테이지에서 주울 수 있게.
@@ -138,12 +141,54 @@ export class Game {
     this.arm();
     this.bombs -= 1;
     this.bombFlash = BOMB.flash;
+    this._shake(8);
     this.player.invul = Math.max(this.player.invul, BOMB.invul);
     this.eb.length = 0;                       // 화면의 적 탄을 모두 지운다
     for (const e of this.enemies) this._hurt(e, BOMB.dmg);
     if (this.boss) this._hurtBoss(BOMB.dmg);
     this.sfx('bomb');
     this._emit();
+  }
+
+  // ---- 연출 ----
+
+  // 화면 흔들림. 렌더러가 game.shake만 읽어 화면 전체를 밀어 그린다.
+  // 세기는 프레임마다 줄고, 흔드는 방향은 t로 정해 렌더 횟수와 무관하게 같다.
+  _shake(mag) { this.shake.mag = Math.min(14, Math.max(this.shake.mag, mag)); }
+
+  // 파편 한 뭉치. kind: spark(불꽃) / shard(금속 조각) / smoke(연기)
+  _burst(x, y, n, kind, sp = 2.2, life = 26) {
+    if (this.parts.length > 340) return;      // 폭주 방지
+    for (let i = 0; i < n; i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      const v = sp * (0.35 + Math.random());
+      this.parts.push({
+        x, y, kind,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        t: 0, life: Math.round(life * (0.6 + Math.random() * 0.7)),
+      });
+    }
+  }
+
+  // 격추 규모에 맞춰 불꽃 + 금속 조각 + 연기를 한 번에
+  _debris(x, y, scale = 1) {
+    this._burst(x, y, Math.round(7 * scale), 'spark', 2.4 * scale, 22);
+    this._burst(x, y, Math.round(4 * scale), 'shard', 1.9 * scale, 34);
+    this._burst(x, y, Math.round(2 * scale), 'smoke', 0.7, 40);
+  }
+
+  _parts() {
+    for (const p of this.parts) {
+      p.t += 1;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.93;
+      if (p.kind === 'shard') p.vy = p.vy * 0.94 + 0.16;        // 조각은 떨어진다
+      else if (p.kind === 'smoke') { p.vy = p.vy * 0.9 + 0.5; } // 연기는 뒤로 흘러간다
+      else p.vy *= 0.93;
+    }
+    this.parts = this.parts.filter((p) => p.t < p.life);
   }
 
   // ---- 프레임 ----
@@ -164,6 +209,7 @@ export class Game {
       this._pickups();
       this._collide();
       this._fx();
+      this._parts();
       this.pickups = this.pickups.filter((p) => !p.dead);
       this.fx = this.fx.filter((f) => f.t < f.life);
       return;
@@ -181,6 +227,12 @@ export class Game {
     this._pickups();
     this._collide();
     this._fx();
+    this._parts();
+    if (this.shake.mag > 0) {
+      this.shake.t += 1;
+      this.shake.mag *= 0.86;
+      if (this.shake.mag < 0.4) this.shake.mag = 0;
+    }
 
     this.enemies = this.enemies.filter((e) => !e.dead);
     this.pb = this.pb.filter((b) => !b.dead);
@@ -226,9 +278,10 @@ export class Game {
   _spawnBoss() {
     const st = this.stage;
     this.boss = {
-      x: W / 2, y: -70, r: BOSS.r, hp: st.bossHp, maxHp: st.bossHp,
-      sprite: st.bossSprite, cd: st.bossCd,
+      x: W / 2, y: -70, r: st.bossR || BOSS.r, hp: st.bossHp, maxHp: st.bossHp,
+      sprite: st.bossSprite, kind: st.bossKind || 'bomber', cd: st.bossCd,
       state: 'enter', t: 0, hit: 0, atkCd: 90, pattern: 0,
+      spin: 0, burst: 0, burstCd: 0,
     };
     this.sfx('boss');
     this.onState('boss');
@@ -371,6 +424,32 @@ export class Game {
     }
   }
 
+  // 회전하는 팔에서 한 발씩 — 여러 프레임에 걸쳐 나선을 그린다
+  _spiralShot(from, arms, angle, speed) {
+    const sp = speed * this.stage.bulletMul;
+    for (let i = 0; i < arms; i += 1) {
+      const a = angle + (i / arms) * Math.PI * 2;
+      this.eb.push({ x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: E_BULLET.r, dead: false });
+    }
+  }
+
+  // 가로 탄막 — 한 곳만 비워 그 틈으로 빠져나가게 한다
+  _wall(from, speed, gapX, gapW = 46) {
+    const sp = speed * this.stage.bulletMul;
+    for (let x = 14; x < W - 10; x += 22) {
+      if (Math.abs(x - gapX) < gapW / 2) continue;
+      this.eb.push({ x, y: from.y + 10, vx: 0, vy: sp, r: E_BULLET.r, dead: false });
+    }
+  }
+
+  // 좌우 엔진 포드에서 조준탄 — 발사 위치가 갈라져 사이가 위험하다
+  _pods(from, speed, spread = 0) {
+    for (const sgn of [-1, 1]) {
+      this._aimed({ x: from.x + sgn * 25, y: from.y + 12 }, speed);
+      if (spread) this._aimedSpread({ x: from.x + sgn * 25, y: from.y + 12 }, 3, spread, speed);
+    }
+  }
+
   _ring(from, n, speed, offset = 0) {
     speed *= this.stage.bulletMul;
     for (let i = 0; i < n; i += 1) {
@@ -394,10 +473,11 @@ export class Game {
     }
     if (b.state === 'dying') {
       if (b.t % 6 === 0) {
-        this.fx.push({
-          x: b.x + (Math.random() - 0.5) * 70, y: b.y + (Math.random() - 0.5) * 50,
-          t: 0, life: 26, r: 22, kind: 'boom',
-        });
+        const ex = b.x + (Math.random() - 0.5) * b.r * 2.6;
+        const ey = b.y + (Math.random() - 0.5) * b.r * 2;
+        this.fx.push({ x: ex, y: ey, t: 0, life: 26, r: 22, kind: 'boom' });
+        this._debris(ex, ey, 1.6);
+        this._shake(7);
         this.sfx('boom');
       }
       return;
@@ -405,6 +485,8 @@ export class Game {
 
     const ratio = b.hp / b.maxHp;
     const ph = ratio <= BOSS.phase3 ? 3 : (ratio <= BOSS.phase2 ? 2 : 1);
+    if (b.kind === 'airship') { this._airship(b, ph); return; }   // 라스트 보스는 패턴이 따로다
+
     b.x = W / 2 + Math.sin(b.t / (ph === 3 ? 40 : 62)) * (W / 2 - 60);
 
     if (--b.atkCd <= 0) {
@@ -425,6 +507,51 @@ export class Game {
         else this._aimedSpread(b, 5, 0.28, 3.2);
         b.atkCd = Math.round(48 * b.cd);
       }
+    }
+  }
+
+  // 라스트 보스(비공정) — 느리게 떠다니며 패턴을 길게 끈다.
+  // 나선·탄막벽·포드 조준탄이 섞여서 폭격기와 결이 다르다.
+  _airship(b, ph) {
+    // 육중하게 좌우로 미끄러지며 위아래로 조금 흔들린다
+    b.x = W / 2 + Math.sin(b.t / (ph === 3 ? 96 : 128)) * (W / 2 - 74);
+    b.y = BOSS.enterY + 12 + Math.sin(b.t / 74) * 9;
+
+    // 나선은 여러 프레임에 걸쳐 흩뿌린다
+    if (b.burst > 0) {
+      b.burst -= 1;
+      if (--b.burstCd <= 0) {
+        b.burstCd = ph === 3 ? 3 : 4;
+        b.spin += ph === 3 ? 0.42 : 0.34;
+        this._spiralShot(b, ph === 3 ? 3 : 2, b.spin, 2.0);
+      }
+      return;
+    }
+
+    if (--b.atkCd > 0) return;
+    const P = ph === 1 ? 3 : (ph === 2 ? 4 : 5);
+    b.pattern = (b.pattern + 1) % P;
+    const cd = (n) => Math.round(n * b.cd);
+
+    if (b.pattern === 0) {                       // 포드 조준탄
+      this._pods(b, 2.6, ph >= 2 ? 0.22 : 0);
+      b.atkCd = cd(ph === 3 ? 46 : 60);
+    } else if (b.pattern === 1) {                // 나선
+      b.burst = ph === 3 ? 70 : 52;
+      b.burstCd = 1;
+      b.atkCd = cd(70);
+    } else if (b.pattern === 2) {                // 탄막벽 — 틈으로 빠져나간다
+      this._wall(b, 2.2, this.player.x, ph === 3 ? 40 : 56);
+      b.atkCd = cd(ph === 3 ? 62 : 82);
+    } else if (b.pattern === 3) {                // 링 + 조준 확산
+      this._ring(b, ph === 3 ? 20 : 16, 2.0, b.t / 30);
+      this._aimedSpread(b, 5, 0.22);
+      b.atkCd = cd(72);
+    } else {                                     // 3페이즈 마무리 — 역방향 이중 링
+      this._ring(b, 22, 2.3, b.t / 24);
+      this._ring(b, 22, 1.5, -b.t / 24);
+      this._pods(b, 3.0);
+      b.atkCd = cd(78);
     }
   }
 
@@ -458,6 +585,9 @@ export class Game {
       e.dead = true;
       this.score += e.score;
       this.fx.push({ x: e.x, y: e.y, t: 0, life: 18, r: e.r + 6, kind: 'boom' });
+      const big = e.type === 'gunner';
+      this._debris(e.x, e.y, big ? 1.8 : 1);
+      if (big) this._shake(3);
       this.sfx('boom');
       if (e.drop) this._drop(e.x, e.y, e.drop);
       else if (Math.random() < 0.04) this._drop(e.x, e.y, 'P');
@@ -557,6 +687,8 @@ export class Game {
     const p = this.player;
     if (p.dead > 0) return;
     this.fx.push({ x: p.x, y: p.y, t: 0, life: 26, r: 22, kind: 'boom' });
+    this._debris(p.x, p.y, 2.4);
+    this._shake(10);
     this.sfx('hit');
     this.lives -= 1;
     this.power = Math.max(1, this.power - 1);
