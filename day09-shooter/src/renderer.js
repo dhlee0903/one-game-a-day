@@ -23,6 +23,7 @@ export class Renderer {
     this.spr.bankR = bakeSprite('player', { bank: 1 });
     this.flash = {};   // 피격용 흰색 실루엣(요청 시 생성)
     this.backdrop = new Backdrop('day');
+    this.showHitbox = false;   // 디버그 콘솔에서 켠다
   }
 
   render(game) {
@@ -40,6 +41,7 @@ export class Renderer {
       c.fillStyle = `rgba(255,255,255,${(game.bombFlash / 34) * 0.7})`;
       c.fillRect(0, 0, W, H);
     }
+    if (this.showHitbox) this._hitboxes(c, game);
     this._hud(c, game);
     this._banner(c, game);
   }
@@ -187,6 +189,24 @@ export class Renderer {
       cx += 6 * scale;
     }
     return cx;
+  }
+
+  // ---- 디버그: 실제 피격 판정 그리기 ----
+
+  _hitboxes(c, game) {
+    const ring = (x, y, r, color) => {
+      c.strokeStyle = color;
+      c.lineWidth = 1;
+      c.beginPath();
+      c.arc(Math.round(x) + 0.5, Math.round(y) + 0.5, r, 0, Math.PI * 2);
+      c.stroke();
+    };
+    for (const e of game.enemies) ring(e.x, e.y, e.r, 'rgba(120,255,140,.85)');
+    if (game.boss) ring(game.boss.x, game.boss.y, game.boss.r, 'rgba(255,120,120,.85)');
+    for (const b of game.eb) ring(b.x, b.y, b.r, 'rgba(255,90,60,.7)');
+    for (const b of game.pb) ring(b.x, b.y, b.r, 'rgba(255,240,120,.5)');
+    const p = game.player;
+    if (p.dead === 0) ring(p.x, p.y, PLAYER.r, 'rgba(255,255,255,.95)');
   }
 
   // ---- HUD ----

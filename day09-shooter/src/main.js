@@ -4,6 +4,7 @@ import { Game } from './game.js';
 import { Renderer } from './renderer.js';
 import { InputController } from './input.js';
 import { STEP_MS, MAX_CATCHUP } from './config.js';
+import { attachDebug } from './debug.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -45,6 +46,12 @@ function handleState(state, p) {
 let acc = 0;
 let prev = 0;
 
+// 디버그 콘솔이 읽고 쓰는 시계. scale은 슬로우·정지용(평소엔 1).
+const clock = { scale: 1, fps: 0, ms: 0 };
+let fpsCount = 0;
+let fpsAt = 0;
+const debug = attachDebug({ game, renderer, clock });
+
 // 일시정지·타이틀 화면에서는 보드 위 버튼을 감춘다
 function syncChrome() {
   const show = game.phase === 'playing' && !game.paused;
@@ -56,13 +63,19 @@ function syncChrome() {
 function loop(now) {
   requestAnimationFrame(loop);
   syncChrome();
+  if (debug) debug.update();          // 멈춰 있어도 계속 갱신된다
   // 멈춰 있는 동안은 시간을 쌓지 않는다 — 풀었을 때 몰아서 돌지 않게
   if (game.paused) { acc = 0; prev = now; renderer.render(game); return; }
   if (!prev) { prev = now; renderer.render(game); return; }
 
   // 탭을 비활성화했다 돌아오면 간격이 크게 벌어진다 — 몰아서 돌리지 않고 잘라낸다
-  acc += Math.min(now - prev, 250);
+  const dt = Math.min(now - prev, 250);
+  acc += dt * clock.scale;
   prev = now;
+
+  clock.ms = dt;
+  fpsCount += 1;
+  if (now - fpsAt >= 500) { clock.fps = Math.round((fpsCount * 1000) / (now - fpsAt)); fpsCount = 0; fpsAt = now; }
 
   let steps = 0;
   while (acc >= STEP_MS && steps < MAX_CATCHUP) {
