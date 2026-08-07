@@ -9,6 +9,9 @@ export class InputController {
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
+    // 이 드래그가 시작될 때의 스테이지 세대. 스테이지가 바뀌면 어긋나서
+    // 잡고 있던 손으로는 다음 스테이지가 시작되지 않는다(떼었다 다시 잡아야 한다).
+    let pressGen = -1;
 
     // 캔버스 CSS 크기 → 논리 좌표 배율
     const scale = () => {
@@ -22,11 +25,14 @@ export class InputController {
       dragging = true;
       lastX = e.clientX; lastY = e.clientY;
       game.resetDrag();   // 이전 플릭의 잔량을 버리고 새로 잡는다
-      if (!game.paused) { game.start(); game.arm(); }  // 시작 화면에서 탭하면 바로 시작
+      if (game.paused) return;
+      game.start();              // 타이틀·게임오버에서 탭하면 새 판
+      pressGen = game.stageGen;  // start()로 세대가 바뀌었어도 이 누름은 유효하다
+      game.arm();
     });
 
     canvas.addEventListener('pointermove', (e) => {
-      if (!dragging) return;
+      if (!dragging || pressGen !== game.stageGen) return;
       e.preventDefault();
       const { sx, sy } = scale();
       game.movePlayerBy((e.clientX - lastX) * sx, (e.clientY - lastY) * sy);
