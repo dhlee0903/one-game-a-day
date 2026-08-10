@@ -1,0 +1,142 @@
+:root {
+  --bg: #0d0a18;
+  --panel: #16112a;
+  --line: #2c2447;
+  --text: #e6e2f5;
+  --dim: #9a92bd;
+  --faint: #6d6590;
+  --accent: #ffd23f;
+  --arcane: #a371f7;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+/* 페이지 자체는 스크롤되지 않는다 — 화면을 끌어 조작하는 게임이라
+   당겨서 새로고침·주소창 여닫힘이 일어나면 안 된다. */
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+
+body {
+  position: fixed; inset: 0;
+  background: radial-gradient(circle at 50% -10%, #241a44, #0d0a18 60%);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
+
+.home {
+  position: fixed; top: 14px; left: 14px; z-index: 50;
+  padding: 7px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+  background: rgba(22, 17, 42, .92); border: 1px solid var(--line); color: var(--dim);
+  transition: color .12s, border-color .12s;
+}
+.home:hover { color: var(--text); border-color: var(--faint); }
+
+/* 세로가 짧으면 보드가 잘리지 않도록 폭을 줄인다(비율 유지) */
+.wrap { width: 100%; max-width: min(360px, calc((100dvh - 92px) * 320 / 560)); }
+
+header { text-align: center; margin-bottom: 10px; }
+h1 {
+  font-size: 25px; font-weight: 800; letter-spacing: .1em;
+  background: linear-gradient(90deg, #7ff0ff, #a371f7, #ff5a63);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sub { font-size: 11px; color: var(--faint); letter-spacing: .3em; margin-top: 2px; font-weight: 700; }
+
+.board-wrap { position: relative; }
+
+canvas {
+  display: block; width: 100%; height: auto; aspect-ratio: 320 / 560;
+  border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
+  touch-action: none; cursor: crosshair;
+  image-rendering: pixelated; /* 확대돼도 도트가 뭉개지지 않게 */
+  background: #1a2418;
+}
+
+.gear {
+  position: absolute; right: 8px; top: 30px; z-index: 5;
+  width: 34px; height: 30px; padding: 0; border-radius: 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #cfc6f5;
+  background: rgba(13, 10, 24, .8);
+  border: 3px solid #2c2447;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, .1), 0 3px 0 #070512;
+  transition: transform .06s, color .12s;
+}
+.gear:hover { color: var(--accent); }
+.gear:active { transform: translateY(3px); box-shadow: inset 0 3px 0 rgba(255, 255, 255, .1); }
+.gear[hidden] { display: none; }
+
+/* 캔버스 위 한글 안내 — 도트 글꼴로는 못 찍으니 DOM으로 띄운다 */
+.banner {
+  position: absolute; left: 0; right: 0; top: 34%;
+  text-align: center; pointer-events: none; z-index: 4;
+  font-size: 17px; font-weight: 800; letter-spacing: .12em;
+  color: #fff; text-shadow: 0 2px 0 #0d0a18, 0 0 14px rgba(163, 113, 247, .8);
+  opacity: 0; transition: opacity .15s;
+}
+.banner.show { opacity: 1; }
+
+.overlay {
+  position: absolute; inset: 0; border-radius: 14px;
+  background: rgba(13, 10, 24, .78); backdrop-filter: blur(3px);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 18px; z-index: 10;
+}
+.overlay.show { display: flex; }
+.overlay h2 { font-size: 22px; letter-spacing: .1em; margin-bottom: 10px; }
+.overlay h2 .title { display: block; font-size: 26px; letter-spacing: .08em; color: #cfc6f5; }
+.overlay h2 .sub { display: block; font-size: 11px; letter-spacing: .3em; color: var(--faint); margin-top: 4px; }
+.overlay p { font-size: 13px; line-height: 1.7; color: var(--dim); margin-bottom: 16px; }
+.overlay b { color: var(--accent); }
+.dim { color: var(--faint); font-size: 12px; }
+
+.btn {
+  font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: .06em;
+  padding: 10px 22px; cursor: pointer; color: #2a1c0a;
+  background: var(--accent); border: 3px solid #7a5a08; border-radius: 0;
+  box-shadow: inset 0 3px 0 #ffeaa8, inset 0 -3px 0 #d99a10, 0 3px 0 #070512;
+  transition: transform .06s;
+  text-decoration: none; display: inline-block;
+}
+.btn:active { transform: translateY(3px); box-shadow: inset 0 3px 0 #ffeaa8, inset 0 -3px 0 #d99a10; }
+.btn.ghost {
+  color: var(--text); background: #221a3d; border-color: #3a2f63;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, .08), 0 3px 0 #070512;
+}
+
+.menu-list { display: flex; flex-direction: column; gap: 10px; width: 190px; margin-bottom: 14px; }
+
+/* ---- 레벨업 카드 ---- */
+.levelup h2 { color: var(--accent); font-size: 15px; letter-spacing: .22em; margin-bottom: 12px; }
+.cards { display: flex; flex-direction: column; gap: 9px; width: 100%; max-width: 268px; margin-bottom: 12px; }
+.card {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  font-family: inherit; color: var(--text); cursor: pointer;
+  background: var(--panel); border: 2px solid var(--line);
+  border-left: 4px solid var(--c); border-radius: 0; padding: 9px 10px;
+  transition: transform .08s, background .12s, border-color .12s;
+}
+.card:hover { background: #1f1838; border-color: var(--c); transform: translateX(2px); }
+.card:active { transform: translateX(2px) translateY(2px); }
+.card .ic {
+  flex: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: #0d0a18; border: 1px solid var(--line);
+}
+.card .ic canvas { display: block; image-rendering: pixelated; }
+.card .ic.dot { border-color: var(--c); }
+.card .body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.card .nm { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+.card .tag {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #0d0a18;
+  background: var(--c); padding: 1px 5px;
+}
+.card .ln { font-size: 11.5px; color: var(--dim); line-height: 1.4; }
+
+@media (max-width: 380px) {
+  .card .nm { font-size: 13px; }
+  .card .ln { font-size: 11px; }
+}
