@@ -14,6 +14,9 @@
 | 05 | [플랫포머](./day05-platformer) | Vanilla JS + Canvas | ES Modules · 관심사 분리(OOP) |
 | 06 | [러너 (3라인)](./day06-runner) | Vanilla JS + Canvas | ES Modules · 의사 3D 원근 |
 | 07 | [3매치 퍼즐](./day07-match3) | Vanilla JS + Canvas | ES Modules · 관심사 분리(OOP) |
+| 08 | [숫자야구](./day08-baseball) | Vanilla JS | ES Modules · 관심사 분리(OOP) |
+| 09 | [SKY RAID (종스크롤 슈팅)](./day09-shooter) | Vanilla JS + Canvas | ES Modules · 도트 스프라이트 |
+| 10 | [아케인 서바이벌](./day10-wizard) | Vanilla JS + Canvas | ES Modules · 스프라이트시트 · 서바이버 |
 
 ## 공통 규칙
 
