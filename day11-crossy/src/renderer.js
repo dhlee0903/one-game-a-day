@@ -2,12 +2,12 @@
 
 import {
   LANE, PAL, EDGE_COLS, HALF_COLS, GRASS_TOP, ROAD_TOP, WATER_TOP, SLAB_BOTTOM,
-  IDLE_WARN, IDLE_LIMIT,
+  BEHIND_WARN, BEHIND_LIMIT,
 } from './config.js';
 import { Engine } from './engine.js';
 import {
   FACE, CHARS, treeModel, logModel, ROCK, COIN, SIGNAL,
-  TRAIN_CAR, TRAIN_HEAD, EAGLE, EAGLE_WING,
+  TRAIN_CAR, TRAIN_HEAD, EAGLE, EAGLE_WING, GLYPHS, GLYPH_W, GLYPH_H,
 } from './models.js';
 
 const SLAB_W = EDGE_COLS * 2 + 1;
@@ -32,6 +32,13 @@ const ROWS_DETAIL = 19;   // 나무·차량은 여기까지만(그 너머는 안
 const FOG_FADE = 165;     // 지면이 끊기는 지점부터 안개가 걷히는 거리(px)
 const CHAR_SCALE = 1.22;  // 캐릭터를 칸 대비 큼직하게(원작 비율)
 
+// 게임오버 글자: 카메라 앞 GO_DIST칸에 화면과 평행하게 세운다.
+// GO_Y만큼 위로 올려야 글자 덩어리가 화면 위쪽에 앉고, 아래에 안내 문구 자리가 남는다.
+const GO_DIST = 18;
+const GO_CUBE = 0.22;     // 글자 한 픽셀의 크기(월드 단위)
+const GO_Y = 3.4;
+const GO_LINES = ['GAME', 'OVER'];
+
 export class Renderer {
   constructor(canvas) {
     this.cv = canvas;
@@ -40,6 +47,8 @@ export class Renderer {
     this.w = 0; this.h = 0;
     this.sky = null;
     this.spin = 0;
+    this.goRise = 0;                  // 게임오버 글자가 떠오르는 정도
+    this.goPos = { x: 0, y: 0, z: 0 }; // 글자 좌표 계산용 스크래치
   }
 
   resize() {
@@ -62,6 +71,10 @@ export class Renderer {
 
   render(game, dt) {
     this.spin = (this.spin + dt * 2.4) % (Math.PI * 2);
+    // 결과 화면에 들어오면 글자가 아래에서 살짝 떠오른다.
+    this.goRise = game.state === 'over'
+      ? this.goRise + (0 - this.goRise) * Math.min(1, dt * 7)
+      : -1.1;
     const c = this.c;
     const eng = this.eng;
 
@@ -104,7 +117,58 @@ export class Renderer {
     c.fillRect(0, yCut, this.w, FOG_FADE + 2);
     c.restore();
 
-    if (game.state === 'play' && game.idle > IDLE_WARN) this.dangerEdge(c, game);
+    if (game.state === 'play' && game.behind() > BEHIND_WARN) this.dangerEdge(c, game);
+    if (game.state === 'over') this.gameOver(c, eng, game);
+  }
+
+  // ---- 게임오버 (블록으로 찍은 글자) ----
+
+  gameOver(c, eng, game) {
+    c.fillStyle = 'rgba(10, 26, 40, .46)';
+    c.fillRect(0, 0, this.w, this.h);
+
+    // 글자는 월드와 같은 엔진으로 그리되, 화면에 평행한 판 위에 놓아
+    // 위아래로 원근이 벌어지지 않게 한다.
+    eng.begin();
+    const rows = GO_LINES.length * (GLYPH_H + 2) - 2;
+    const top = rows / 2;
+    GO_LINES.forEach((line, li) => {
+      const cols = line.length * (GLYPH_W + 1) - 1;
+      for (let i = 0; i < line.length; i += 1) {
+        const g = GLYPHS[line[i]];
+        if (!g) continue;
+        for (let r = 0; r < GLYPH_H; r += 1) {
+          for (let col = 0; col < GLYPH_W; col += 1) {
+            if (!(g[r] & (1 << (GLYPH_W - 1 - col)))) continue;
+            const u = (i * (GLYPH_W + 1) + col - (cols - 1) / 2) * GO_CUBE;
+            const v = GO_Y + (top - (li * (GLYPH_H + 2) + r)) * GO_CUBE + this.goRise;
+            eng.fromCamera(u, v, GO_DIST, this.goPos);
+            eng.box(this.goPos.x, this.goPos.y - GO_CUBE / 2, this.goPos.z,
+              GO_CUBE, GO_CUBE, GO_CUBE, li === 0 ? '#ffffff' : '#ff5a4e');
+          }
+        }
+      }
+    });
+    eng.flush();
+
+    // 아래에 기록과 안내. 글자는 블록, 설명은 평범한 글씨로 나눈다.
+    const cx = this.w / 2;
+    const y0 = this.h * 0.63;
+    c.textAlign = 'center';
+    c.fillStyle = 'rgba(255,255,255,.9)';
+    c.font = '700 15px "Segoe UI", system-ui, sans-serif';
+    c.fillText(`${game.score}칸 · 최고 ${game.bestShown}칸`, cx, y0);
+    if (game.coins > 0) {
+      c.fillStyle = '#ffd34d';
+      c.font = '700 13px "Segoe UI", system-ui, sans-serif';
+      c.fillText(`코인 +${game.coins}`, cx, y0 + 21);
+    }
+    // 깜빡이는 안내 — 누르라는 건 눈에 띄어야 한다.
+    const blink = 0.55 + Math.abs(Math.sin(game.overT * 3.2)) * 0.45;
+    c.fillStyle = `rgba(255,255,255,${blink})`;
+    c.font = '700 13.5px "Segoe UI", system-ui, sans-serif';
+    c.fillText('press any button to restart', cx, y0 + 52);
+    c.textAlign = 'left';
   }
 
   // ---- 차선 ----
@@ -256,10 +320,11 @@ export class Renderer {
     }
   }
 
-  // 독수리가 오기 직전 화면 가장자리에 붉은 경고.
+  // 화면 아래로 밀려나 독수리가 오기 직전이면 가장자리에 붉은 경고.
   dangerEdge(c, game) {
-    const k = Math.min(1, (game.idle - IDLE_WARN) / (IDLE_LIMIT - IDLE_WARN));
-    const pulse = 0.35 + Math.abs(Math.sin(game.idle * 7)) * 0.45;
+    const b = game.behind();
+    const k = Math.min(1, (b - BEHIND_WARN) / (BEHIND_LIMIT - BEHIND_WARN));
+    const pulse = 0.35 + Math.abs(Math.sin(this.spin * 3.4)) * 0.45;
     const g = c.createLinearGradient(0, 0, 0, this.h);
     g.addColorStop(0, `rgba(214,48,42,${0.5 * k * pulse})`);
     g.addColorStop(0.35, 'rgba(214,48,42,0)');

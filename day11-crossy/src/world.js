@@ -156,6 +156,7 @@ export class World {
       blink: 0,
       speed: 17 + d * 7,
       train: null,
+      whooshed: false,   // 이번 기차의 통과음을 냈는지
       carCount,
       trainLen: 3.5 * (carCount + 1),
     };
@@ -239,6 +240,7 @@ export class World {
       lane.train.x += lane.speed * lane.dir * dt;
       if (lane.train.x * lane.dir > TRAIN_X) {
         lane.train = null;
+        lane.whooshed = false;   // 다음 기차 때 통과음을 다시 낸다
         lane.phase = 'idle';
         lane.timer = range(2.4, 6.5);
         lane.blink = 0;

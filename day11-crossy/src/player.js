@@ -1,7 +1,10 @@
 // 플레이어의 위치와 점프 애니메이션만 담당한다.
 // "갈 수 있는가 / 죽었는가" 같은 판정은 game.js가 한다.
 
-import { HOP_TIME, HOP_HEIGHT, BUMP_TIME, TURN_SPEED } from './config.js';
+import { HOP_TIME, HOP_HEIGHT, LAND_TIME, BUMP_TIME, TURN_SPEED } from './config.js';
+
+// 시작과 끝이 부드러운 보간 — 딱딱하게 튀지 않게 한다.
+const smooth = (t) => t * t * (3 - 2 * t);
 
 export class Player {
   constructor() { this.reset(); }
@@ -16,6 +19,7 @@ export class Player {
     this.yaw = 0;
     this.yawTo = 0;
     this.idleT = 0;           // 제자리 들썩임용 시간
+    this.land = 0;            // 착지 직후 눌림(1 → 0)
     this.bump = 0;            // 막혔을 때 살짝 부딪히는 모션(0..1)
     this.bumpDir = 0;
     this.ride = null;         // 올라탄 통나무
@@ -54,14 +58,17 @@ export class Player {
         this.x = this.toX; this.z = this.toZ;
         this.gz = Math.round(this.toZ);
         this.y = 0;
+        this.land = 1;        // 착지 눌림 시작
       } else {
-        const k = this.t;
+        // 수평 이동은 부드럽게, 높이는 사인 아치 — 둘 다 끊기는 지점이 없다.
+        const k = smooth(this.t);
         this.x = this.fromX + (this.toX - this.fromX) * k;
         this.z = this.fromZ + (this.toZ - this.fromZ) * k;
-        this.y = Math.sin(k * Math.PI) * HOP_HEIGHT;
+        this.y = Math.sin(this.t * Math.PI) * HOP_HEIGHT;
       }
     } else {
       if (this.bump > 0) this.bump = Math.max(0, this.bump - dt / BUMP_TIME);
+      if (this.land > 0) this.land = Math.max(0, this.land - dt / LAND_TIME);
       // 가만히 서 있을 때도 살짝 들썩인다 — 완전히 멈춰 있으면 인형처럼 보인다.
       this.idleT += dt;
       this.y = Math.abs(Math.sin(this.idleT * 3.1)) * 0.022;
@@ -75,17 +82,23 @@ export class Player {
     this.yaw += Math.abs(d) < step ? d : Math.sign(d) * step;
   }
 
-  // 점프 중 몸이 늘어나고 착지에서 눌리는 정도 → [가로, 세로] 배율.
+  // 몸이 늘어나고 눌리는 정도 → [가로, 세로] 배율.
+  // 구간을 나눠 꺾지 않고 사인 하나로 이어 붙여 모션이 매끄럽게 흐르게 한다.
   squash() {
     if (this.flat > 0) return [1 + this.flat * 0.55, Math.max(0.12, 1 - this.flat * 0.88)];
-    if (!this.hopping) {
-      if (this.bump > 0) return [1 + this.bump * 0.12, 1 - this.bump * 0.12];
-      return [1, 1];
+    if (this.hopping) {
+      const k = Math.sin(this.t * Math.PI);      // 공중에서 최대로 늘어남
+      return [1 - k * 0.11, 1 + k * 0.17];
     }
-    const k = this.t;
-    if (k < 0.25) { const p = k / 0.25; return [1 - p * 0.18, 1 + p * 0.22]; }
-    if (k > 0.78) { const p = (k - 0.78) / 0.22; return [1 + p * 0.2, 1 - p * 0.2]; }
-    return [0.94, 1.1];
+    if (this.land > 0) {
+      const k = Math.sin(this.land * Math.PI);   // 착지 순간 눌렸다 되돌아옴
+      return [1 + k * 0.15, 1 - k * 0.19];
+    }
+    if (this.bump > 0) {
+      const k = Math.sin(this.bump * Math.PI);
+      return [1 + k * 0.12, 1 - k * 0.12];
+    }
+    return [1, 1];
   }
 
   // 막힌 방향으로 밀리는 시각적 오프셋.

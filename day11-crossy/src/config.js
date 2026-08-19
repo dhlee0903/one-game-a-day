@@ -2,7 +2,7 @@
 // 좌표계: x = 좌우(칸), y = 위, z = 앞(플레이어가 나아가는 방향).
 // 1 = 한 칸(타일) 크기.
 
-export const VERSION = 'v11.0';
+export const VERSION = 'v11.1';
 
 // ---- 캔버스 ----
 // 캔버스 크기는 CSS가 정하고(aspect-ratio 400/700) 엔진이 거기에 맞춘다.
@@ -19,7 +19,7 @@ export const CAM = {
   lookY: 0.7,     // 바라보는 점의 높이
   ahead: 2.6,     // 플레이어보다 조금 앞을 본다
   focal: 850,
-  follow: 6.5,    // 초점이 목표를 따라가는 속도(1/s)
+  follow: 4.5,    // 초점이 목표를 따라가는 속도(1/s) — 낮을수록 미끄러지듯
 };
 
 // ---- 격자 ----
@@ -37,19 +37,20 @@ export const WATER_TOP = 0.10;   // 수면은 풀밭보다 낮게
 export const SLAB_BOTTOM = -1.6; // 지면 슬래브 아랫면
 
 // ---- 플레이어 ----
-export const HOP_TIME = 0.135;   // 한 칸 뛰는 데 걸리는 시간(초)
+export const HOP_TIME = 0.16;    // 한 칸 뛰는 데 걸리는 시간(초)
 export const HOP_HEIGHT = 0.62;
-export const BUMP_TIME = 0.11;   // 나무에 막혔을 때 부딪히는 모션
-export const TURN_SPEED = 16;    // 바라보는 방향이 도는 속도(rad/s)
+export const LAND_TIME = 0.14;   // 착지하고 눌렸다 펴지는 시간
+export const BUMP_TIME = 0.12;   // 나무에 막혔을 때 부딪히는 모션
+export const TURN_SPEED = 13;    // 바라보는 방향이 도는 속도(rad/s)
 
-// ---- 독수리(가만히 있으면 잡아간다) ----
-export const IDLE_LIMIT = 4.5;   // 앞으로 안 나아간 채 버틸 수 있는 시간
-export const IDLE_WARN = 3.0;    // 경고가 뜨기 시작하는 시점
+// ---- 시점 전진과 독수리 ----
+// 화면은 늘 앞으로 천천히 밀린다. 플레이어가 카메라 초점 뒤로 BEHIND_LIMIT칸
+// 넘게 처지면 — 화면 바닥에 닿을 즈음 — 독수리가 잡아간다.
+export const BEHIND_LIMIT = 6.5;
+export const BEHIND_WARN = 4.0;  // 이만큼 처지면 붉은 경고가 뜬다
 export const EAGLE_TIME = 1.15;  // 급강하 연출 길이
-
-// ---- 카메라 강제 전진 ----
-export const SCROLL_BASE = 0.55;  // 줄/초
-export const SCROLL_GAIN = 0.0016; // 점수 1당 추가 속도
+export const SCROLL_BASE = 0.95;  // 줄/초
+export const SCROLL_GAIN = 0.0022; // 점수 1당 추가 속도
 
 // ---- 난이도 ----
 // 점수가 오를수록 차가 빨라지고 간격이 좁아진다.

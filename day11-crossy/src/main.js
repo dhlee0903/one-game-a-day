@@ -34,24 +34,15 @@ function hud(s) {
   if (s.coins !== lastCoins) { $('coins').textContent = s.coins; lastCoins = s.coins; }
 }
 
-const CAUSE = {
-  car: '차에 치였다', train: '기차에 치였다',
-  water: '물에 빠졌다', eagle: '독수리가 낚아챘다',
-};
-
-function onState(state, p) {
-  if (state !== 'over') return;
-  $('cause').textContent = CAUSE[p.cause] || '';
-  $('finalScore').textContent = p.score;
-  $('overBest').textContent = `최고 기록 ${p.best}칸`;
-  $('gain').textContent = p.coins > 0 ? `코인 +${p.coins} (보유 ${p.totalCoins})` : '';
-  show('over');
-  paintChars();
+// 결과 화면은 캔버스에 직접 그린다(renderer.gameOver). 여기서는 코인이 늘었으니
+// 캐릭터 목록만 다시 칠해 둔다.
+function onState(state) {
+  if (state === 'over') paintChars();
 }
 
 // ---- 오버레이 ----
 
-const panels = { title: $('title'), over: $('over'), opts: $('opts') };
+const panels = { title: $('title'), opts: $('opts') };
 
 function show(name) {
   for (const k of Object.keys(panels)) panels[k].classList.toggle('show', k === name);
@@ -102,14 +93,16 @@ function kick() {
   sound.resume();
 }
 
-$('playBtn').onclick = () => { kick(); hideAll(); game.start(); };
-$('againBtn').onclick = () => { kick(); hideAll(); game.start(); };
-$('menuBtn').onclick = () => { game.state = 'title'; game.reset(); show('title'); paintChars(); };
+function play() { kick(); hideAll(); game.start(); }
+function toTitle() { game.state = 'title'; game.reset(); show('title'); paintChars(); }
+
+$('playBtn').onclick = play;
+$('menuBtn').onclick = toTitle;
 
 let wasPlaying = false;
 function closeOpts() {
-  if (wasPlaying) hideAll();
-  else show(game.state === 'over' ? 'over' : 'title');
+  if (wasPlaying || game.state === 'over') hideAll();
+  else show('title');
 }
 $('gear').onclick = () => {
   if (panels.opts.classList.contains('show')) { closeOpts(); return; }
@@ -132,7 +125,7 @@ paintSfx();
 // ---- 입력 ----
 
 // eslint-disable-next-line no-new
-new Input(canvas, game, kick);
+new Input(canvas, game, kick, play);
 
 // 설정 창이 열려 있으면 게임은 멈춘다.
 const paused = () => panels.opts.classList.contains('show');

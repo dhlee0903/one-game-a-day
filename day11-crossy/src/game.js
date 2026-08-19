@@ -2,14 +2,16 @@
 
 import {
   LANE, HALF_COLS, ROWS_AHEAD, ROWS_BEHIND, CAM,
-  IDLE_LIMIT, IDLE_WARN, EAGLE_TIME, SCROLL_BASE, SCROLL_GAIN,
+  BEHIND_LIMIT, BEHIND_WARN, EAGLE_TIME, SCROLL_BASE, SCROLL_GAIN,
 } from './config.js';
 import { World } from './world.js';
 import { Player } from './player.js';
 import { FACE } from './models.js';
 
-const BEHIND = 5;          // 카메라 뒤로 이만큼 처지면 독수리
-const DEATH_HOLD = 0.75;   // 깔린 뒤 결과창까지의 여유
+const DEATH_HOLD = 0.75;   // 깔린 뒤 결과 화면까지의 여유
+const RESTART_LOCK = 0.4;  // 죽자마자 눌린 키로 넘어가지 않게 잠그는 시간
+const BELL_GAP = 0.42;     // 건널목 종 "땡" 간격
+const CUE_NEAR = 8;        // 소리를 낼 앞쪽 줄 범위
 
 export class Game {
   constructor({ onHud, onState, sound, store } = {}) {
@@ -31,10 +33,12 @@ export class Game {
     this.score = 0;
     this.coins = 0;
     this.camZ = 0;
-    this.edge = -BEHIND;
-    this.idle = 0;
     this.deathT = 0;
+    this.overT = 0;
+    this.bellT = 0;
+    this.honkT = 4;
     this.cause = null;
+    this.bestShown = this.store ? this.store.best() : 0;
     this.eagle = null;
     this.pending = null;
     this.shake = 0;
@@ -48,14 +52,28 @@ export class Game {
   }
 
   emitHud() {
-    this.onHud({ score: this.score, coins: this.coins, danger: this.idle >= IDLE_WARN && this.state === 'play' });
+    this.onHud({ score: this.score, coins: this.coins, danger: this.behind() > BEHIND_WARN });
   }
+
+  // 플레이어가 카메라 초점 뒤로 얼마나 처졌는지(칸). 화면 아래로 밀려난 정도.
+  behind() { return this.camZ - this.player.z; }
 
   // ---- 입력 ----
 
   move(dir) {
+    if (this.state === 'over') { this.restart(); return; }
     if (this.state !== 'play') return;
     this.pending = dir;
+  }
+
+  // 결과 화면에서는 아무 버튼이나 누르면 다시 시작한다.
+  anyKey() {
+    if (this.state === 'over') this.restart();
+  }
+
+  restart() {
+    if (this.overT < RESTART_LOCK) return;
+    this.start();
   }
 
   tryMove(dir) {
@@ -96,10 +114,11 @@ export class Game {
       return;
     }
 
-    if (this.state === 'dying') {
-      this.stepDeath(dt);
+    if (this.state === 'dying' || this.state === 'over') {
+      // 결과 화면에서도 세계는 계속 움직인다 — 멈춘 그림보다 살아 있다.
+      if (this.state === 'dying') this.stepDeath(dt);
+      else this.overT += dt;
       w.update(dt, Math.floor(this.camZ) - ROWS_BEHIND, Math.floor(this.camZ) + ROWS_AHEAD);
-      this.stepCamera(dt, true);
       return;
     }
 
@@ -107,7 +126,7 @@ export class Game {
 
     // 1) 세계
     w.ensure(Math.round(p.z) + ROWS_AHEAD);
-    w.prune(Math.floor(this.edge) - ROWS_BEHIND);
+    w.prune(Math.floor(this.camZ) - ROWS_BEHIND - 4);
     w.update(dt, Math.floor(this.camZ) - ROWS_BEHIND, Math.floor(this.camZ) + ROWS_AHEAD);
 
     // 2) 입력 → 점프
@@ -135,22 +154,58 @@ export class Game {
     const hit = w.hazardAt(p.x, hz, 0.24);
     if (hit) { this.die(hit); return; }
 
-    // 6) 독수리 압박
-    this.idle += dt;
-    this.edge += (SCROLL_BASE + this.score * SCROLL_GAIN) * dt;
-    if (this.edge < p.z - BEHIND) this.edge = p.z - BEHIND;
-    if (this.idle > IDLE_LIMIT || p.z < this.edge - 0.2) { this.die('eagle'); return; }
+    // 6) 시점 전진 → 화면 바닥까지 밀리면 독수리
+    this.stepCamera(dt);
+    if (this.behind() > BEHIND_LIMIT) { this.die('eagle'); return; }
 
-    this.stepCamera(dt, false);
+    this.audioCues(dt);
     if (this.splash > 0) this.splash = Math.max(0, this.splash - dt * 2.4);
     if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 3.2);
     this.emitHud();
   }
 
-  stepCamera(dt, dead) {
+  // 시점은 늘 앞으로 천천히 밀리고, 플레이어가 그보다 앞서면 부드럽게 따라붙는다.
+  // 뒤로 처지는 만큼 플레이어는 화면 아래로 내려간다.
+  stepCamera(dt) {
     const p = this.player;
-    const target = dead ? this.camZ : Math.max(p.z, this.edge + BEHIND * 0.5);
-    this.camZ += (target - this.camZ) * (1 - Math.exp(-CAM.follow * dt));
+    this.camZ += (SCROLL_BASE + this.score * SCROLL_GAIN) * dt;
+    if (p.z > this.camZ) this.camZ += (p.z - this.camZ) * (1 - Math.exp(-CAM.follow * dt));
+  }
+
+  // 주변 상황에 맞춰 소리를 낸다(건널목 종 · 기차 · 경적).
+  audioCues(dt) {
+    if (!this.sound) return;
+    const w = this.world;
+    const z0 = Math.round(this.player.z);
+    let warning = false;
+    for (let z = z0 - 2; z <= z0 + CUE_NEAR; z += 1) {
+      const lane = w.laneAt(z);
+      if (!lane || lane.type !== LANE.RAIL) continue;
+      if (lane.phase === 'warn') warning = true;
+      // 기차가 나타나는 순간 한 번만 "슈우우웅"
+      if (lane.train && !lane.whooshed) { lane.whooshed = true; this.sound.whoosh(); }
+    }
+    if (warning) {
+      this.bellT -= dt;
+      if (this.bellT <= 0) { this.sound.bell(); this.bellT = BELL_GAP; }
+    } else {
+      this.bellT = 0;
+    }
+
+    // 경적은 가끔만. 근처에 차가 없으면 조금 뒤에 다시 본다.
+    this.honkT -= dt;
+    if (this.honkT > 0) return;
+    const px = this.player.x;
+    let near = false;
+    for (let z = z0 - 1; z <= z0 + 5 && !near; z += 1) {
+      const lane = w.laneAt(z);
+      if (!lane || lane.type !== LANE.ROAD) continue;
+      for (const car of lane.cars) {
+        if (Math.abs(car.x - px) < 6) { near = true; break; }
+      }
+    }
+    if (near) { this.sound.honk(); this.honkT = 9 + Math.random() * 13; }
+    else this.honkT = 2;
   }
 
   onLand() {
@@ -160,7 +215,6 @@ export class Game {
 
     if (gz > this.score) {
       this.score = gz;
-      this.idle = 0;
       if (this.sound) this.sound.step();
     }
     if (w.takeCoin(Math.round(p.x), gz)) {
@@ -233,12 +287,14 @@ export class Game {
 
   finish() {
     this.state = 'over';
+    this.overT = 0;
     let best = this.score;
     let totalCoins = this.coins;
     if (this.store) {
       best = this.store.saveBest(this.score);
       totalCoins = this.store.addCoins(this.coins);
     }
+    this.bestShown = best;
     this.onState('over', { score: this.score, best, coins: this.coins, totalCoins, cause: this.cause });
   }
 }

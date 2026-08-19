@@ -96,6 +96,15 @@ export class Engine {
     return (this.w * 0.5 + 70) * pz / this.f;
   }
 
+  // 카메라 기준 좌표(오른쪽 u, 위 v, 앞 d)를 월드 좌표로. 화면에 평행한 판을
+  // 놓을 때 쓴다 — 게임오버 글자처럼 원근으로 일그러지면 안 되는 것들.
+  fromCamera(u, v, d, out) {
+    out.x = this.cam.x + u;
+    out.y = this.cam.y + v * this.cb - d * this.sb;
+    out.z = this.cam.z + v * this.sb + d * this.cb;
+    return out;
+  }
+
   depthOf(x, y, z) {
     const dy = y - this.cam.y;
     const dz = z - this.cam.z;
