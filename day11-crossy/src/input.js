@@ -4,10 +4,11 @@ const SWIPE = 22;      // 이만큼 끌면 스와이프로 본다(px)
 const TAP_TIME = 400;  // 이 안에 떼면 탭
 
 export class Input {
-  constructor(el, game, onFirst) {
+  constructor(el, game, onFirst, onStart) {
     this.el = el;
     this.game = game;
     this.onFirst = onFirst || (() => {});
+    this.onStart = onStart || (() => {});
     this.sx = 0; this.sy = 0; this.st = 0; this.down = false; this.fired = false;
 
     el.addEventListener('pointerdown', this.onDown, { passive: false });
@@ -23,7 +24,15 @@ export class Input {
   }
 
   onKey = (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key;
+    this.onFirst();
+    // 결과 화면에서는 아무 버튼이나 누르면 다시 시작한다.
+    if (this.game.state === 'over') { e.preventDefault(); this.game.anyKey(); return; }
+    if (this.game.state === 'title') {
+      if (k === ' ' || k === 'Enter') { e.preventDefault(); this.onStart(); }
+      return;
+    }
     let dir = null;
     if (k === 'ArrowUp' || k === 'w' || k === 'W' || k === ' ') dir = 'fwd';
     else if (k === 'ArrowDown' || k === 's' || k === 'S') dir = 'back';
