@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>길건너 친구들 · Day 11</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="home" href="../">&larr; 홈</a>
+
+  <div class="wrap">
+    <header>
+      <h1>길건너 친구들</h1>
+      <p class="sub">DAY 11</p>
+    </header>
+
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+
+      <div class="hud">
+        <div class="score" id="score">0</div>
+        <div class="coin-tag"><span class="coin-dot"></span><span id="coins">0</span></div>
+      </div>
+
+      <button class="gear" id="gear" aria-label="설정">
+        <svg viewBox="0 0 16 16" width="18" height="18" shape-rendering="crispEdges" aria-hidden="true">
+          <mask id="gearMask">
+            <rect width="16" height="16" fill="#000"/>
+            <g fill="#fff">
+              <rect x="6" y="0" width="4" height="16"/>
+              <rect x="0" y="6" width="16" height="4"/>
+              <rect x="3" y="3" width="10" height="10"/>
+              <rect x="2" y="2" width="3" height="3"/><rect x="11" y="2" width="3" height="3"/>
+              <rect x="2" y="11" width="3" height="3"/><rect x="11" y="11" width="3" height="3"/>
+            </g>
+            <rect x="6" y="6" width="4" height="4" fill="#000"/>
+          </mask>
+          <rect width="16" height="16" fill="currentColor" mask="url(#gearMask)"/>
+        </svg>
+      </button>
+
+      <div class="ver" id="ver"></div>
+
+      <!-- 시작 화면 -->
+      <div class="overlay show" id="title">
+        <div class="panel">
+          <h2>길건너 친구들</h2>
+          <p class="best" id="titleBest">최고 기록 0</p>
+          <div class="chars" id="chars"></div>
+          <button class="btn" id="playBtn">시작</button>
+          <p class="dim">탭 · 스페이스로 앞으로<br>스와이프 · 방향키로 좌우와 뒤</p>
+        </div>
+      </div>
+
+      <!-- 결과 화면 -->
+      <div class="overlay" id="over">
+        <div class="panel">
+          <p class="cause" id="cause"></p>
+          <div class="scoreline"><span id="finalScore">0</span><span class="unit">칸</span></div>
+          <p class="best" id="overBest">최고 기록 0</p>
+          <p class="gain" id="gain"></p>
+          <button class="btn" id="againBtn">다시 하기</button>
+          <button class="btn ghost" id="menuBtn">처음 화면</button>
+        </div>
+      </div>
+
+      <!-- 설정 -->
+      <div class="overlay" id="opts">
+        <div class="panel">
+          <h3>설정</h3>
+          <button class="btn tog" id="sfxBtn" data-opt="sfx">효과음</button>
+          <button class="btn ghost" id="optClose">닫기</button>
+          <a class="btn ghost" href="../">홈으로</a>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint">가장 멀리 건너가면 된다 · 오래 멈춰 있으면 독수리가 온다</p>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
