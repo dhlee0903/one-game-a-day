@@ -6,9 +6,67 @@ import {
 } from './config.js';
 import { Engine } from './engine.js';
 import {
-  FACE, CHARS, treeModel, logModel, ROCK, COIN, SIGNAL,
+  FACE, CHARS, treeModel, logModel, flowerModel, ROCK, COIN, SIGNAL,
   TRAIN_CAR, TRAIN_HEAD, EAGLE, EAGLE_WING, GLYPHS, GLYPH_W, GLYPH_H,
 } from './models.js';
+
+// 결정적인 해시 — 줄마다 같은 잔물결 배치가 나오도록.
+const hash = (n) => {
+  const s = Math.sin(n * 12.9898) * 43758.5453;
+  return s - Math.floor(s);
+};
+
+// 글자를 (행, 열) 칸 목록으로 펼친다. 줄은 가운데 정렬.
+// space는 글자 사이 간격 — 테두리를 두를 거면 1보다 넓어야 글자끼리 붙지 않는다.
+function textCells(lines, gap, space = 1) {
+  const step = GLYPH_W + space;
+  let cols = 0;
+  for (const line of lines) cols = Math.max(cols, line.length * step - space);
+  const set = new Set();
+  lines.forEach((line, li) => {
+    const w = line.length * step - space;
+    const off = Math.round((cols - w) / 2);
+    for (let i = 0; i < line.length; i += 1) {
+      const g = GLYPHS[line[i]];
+      if (!g) continue;
+      for (let r = 0; r < GLYPH_H; r += 1) {
+        for (let c = 0; c < GLYPH_W; c += 1) {
+          if (g[r] & (1 << (GLYPH_W - 1 - c))) {
+            set.add(`${li * (GLYPH_H + gap) + r},${off + i * step + c}`);
+          }
+        }
+      }
+    }
+  });
+  const rows = lines.length * GLYPH_H + (lines.length - 1) * gap;
+  return { set, list: toPairs(set), rows, cols };
+}
+
+// 글자 칸의 둘레 — 검은 테두리를 두를 자리.
+function outlineCells(set) {
+  const out = new Set();
+  for (const key of set) {
+    const i = key.indexOf(',');
+    const r = +key.slice(0, i); const c = +key.slice(i + 1);
+    for (let dr = -1; dr <= 1; dr += 1) {
+      for (let dc = -1; dc <= 1; dc += 1) {
+        if (!dr && !dc) continue;
+        const k = `${r + dr},${c + dc}`;
+        if (!set.has(k)) out.add(k);
+      }
+    }
+  }
+  return toPairs(out);
+}
+
+function toPairs(set) {
+  const out = [];
+  for (const key of set) {
+    const i = key.indexOf(',');
+    out.push([+key.slice(0, i), +key.slice(i + 1)]);
+  }
+  return out;
+}
 
 const SLAB_W = EDGE_COLS * 2 + 1;
 const SLAB_H_GRASS = GRASS_TOP - SLAB_BOTTOM;
@@ -33,11 +91,23 @@ const FOG_FADE = 165;     // 지면이 끊기는 지점부터 안개가 걷히�
 const CHAR_SCALE = 1.22;  // 캐릭터를 칸 대비 큼직하게(원작 비율)
 
 // 게임오버 글자: 카메라 앞 GO_DIST칸에 화면과 평행하게 세운다.
-// GO_Y만큼 위로 올려야 글자 덩어리가 화면 위쪽에 앉고, 아래에 안내 문구 자리가 남는다.
+// GAME / OVER는 사이를 띄우지 않고 한 덩어리로 붙여 검은 테두리를 두른다.
 const GO_DIST = 18;
-const GO_CUBE = 0.22;     // 글자 한 픽셀의 크기(월드 단위)
-const GO_Y = 3.4;
-const GO_LINES = ['GAME', 'OVER'];
+const GO_CUBE = 0.208;    // 글자 한 픽셀의 크기(월드 단위)
+const GO_Y = 3.0;
+// 줄 사이는 한 칸만 띄워 두 줄이 검은 테두리로 이어진 한 덩어리가 되게 하고,
+// 글자 사이는 두 칸 띄워 테두리가 글자를 서로 먹지 않게 한다.
+const GO = textCells(['GAME', 'OVER'], 1, 2);
+const GO_OUTLINE = outlineCells(GO.set);
+
+// 안내 문구도 글자 블록으로. 작아서 입체 대신 납작한 판으로 찍는다.
+const HINT_CUBE = 0.061;
+const HINT_Y = 0.38;
+const HINT = textCells(['PRESS ANY BUTTON', 'TO RESTART'], 3, 2);
+const HINT_OUTLINE = outlineCells(HINT.set);
+
+// 물 잔물결
+const RIPPLES = 5;
 
 export class Renderer {
   constructor(canvas) {
@@ -47,8 +117,11 @@ export class Renderer {
     this.w = 0; this.h = 0;
     this.sky = null;
     this.spin = 0;
+    this.time = 0;                    // 물결 등 흐르는 연출용 시간
     this.goRise = 0;                  // 게임오버 글자가 떠오르는 정도
     this.goPos = { x: 0, y: 0, z: 0 }; // 글자 좌표 계산용 스크래치
+    this.goCv = null;                 // 미리 구워 둔 게임오버 글자
+    this.hintCv = null;
   }
 
   resize() {
@@ -61,6 +134,8 @@ export class Renderer {
     this.c.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.w = w; this.h = h;
     this.eng.resize(w, h);
+    this.goCv = null;   // 크기가 바뀌면 글자도 다시 굽는다
+    this.hintCv = null;
     // 지면이 끊기는 높이 언저리는 하늘색을 단색으로 둔다. 그래야 그 위를
     // 같은 색 안개로 덮었을 때 경계가 보이지 않는다.
     this.sky = this.c.createLinearGradient(0, 0, 0, h);
@@ -71,6 +146,7 @@ export class Renderer {
 
   render(game, dt) {
     this.spin = (this.spin + dt * 2.4) % (Math.PI * 2);
+    this.time = (this.time + dt) % 3600;
     // 결과 화면에 들어오면 글자가 아래에서 살짝 떠오른다.
     this.goRise = game.state === 'over'
       ? this.goRise + (0 - this.goRise) * Math.min(1, dt * 7)
@@ -126,49 +202,64 @@ export class Renderer {
   gameOver(c, eng, game) {
     c.fillStyle = 'rgba(10, 26, 40, .46)';
     c.fillRect(0, 0, this.w, this.h);
+    if (!this.goCv || this.goCv.width !== this.cv.width) this.buildOverlay();
 
-    // 글자는 월드와 같은 엔진으로 그리되, 화면에 평행한 판 위에 놓아
-    // 위아래로 원근이 벌어지지 않게 한다.
+    // 글자는 화면에 고정된 위치라 매 프레임 다시 그릴 필요가 없다.
+    // 미리 구워 둔 그림을 얹고, 떠오르는 연출만 세로로 밀어 준다.
+    const rise = this.goRise * (eng.f / GO_DIST);
+    c.drawImage(this.goCv, 0, -rise, this.w, this.h);
+    c.globalAlpha = Math.abs(Math.sin(game.overT * 3.0)) > 0.35 ? 1 : 0.45;
+    c.drawImage(this.hintCv, 0, 0, this.w, this.h);
+    c.globalAlpha = 1;
+  }
+
+  // 게임오버 글자를 오프스크린에 한 번만 구워 둔다. 카메라 기준으로 놓은 판이라
+  // 시점이 움직여도 화면상 위치가 변하지 않으므로 그대로 재사용할 수 있다.
+  buildOverlay() {
+    const eng = this.eng;
+    const dpr = this.cv.width / this.w;
+    const make = () => {
+      const cv = document.createElement('canvas');
+      cv.width = this.cv.width; cv.height = this.cv.height;
+      const cx = cv.getContext('2d');
+      cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return [cv, cx];
+    };
+    const prev = eng.c;
+    const [goCv, goCx] = make();
+    eng.c = goCx;
     eng.begin();
-    const rows = GO_LINES.length * (GLYPH_H + 2) - 2;
-    const top = rows / 2;
-    GO_LINES.forEach((line, li) => {
-      const cols = line.length * (GLYPH_W + 1) - 1;
-      for (let i = 0; i < line.length; i += 1) {
-        const g = GLYPHS[line[i]];
-        if (!g) continue;
-        for (let r = 0; r < GLYPH_H; r += 1) {
-          for (let col = 0; col < GLYPH_W; col += 1) {
-            if (!(g[r] & (1 << (GLYPH_W - 1 - col)))) continue;
-            const u = (i * (GLYPH_W + 1) + col - (cols - 1) / 2) * GO_CUBE;
-            const v = GO_Y + (top - (li * (GLYPH_H + 2) + r)) * GO_CUBE + this.goRise;
-            eng.fromCamera(u, v, GO_DIST, this.goPos);
-            eng.box(this.goPos.x, this.goPos.y - GO_CUBE / 2, this.goPos.z,
-              GO_CUBE, GO_CUBE, GO_CUBE, li === 0 ? '#ffffff' : '#ff5a4e');
-          }
-        }
-      }
-    });
+    this.cells(eng, GO_OUTLINE, GO, GO_CUBE, GO_Y, '#12161f', false); // 검은 테두리 먼저
+    this.cells(eng, GO.list, GO, GO_CUBE, GO_Y, '#ffffff', false);    // 그 위에 하얀 글자
     eng.flush();
 
-    // 아래에 기록과 안내. 글자는 블록, 설명은 평범한 글씨로 나눈다.
-    const cx = this.w / 2;
-    const y0 = this.h * 0.63;
-    c.textAlign = 'center';
-    c.fillStyle = 'rgba(255,255,255,.9)';
-    c.font = '700 15px "Segoe UI", system-ui, sans-serif';
-    c.fillText(`${game.score}칸 · 최고 ${game.bestShown}칸`, cx, y0);
-    if (game.coins > 0) {
-      c.fillStyle = '#ffd34d';
-      c.font = '700 13px "Segoe UI", system-ui, sans-serif';
-      c.fillText(`코인 +${game.coins}`, cx, y0 + 21);
+    const [hintCv, hintCx] = make();
+    eng.c = hintCx;
+    eng.begin();
+    this.cells(eng, HINT_OUTLINE, HINT, HINT_CUBE, HINT_Y, '#12161f', true);
+    this.cells(eng, HINT.list, HINT, HINT_CUBE, HINT_Y, '#ffffff', true);
+    eng.flush();
+
+    eng.c = prev;
+    this.goCv = goCv;
+    this.hintCv = hintCv;
+  }
+
+  // 글자 칸 목록을 카메라 앞 판 위에 찍는다. plate면 납작하게, 아니면 입체 블록으로.
+  cells(eng, list, block, cube, centerV, color, plate) {
+    const u0 = (block.cols - 1) / 2;
+    const v0 = (block.rows - 1) / 2;
+    for (let i = 0; i < list.length; i += 1) {
+      const r = list[i][0]; const cc = list[i][1];
+      const u = (cc - u0) * cube;
+      const v = centerV + (v0 - r) * cube;
+      if (plate) {
+        eng.plate(u, v, cube, cube, GO_DIST, color);
+      } else {
+        eng.fromCamera(u, v, GO_DIST, this.goPos);
+        eng.box(this.goPos.x, this.goPos.y - cube / 2, this.goPos.z, cube, cube, cube, color);
+      }
     }
-    // 깜빡이는 안내 — 누르라는 건 눈에 띄어야 한다.
-    const blink = 0.55 + Math.abs(Math.sin(game.overT * 3.2)) * 0.45;
-    c.fillStyle = `rgba(255,255,255,${blink})`;
-    c.font = '700 13.5px "Segoe UI", system-ui, sans-serif';
-    c.fillText('press any button to restart', cx, y0 + 52);
-    c.textAlign = 'left';
   }
 
   // ---- 차선 ----
@@ -195,6 +286,12 @@ export class Renderer {
       if (b.kind === 'rock') this.model(eng, ROCK, x, GRASS_TOP, z, 0);
       else this.model(eng, treeModel(b.tier), x, GRASS_TOP, z, 0);
     }
+    if (lane.deco) {
+      for (const f of lane.deco) {
+        if (f.x < -span || f.x > span) continue;
+        this.model(eng, flowerModel(f.c), f.x, GRASS_TOP, z + f.zo, 0);
+      }
+    }
     if (lane.coin !== null) {
       this.model(eng, COIN, lane.coin, GRASS_TOP + 0.26 + Math.sin(this.spin * 1.6) * 0.05, z, this.spin);
     }
@@ -216,14 +313,24 @@ export class Renderer {
     }
   }
 
+  // 물은 격자무늬 대신 한 장의 수면 + 물살을 따라 흐르는 잔물결로 그린다.
   river(eng, lane, detail) {
     const z = lane.z;
-    eng.box(0, SLAB_BOTTOM, z, SLAB_W, SLAB_H_WATER, 1, PAL.waterSide);
-    const even = z & 1 ? PAL.waterB : PAL.waterA;
-    const odd = z & 1 ? PAL.waterA : PAL.waterB;
-    eng.tiles(XS_EVEN, WATER_TOP, z, 1, 1, even, -0.02);
-    eng.tiles(XS_ODD, WATER_TOP, z, 1, 1, odd, -0.02);
+    eng.box(0, SLAB_BOTTOM, z, SLAB_W, SLAB_H_WATER, 1, PAL.water);
     if (!detail) return;
+
+    const drift = this.time * lane.speed * lane.dir;
+    for (let i = 0; i < RIPPLES; i += 1) {
+      const seed = i + z * 3.7;
+      const len = 0.5 + hash(seed) * 0.9;
+      // 물살을 타고 흐르다 반대편으로 감긴다.
+      let x = hash(seed + 0.5) * SLAB_W + drift;
+      x = ((x % SLAB_W) + SLAB_W) % SLAB_W - SLAB_W / 2;
+      const zo = (hash(seed + 1.5) - 0.5) * 0.62;
+      const deep = i % 2 === 1;
+      eng.quad(x, WATER_TOP + 0.004, z + zo, len, 0.085,
+        deep ? PAL.waterDeep : PAL.foam, deep ? 0.5 : 0.42, -0.03);
+    }
 
     const span = eng.halfSpan(z);
     for (const lg of lane.logs) {
