@@ -6,7 +6,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { store } from './storage.js';
 import { CHARS } from './models.js';
-import { VERSION } from './config.js';
+import { VERSION, GACHA_COST } from './config.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,7 +17,9 @@ const opts = store.opts();
 sound.enable(opts.sfx);
 
 const game = new Game({ onHud: hud, onState: onState, sound, store });
-game.charIndex = Math.min(CHARS.length - 1, store.char());
+// 저장된 캐릭터가 아직 없는 것(또는 범위 밖)이면 기본 닭으로 되돌린다.
+const savedChar = store.char();
+game.charIndex = store.owned().includes(savedChar) && CHARS[savedChar] ? savedChar : 0;
 
 $('ver').textContent = VERSION;
 
@@ -57,9 +59,25 @@ function show(name) {
 }
 function hideAll() { show(null); }
 
-// ---- 캐릭터 ----
+// ---- 도감 · 뽑기 ----
 
 const charsEl = $('chars');
+const gachaBtn = $('gachaBtn');
+let freshIndex = -1;   // 방금 뽑은 캐릭터 (칸이 튀어오르는 연출용)
+
+// 도감 초상은 게임과 같은 3D 엔진으로 한 번만 찍어 두고 재사용한다.
+const ICON_PX = 96;
+const iconCache = new Map();
+
+function iconFor(i, locked) {
+  const key = `${i}:${locked ? 's' : 'n'}`;
+  let cv = iconCache.get(key);
+  if (!cv) {
+    cv = renderer.charIcon(CHARS[i].model, ICON_PX, locked ? '#aab4c0' : null);
+    iconCache.set(key, cv);
+  }
+  return cv;
+}
 
 function paintChars() {
   const owned = store.owned();
@@ -69,28 +87,51 @@ function paintChars() {
     const has = owned.includes(i);
     const btn = document.createElement('button');
     btn.className = 'char'
-      + (i === game.charIndex ? ' on' : '')
-      + (has ? '' : (coins >= ch.cost ? ' locked buyable' : ' locked'));
-    const body = ch.model.find((b) => b.w > 0.4) || ch.model[0];
-    btn.innerHTML = `<span class="swatch" style="background:${body.c}"></span>
-      <span class="nm">${ch.name}</span>
-      <span class="pz">${has ? '보유' : `${ch.cost}코인`}</span>`;
-    btn.onclick = () => {
-      kick();
-      if (has) {
+      + (i === game.charIndex && has ? ' on' : '')
+      + (has ? '' : ' locked')
+      + (i === freshIndex ? ' fresh' : '');
+    btn.title = has ? ch.name : '아직 없음';
+    const icon = iconFor(i, !has).toDataURL();
+    btn.innerHTML = `<img class="swatch" alt="${has ? ch.name : ''}" src="${icon}">`;
+    if (has) {
+      btn.onclick = () => {
+        kick();
         game.charIndex = i;
         store.saveChar(i);
-      } else if (store.spend(ch.cost)) {
-        store.addOwned(i);
-        game.charIndex = i;
-        store.saveChar(i);
-      }
-      paintChars();
-    };
+        paintChars();
+      };
+    }
     charsEl.appendChild(btn);
   });
   $('titleBest').textContent = `최고 기록 ${store.best()}칸 · 코인 ${coins}개`;
+  $('dexCount').textContent = `${owned.length} / ${CHARS.length}`;
+  const all = owned.length >= CHARS.length;
+  gachaBtn.disabled = all || coins < GACHA_COST;
+  gachaBtn.innerHTML = all ? '전부 모았다' : `캐릭터 뽑기 <b>${GACHA_COST}</b>코인`;
+  freshIndex = -1;
 }
+
+// 아직 없는 캐릭터 중에서 하나. 중복이 안 나오니 100코인 = 확실히 새 친구.
+function drawChar() {
+  kick();
+  const owned = store.owned();
+  const pool = [];
+  for (let i = 0; i < CHARS.length; i += 1) if (!owned.includes(i)) pool.push(i);
+  if (!pool.length || !store.spend(GACHA_COST)) return;
+  const idx = pool[Math.floor(Math.random() * pool.length)];
+  store.addOwned(idx);
+  store.saveChar(idx);
+  game.charIndex = idx;
+  freshIndex = idx;
+  $('pickMsg').textContent = `새 친구 · ${CHARS[idx].name}`;
+  sound.fanfare();
+  paintChars();
+  // 새로 뽑은 칸이 보이도록 스크롤
+  const el = charsEl.children[idx];
+  if (el) el.scrollIntoView({ block: 'nearest' });
+}
+
+gachaBtn.onclick = drawChar;
 
 // ---- 버튼 ----
 
@@ -102,7 +143,13 @@ function kick() {
 }
 
 function play() { kick(); hideAll(); game.start(); }
-function toTitle() { game.state = 'title'; game.reset(); show('title'); paintChars(); }
+function toTitle() {
+  game.state = 'title';
+  game.reset();
+  $('pickMsg').textContent = '';
+  show('title');
+  paintChars();
+}
 
 $('playBtn').onclick = play;
 $('menuBtn').onclick = toTitle;

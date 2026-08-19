@@ -153,17 +153,34 @@ canvas {
 .btn.ghost:active { box-shadow: 0 1px 0 #d6dde6; }
 .btn.tog.off { background: #b9c3cf; box-shadow: 0 3px 0 #98a4b2; }
 
-/* ---- 캐릭터 고르기 ---- */
+/* ---- 뽑기 · 도감 ---- */
 
-.chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.char {
-  padding: 8px 2px 7px; border: 2px solid transparent; border-radius: 11px;
-  background: #eef2f7; cursor: pointer; font-family: inherit;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+.btn.gacha { background: var(--accent); box-shadow: 0 3px 0 #d18b1c; color: #4a3305; }
+.btn.gacha:active { box-shadow: 0 1px 0 #d18b1c; }
+.btn.gacha b { font-weight: 900; }
+.btn.gacha:disabled { background: #c9cfd8; box-shadow: 0 3px 0 #a9b2bd; color: #7d8794; cursor: default; }
+
+.pick { min-height: 15px; font-size: 12px; font-weight: 800; color: var(--primary); }
+.dex-head {
+  font-size: 11px; font-weight: 800; letter-spacing: .06em;
+  color: var(--faint); text-align: left; margin-top: 2px;
 }
-.char .nm { font-size: 11px; font-weight: 800; color: var(--text); }
-.char .pz { font-size: 9.5px; font-weight: 700; color: var(--faint); }
+.dex-head span { color: var(--dim); }
+
+/* 30칸이라 스크롤되게 두고, 패널이 화면을 넘지 않게 높이를 제한한다. */
+.chars {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+  max-height: min(122px, 19dvh); overflow-y: auto; overscroll-behavior: contain;
+  touch-action: pan-y;   /* 본문은 스크롤을 막아 두었으니 여기서만 풀어 준다 */
+  padding: 2px; border-radius: 10px; background: #f4f7fa;
+}
+.char {
+  aspect-ratio: 1; border: 2px solid transparent; border-radius: 9px;
+  background: #e6ebf2; cursor: pointer; font-family: inherit; padding: 0;
+  display: grid; place-items: center; position: relative;
+}
+.char .swatch { width: 96%; height: 96%; display: block; image-rendering: auto; }
 .char.on { border-color: var(--primary); background: #e7f6ea; }
-.char.locked .nm { color: var(--faint); }
-.char.buyable .pz { color: #b8860b; }
-.swatch { width: 20px; height: 20px; border-radius: 5px; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .14); }
+.char.locked { cursor: default; background: #dfe5ec; }
+.char.fresh { animation: pop .5s ease-out; }
+@keyframes pop { 0% { transform: scale(.5); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }

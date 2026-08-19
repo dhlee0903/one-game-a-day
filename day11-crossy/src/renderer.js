@@ -109,6 +109,11 @@ const HINT_OUTLINE = outlineCells(HINT.set);
 // 물 잔물결
 const RIPPLES = 5;
 
+// 도감 초상: 카메라를 충분히 멀리 두고 초점거리를 키워야 게임에서 보이는 것과
+// 같은 납작한 비율이 된다. 가까이 두면 머리만 커지는 어안 그림이 된다.
+const ICON_DIST = 5.5;
+const ICON_FOCAL = 5.7;   // 초점거리 = 아이콘 크기 x 이 값
+
 export class Renderer {
   constructor(canvas) {
     this.cv = canvas;
@@ -413,7 +418,7 @@ export class Renderer {
   }
 
   // 모델(로컬 박스 배열)을 위치·회전·배율을 적용해 등록한다.
-  model(eng, boxes, x, y, z, yaw, sxz = 1, sy = 1) {
+  model(eng, boxes, x, y, z, yaw, sxz = 1, sy = 1, tint = null) {
     const ca = Math.cos(yaw); const sa = Math.sin(yaw);
     for (let i = 0; i < boxes.length; i += 1) {
       const b = boxes[i];
@@ -422,9 +427,28 @@ export class Renderer {
         x + bx * ca - bz * sa,
         y + b.y * sy,
         z + bx * sa + bz * ca,
-        b.w * sxz, b.h * sy, b.d * sxz, b.c, yaw,
+        b.w * sxz, b.h * sy, b.d * sxz, tint || b.c, yaw,
       );
     }
+  }
+
+  // 도감 칸에 넣을 캐릭터 초상. 게임과 같은 엔진·같은 시점으로 작게 찍는다.
+  // 아직 없는 캐릭터는 실루엣만 보여 준다.
+  charIcon(model, px, tint) {
+    const cv = document.createElement('canvas');
+    cv.width = px; cv.height = px;
+    const eng = new Engine(cv);
+    eng.resize(px, px);
+    eng.setFocus(0);
+    eng.f = px * ICON_FOCAL;
+    eng.oy = px * 0.5;
+    eng.begin();
+    // 카메라 앞 ICON_DIST칸에 세우면 아이콘 크기에 딱 맞게 잡힌다.
+    eng.fromCamera(0, -0.27, ICON_DIST, this.goPos);
+    this.model(eng, model, this.goPos.x, this.goPos.y, this.goPos.z,
+      Math.PI + 0.42, 1, 1, tint);   // 살짝 비스듬히 정면을 보게
+    eng.flush();
+    return cv;
   }
 
   // 화면 아래로 밀려나 독수리가 오기 직전이면 가장자리에 붉은 경고.

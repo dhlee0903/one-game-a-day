@@ -151,6 +151,14 @@ export class Sound {
     this._noise(0.4, 0.09, 2600, 1.6);
   }
 
+  // 새 캐릭터를 뽑았을 때 — 올라가는 세 음.
+  fanfare() {
+    [0, 90, 180].forEach((ms, i) => {
+      setTimeout(() => this._tone('square', 520 + i * 180, 530 + i * 180, 0.16, 0.15), ms);
+    });
+    setTimeout(() => this._tone('square', 1180, 1190, 0.3, 0.13), 280);
+  }
+
   die(cause) {
     if (cause === 'water') { this._noise(0.42, 0.30, 900, 0.7); this._tone('sine', 420, 90, 0.35, 0.12); }
     else if (cause === 'train') { this._tone('sawtooth', 180, 120, 0.55, 0.22); this._noise(0.5, 0.22, 500, 0.6); }

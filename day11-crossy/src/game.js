@@ -2,7 +2,7 @@
 
 import {
   LANE, HALF_COLS, ROWS_AHEAD, ROWS_BEHIND, CAM,
-  BEHIND_LIMIT, BEHIND_WARN, EAGLE_TIME, SCROLL_BASE, SCROLL_GAIN,
+  BEHIND_LIMIT, BEHIND_WARN, EAGLE_TIME, SCROLL_BASE, SCROLL_GAIN, COIN_PER_ROWS,
 } from './config.js';
 import { World } from './world.js';
 import { Player } from './player.js';
@@ -38,6 +38,7 @@ export class Game {
     this.bellT = 0;
     this.honkT = 4;
     this.cause = null;
+    this.bonus = 0;
     this.eagle = null;
     this.pending = null;
     this.shake = 0;
@@ -287,12 +288,16 @@ export class Game {
   finish() {
     this.state = 'over';
     this.overT = 0;
+    // 간 거리만큼 코인 보너스. 주운 코인과 합쳐 HUD에 바로 반영된다.
+    this.bonus = Math.floor(this.score / COIN_PER_ROWS);
+    this.coins += this.bonus;
+    this.emitHud();
     let best = this.score;
     let totalCoins = this.coins;
     if (this.store) {
       best = this.store.saveBest(this.score);
       totalCoins = this.store.addCoins(this.coins);
     }
-    this.onState('over', { score: this.score, best, coins: this.coins, totalCoins, cause: this.cause });
+    this.onState('over', { score: this.score, best, coins: this.coins, bonus: this.bonus, totalCoins, cause: this.cause });
   }
 }
