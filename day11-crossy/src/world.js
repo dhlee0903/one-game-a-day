@@ -1,8 +1,11 @@
 // 차선 생성과 차량·통나무·기차 시뮬레이션.
 // 렌더러는 여기 상태를 읽기만 한다.
 
-import { LANE, CARS, HALF_COLS, ROWS_AHEAD, difficulty } from './config.js';
-import { carModel } from './models.js';
+import {
+  LANE, CARS, HALF_COLS, ROWS_AHEAD, difficulty,
+  COIN_CHANCE, PLAIN_CHANCE, PLAIN_COIN_CHANCE,
+} from './config.js';
+import { carModel, FLOWER_COLORS } from './models.js';
 
 const SPAWN_X = 14;    // 이 바깥에서 생겨나고 사라진다
 const TRAIN_X = 24;
@@ -18,6 +21,7 @@ export class World {
     this.groupLeft = 0;       // 현재 그룹에 남은 줄 수
     this.groupType = LANE.GRASS;
     this.dangerRun = 0;       // 연속으로 놓인 위험 그룹 수
+    this.groupPlain = false;  // 현재 그룹이 넓은 평야인지
   }
 
   reset() {
@@ -55,12 +59,21 @@ export class World {
     if (this.groupType === LANE.ROAD) return this.makeRoad(z, d);
     if (this.groupType === LANE.RIVER) return this.makeRiver(z, d);
     if (this.groupType === LANE.RAIL) return this.makeRail(z, d);
-    return this.makeGrass(z, false);
+    return this.makeGrass(z, false, this.groupPlain);
   }
 
   planGroup(z) {
     const d = difficulty(z);
     const r = rand();
+    this.groupPlain = false;
+    // 가끔 탁 트인 평야가 나온다 — 나무가 거의 없고 꽃과 코인이 흩뿌려진 넓은 구간.
+    if (rand() < PLAIN_CHANCE) {
+      this.groupType = LANE.GRASS;
+      this.groupPlain = true;
+      this.groupLeft = 4 + ((rand() * 4) | 0);
+      this.dangerRun = 0;
+      return;
+    }
     // 위험 지대가 너무 길게 이어지면 풀밭을 끼워 숨을 돌리게 한다.
     if (this.dangerRun >= 2 || (this.groupType !== LANE.GRASS && r < 0.34)) {
       this.groupType = LANE.GRASS;
@@ -76,11 +89,12 @@ export class World {
     if (this.groupType !== LANE.GRASS) this.dangerRun += 1;
   }
 
-  makeGrass(z, safe) {
+  makeGrass(z, safe, plain = false) {
     const d = difficulty(z);
-    const lane = { type: LANE.GRASS, z, blocks: new Map(), coin: null };
+    const lane = { type: LANE.GRASS, z, plain, blocks: new Map(), coin: null, deco: null };
     if (!safe) {
-      const density = 0.16 + d * 0.16;
+      // 평야는 시야가 탁 트이도록 장애물을 거의 두지 않는다.
+      const density = plain ? 0.03 : 0.16 + d * 0.16;
       const free = [];
       for (let x = -HALF_COLS; x <= HALF_COLS; x += 1) {
         if (rand() < density) {
@@ -94,7 +108,19 @@ export class World {
         const x = -HALF_COLS + ((rand() * (HALF_COLS * 2 + 1)) | 0);
         if (lane.blocks.delete(x)) free.push(x);
       }
-      if (rand() < 0.14) lane.coin = pick(free);
+      if (rand() < (plain ? PLAIN_COIN_CHANCE : COIN_CHANCE)) lane.coin = pick(free);
+      if (plain) {
+        // 막지 않는 꽃 장식 — 평야를 한눈에 알아보게 한다.
+        lane.deco = [];
+        const n = 2 + ((rand() * 4) | 0);
+        for (let i = 0; i < n; i += 1) {
+          lane.deco.push({
+            x: -HALF_COLS + rand() * (HALF_COLS * 2),
+            zo: (rand() - 0.5) * 0.6,
+            c: pick(FLOWER_COLORS),
+          });
+        }
+      }
     } else if (z <= -2) {
       // 시작 지점 뒤는 나무로 막아 되돌아가지 못하게 한다. z = -1은 비워 둔다 —
       // 키 큰 나무가 바로 앞줄에 서면 시작할 때 플레이어를 가린다.

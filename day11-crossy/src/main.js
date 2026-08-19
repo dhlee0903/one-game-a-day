@@ -28,16 +28,24 @@ window.day11 = game;
 
 let lastScore = -1;
 let lastCoins = -1;
+let lastBest = -1;
+let bestBase = store.best();
+$('best').textContent = bestBase;
 
 function hud(s) {
   if (s.score !== lastScore) { $('score').textContent = s.score; lastScore = s.score; }
   if (s.coins !== lastCoins) { $('coins').textContent = s.coins; lastCoins = s.coins; }
+  // 기록을 넘어서면 그 자리에서 최고 기록이 올라간다.
+  const best = Math.max(bestBase, s.score);
+  if (best !== lastBest) { $('best').textContent = best; lastBest = best; }
 }
 
 // 결과 화면은 캔버스에 직접 그린다(renderer.gameOver). 여기서는 코인이 늘었으니
 // 캐릭터 목록만 다시 칠해 둔다.
 function onState(state) {
-  if (state === 'over') paintChars();
+  if (state !== 'over') return;
+  bestBase = store.best();
+  paintChars();
 }
 
 // ---- 오버레이 ----

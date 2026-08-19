@@ -38,7 +38,6 @@ export class Game {
     this.bellT = 0;
     this.honkT = 4;
     this.cause = null;
-    this.bestShown = this.store ? this.store.best() : 0;
     this.eagle = null;
     this.pending = null;
     this.shake = 0;
@@ -294,7 +293,6 @@ export class Game {
       best = this.store.saveBest(this.score);
       totalCoins = this.store.addCoins(this.coins);
     }
-    this.bestShown = best;
     this.onState('over', { score: this.score, best, coins: this.coins, totalCoins, cause: this.cause });
   }
 }

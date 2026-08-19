@@ -27,7 +27,7 @@ function newItem() {
   return { kind: 0, depth: 0, x: 0, y: 0, z: 0, w: 0, h: 0, d: 0, yaw: 0, color: '#fff', alpha: 1, xs: null };
 }
 
-const BOX = 0; const QUAD = 1; const TILES = 2;
+const BOX = 0; const QUAD = 1; const TILES = 2; const PLATE = 3;
 
 export class Engine {
   constructor(canvas) {
@@ -49,6 +49,7 @@ export class Engine {
     this.bz = new Float32Array(4);
     this.quadIdx = new Int32Array(4);
     this.list = [];
+    this.pt = { x: 0, y: 0, z: 0 };   // fromCamera 결과용 스크래치
   }
 
   resize(w, h) {
@@ -150,6 +151,18 @@ export class Engine {
     return it;
   }
 
+  // 화면과 평행한 납작한 사각형. 카메라 기준 좌표(u, v)와 거리 d로 놓는다.
+  // 작은 글자처럼 입체가 필요 없는 것은 박스 대신 이걸 쓴다(fill 한 번).
+  plate(u, v, w, h, d, color) {
+    const it = this._next();
+    it.kind = PLATE;
+    it.x = u; it.y = v; it.z = d;
+    it.w = w; it.h = h;
+    it.color = color; it.alpha = 1;
+    it.depth = d;
+    return it;
+  }
+
   // ---- 그리기 ----
 
   begin() { this.n = 0; }
@@ -166,6 +179,7 @@ export class Engine {
       const it = list[i];
       if (it.kind === BOX) this._box(c, it);
       else if (it.kind === QUAD) this._quad(c, it);
+      else if (it.kind === PLATE) this._plate(c, it);
       else this._tiles(c, it);
     }
   }
@@ -255,6 +269,19 @@ export class Engine {
     this._poly(c, 0, 1, 2, 3);
     c.fill();
     if (it.alpha !== 1) c.globalAlpha = 1;
+  }
+
+  _plate(c, it) {
+    const hw = it.w * 0.5; const hh = it.h * 0.5;
+    const p = this.pt;
+    this.fromCamera(it.x - hw, it.y + hh, it.z, p); this.project(p.x, p.y, p.z, 0);
+    this.fromCamera(it.x + hw, it.y + hh, it.z, p); this.project(p.x, p.y, p.z, 1);
+    this.fromCamera(it.x + hw, it.y - hh, it.z, p); this.project(p.x, p.y, p.z, 2);
+    this.fromCamera(it.x - hw, it.y - hh, it.z, p); this.project(p.x, p.y, p.z, 3);
+    c.fillStyle = it.color;
+    c.beginPath();
+    this._poly(c, 0, 1, 2, 3);
+    c.fill();
   }
 
   _tiles(c, it) {

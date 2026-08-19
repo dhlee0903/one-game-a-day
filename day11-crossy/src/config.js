@@ -2,7 +2,7 @@
 // 좌표계: x = 좌우(칸), y = 위, z = 앞(플레이어가 나아가는 방향).
 // 1 = 한 칸(타일) 크기.
 
-export const VERSION = 'v11.1';
+export const VERSION = 'v11.2';
 
 // ---- 캔버스 ----
 // 캔버스 크기는 CSS가 정하고(aspect-ratio 400/700) 엔진이 거기에 맞춘다.
@@ -61,6 +61,11 @@ export function difficulty(score) {
 // ---- 차선 종류 ----
 export const LANE = { GRASS: 'grass', ROAD: 'road', RIVER: 'river', RAIL: 'rail' };
 
+// 지형 패턴 빈도.
+export const COIN_CHANCE = 0.34;       // 풀밭 한 줄에 코인이 놓일 확률
+export const PLAIN_CHANCE = 0.035;     // 넓은 평야가 나올 확률(드물게 — 70줄에 한 번꼴)
+export const PLAIN_COIN_CHANCE = 0.55; // 평야는 코인이 더 자주 나온다
+
 // 차 종류: len은 x축 길이(칸), 색은 차체 색.
 export const CARS = [
   { kind: 'car', len: 1.34, colors: ['#e8453c', '#3d7be0', '#f0b429', '#48b56a', '#b06bff', '#f2f4f8', '#ff7a3d'] },
@@ -79,8 +84,9 @@ export const PAL = {
   roadDark: '#3f444b',
   roadSide: '#33373d',
   mark: '#e9edf2',
-  waterA: '#3aa0e8',
-  waterB: '#3494db',
+  water: '#3aa0e8',
+  waterDeep: '#2f8fd4',
+  foam: '#bde6ff',
   waterSide: '#2b7ab5',
   railBed: '#6b6157',
   railBedSide: '#514940',

@@ -66,9 +66,18 @@ canvas {
   pointer-events: none;
 }
 
+.hud-left { display: flex; flex-direction: column; gap: 3px; }
+
 .score {
   font-size: 40px; font-weight: 900; color: #fff; line-height: .95;
   text-shadow: 0 3px 0 rgba(22, 60, 30, .38), 0 6px 14px rgba(0, 0, 0, .2);
+  font-variant-numeric: tabular-nums;
+}
+
+.best-tag {
+  font-size: 12px; font-weight: 800; letter-spacing: .08em;
+  color: rgba(255, 255, 255, .92); padding-left: 2px;
+  text-shadow: 0 2px 0 rgba(22, 60, 30, .34), 0 4px 10px rgba(0, 0, 0, .2);
   font-variant-numeric: tabular-nums;
 }
 
