@@ -2,7 +2,7 @@
 // 좌표계: x = 좌우(칸), y = 위, z = 앞(플레이어가 나아가는 방향).
 // 1 = 한 칸(타일) 크기.
 
-export const VERSION = 'v11.2';
+export const VERSION = 'v11.3';
 
 // ---- 캔버스 ----
 // 캔버스 크기는 CSS가 정하고(aspect-ratio 400/700) 엔진이 거기에 맞춘다.
@@ -60,6 +60,11 @@ export function difficulty(score) {
 
 // ---- 차선 종류 ----
 export const LANE = { GRASS: 'grass', ROAD: 'road', RIVER: 'river', RAIL: 'rail' };
+
+// 캐릭터 뽑기 값. 한 번 뽑으면 아직 없는 캐릭터 중에서 하나가 나온다.
+export const GACHA_COST = 100;
+// 주워 모은 코인만으로는 100개가 너무 멀어서, 간 거리만큼 보너스를 얹는다.
+export const COIN_PER_ROWS = 12;
 
 // 지형 패턴 빈도.
 export const COIN_CHANCE = 0.34;       // 풀밭 한 줄에 코인이 놓일 확률
