@@ -1,0 +1,169 @@
+:root {
+  --line: #cfdced;
+  --text: #14212f;
+  --dim: #5f708a;
+  --faint: #9db0c6;
+  --accent: #ffb03a;
+  --primary: #3aa653;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+/* 탭·스와이프로 조작하므로 페이지 자체는 절대 스크롤되지 않는다. */
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+
+body {
+  position: fixed; inset: 0;
+  background: radial-gradient(circle at 50% -10%, #eaf6ff, #cfe4f5 65%);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+}
+
+.home {
+  position: fixed; top: 14px; left: 14px; z-index: 50;
+  padding: 7px 14px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+  background: rgba(255, 255, 255, .92); border: 1px solid var(--line); color: var(--dim);
+  box-shadow: 0 2px 8px rgba(20, 33, 47, .08);
+  transition: color .12s, border-color .12s;
+}
+.home:hover { color: var(--text); border-color: var(--faint); }
+
+/* 세로가 짧으면 폭을 줄여 보드가 잘리지 않게 한다(비율 유지) */
+.wrap { width: 100%; max-width: min(400px, calc((100dvh - 104px) * 400 / 700)); }
+
+header { text-align: center; margin-bottom: 10px; }
+h1 {
+  font-size: 26px; font-weight: 800; letter-spacing: .06em;
+  background: linear-gradient(90deg, #2f9e4a, #1c7fc0, #7c3aed);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sub { font-size: 11px; color: var(--faint); letter-spacing: .3em; margin-top: 2px; font-weight: 700; }
+
+.board-wrap { position: relative; }
+
+canvas {
+  display: block; width: 100%; height: auto; aspect-ratio: 400 / 700;
+  border-radius: 18px; box-shadow: 0 18px 42px rgba(20, 45, 70, .3);
+  touch-action: none; cursor: pointer;
+  background: #8fd6ff;
+}
+
+.hint {
+  margin-top: 9px; text-align: center;
+  font-size: 11.5px; color: var(--faint); letter-spacing: .01em;
+}
+
+/* ---- 게임 중 표시 ---- */
+
+.hud {
+  position: absolute; inset: 12px 12px auto 12px; z-index: 4;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  pointer-events: none;
+}
+
+.score {
+  font-size: 40px; font-weight: 900; color: #fff; line-height: .95;
+  text-shadow: 0 3px 0 rgba(22, 60, 30, .38), 0 6px 14px rgba(0, 0, 0, .2);
+  font-variant-numeric: tabular-nums;
+}
+
+.coin-tag {
+  display: flex; align-items: center; gap: 6px;
+  margin-right: 40px;
+  padding: 5px 11px; border-radius: 999px;
+  background: rgba(255, 255, 255, .82);
+  font-size: 14px; font-weight: 800; color: #6b5312;
+  font-variant-numeric: tabular-nums;
+}
+.coin-dot {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: #ffcc33; box-shadow: inset 0 0 0 2.5px #e0a81f;
+}
+
+.gear {
+  position: absolute; top: 12px; right: 12px; z-index: 6;
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: none; border-radius: 10px; cursor: pointer;
+  background: rgba(255, 255, 255, .82); color: var(--dim);
+}
+.gear:hover { color: var(--text); }
+
+.ver {
+  position: absolute; right: 10px; bottom: 8px; z-index: 3;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  color: rgba(255, 255, 255, .55);
+}
+
+/* ---- 오버레이 ---- */
+
+.overlay {
+  position: absolute; inset: 0; z-index: 10;
+  display: none; align-items: center; justify-content: center;
+  border-radius: 18px;
+  background: rgba(12, 30, 45, .42);
+  backdrop-filter: blur(2px);
+  padding: 18px;
+}
+.overlay.show { display: flex; }
+
+/* 시작 화면은 패널을 위로 붙여, 아래쪽에 고른 캐릭터가 보이게 한다. */
+#title { align-items: flex-start; padding-top: 6%; }
+
+.panel {
+  width: 100%; max-width: 280px;
+  display: flex; flex-direction: column; gap: 10px; align-items: stretch;
+  padding: 20px 18px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 14px 34px rgba(10, 30, 50, .28);
+  text-align: center;
+}
+
+.panel h2 { font-size: 21px; font-weight: 800; letter-spacing: .02em; }
+.panel h3 { font-size: 16px; font-weight: 800; color: var(--dim); }
+.best { font-size: 12.5px; color: var(--dim); font-weight: 600; }
+.cause { font-size: 14px; font-weight: 700; color: #d6302a; }
+.gain { font-size: 12px; color: #6b5312; font-weight: 700; min-height: 15px; }
+.dim { font-size: 11.5px; color: var(--faint); line-height: 1.6; }
+
+.scoreline { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+.scoreline span:first-child {
+  font-size: 46px; font-weight: 900; color: var(--text); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.scoreline .unit { font-size: 13px; font-weight: 700; color: var(--dim); }
+
+.btn {
+  padding: 11px 16px; border: none; border-radius: 11px;
+  font-size: 14.5px; font-weight: 800; font-family: inherit;
+  color: #fff; background: var(--primary); cursor: pointer;
+  box-shadow: 0 3px 0 #2b7f3f;
+  transition: transform .08s, box-shadow .08s;
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #2b7f3f; }
+.btn.ghost {
+  background: #eef2f7; color: var(--dim); box-shadow: 0 3px 0 #d6dde6;
+  text-decoration: none;
+}
+.btn.ghost:active { box-shadow: 0 1px 0 #d6dde6; }
+.btn.tog.off { background: #b9c3cf; box-shadow: 0 3px 0 #98a4b2; }
+
+/* ---- 캐릭터 고르기 ---- */
+
+.chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.char {
+  padding: 8px 2px 7px; border: 2px solid transparent; border-radius: 11px;
+  background: #eef2f7; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.char .nm { font-size: 11px; font-weight: 800; color: var(--text); }
+.char .pz { font-size: 9.5px; font-weight: 700; color: var(--faint); }
+.char.on { border-color: var(--primary); background: #e7f6ea; }
+.char.locked .nm { color: var(--faint); }
+.char.buyable .pz { color: #b8860b; }
+.swatch { width: 20px; height: 20px; border-radius: 5px; box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .14); }
